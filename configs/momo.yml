@@ -1,0 +1,104 @@
+mode: passive
+
+interface:
+  name: wlan1
+  mac_randomization: true
+  channel_hop: true
+  channels: [1, 6, 11]
+  regulatory_domain: TR
+
+capture:
+  out_dir_name: handshakes
+  meta_dir_name: meta
+  rotate_on_size: true
+  rotate_on_time: true
+  tools:
+    hcxdumptool_path: /usr/bin/hcxdumptool
+    hcxpcapngtool_path: /usr/bin/hcxpcapngtool
+    tcpdump_path: /usr/sbin/tcpdump
+  adapters: []
+
+logging:
+  base_dir: logs
+  rotation:
+    size_mb: 50
+    time_minutes: 60
+    max_archives: 24
+  retention_days: 14
+
+bettercap:
+  enabled: false
+  allow_assoc: false
+  allow_deauth: false
+
+oled:
+  enabled: false
+  i2c_address: "0x3C"
+  width: 128
+  height: 64
+
+security:
+  whitelist_bssids: []
+  blacklist_bssids: []
+
+stats:
+  sample_interval_sec: 5
+
+plugins:
+  enabled: ["autobackup", "wpa-sec"]
+  options:
+    autobackup:
+    wpa-sec:
+      upload: false
+      endpoint: "https://wpa-sec.stanev.org"
+      queue_dir: "/logs/handshakes"
+      retry_secs: 300
+      dry_run: true
+    webcfg:
+      enabled: false
+      port: 8088
+      allow_unauth: false
+      node_name: "momo"
+      files:
+        - "/logs"
+        - "/etc/momo.yml"
+      backup_location: "/opt/momo_backups"
+      interval: "daily"
+      max_tries: 3
+      exclude:
+        - "*.hccapx"
+        - "*.tmp"
+
+storage:
+  enabled: true
+  max_days: 30
+  max_gb: 5
+  low_space_gb: 1
+  check_interval_secs: 600
+
+supervisor:
+  enabled: true
+  retries_before_passive: 3
+  backoff_initial_secs: 1
+  backoff_cap_secs: 60
+  jitter_frac: 0.2
+  health_check_interval_secs: 5
+  fault_injection: false
+
+aggressive:
+  enabled: false
+  require_ack_env: "MOMO_ACK_AGGR=YES"
+  ssid_whitelist: []
+  bssid_whitelist: []
+  ssid_blacklist: []
+  bssid_blacklist: []
+  max_deauth_per_min: 60
+  max_assoc_per_min: 30
+  burst_len: 5
+  cooldown_secs: 10
+  quiet_hours:
+    start: "22:00"
+    end: "08:00"
+  panic_file: "/tmp/momo.panic"
+  rfkill_on_panic: true
+

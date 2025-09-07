@@ -1,0 +1,14 @@
+/opt/momo/logs/*/*.log {
+    daily
+    rotate 14
+    missingok
+    notifempty
+    compress
+    delaycompress
+    copytruncate
+    postrotate
+        /bin/systemctl kill -s SIGUSR1 momo.service || true
+    endscript
+}
+
+
