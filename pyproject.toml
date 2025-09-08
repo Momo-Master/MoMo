@@ -60,13 +60,26 @@ packages = ["momo"]
 
 
 [tool.ruff]
-line-length = 100
+line-length = 120
 target-version = "py311"
-select = [
-  "E", "F", "I", "UP", "B", "PL", "RUF"
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "PL", "RUF"]
+ignore = ["E501", "PLR2004", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Treat the drop-in plugin directory as vendor-like; ignore noisy rules there.
+"momo/apps/momo_plugins/*.py" = [
+  "E402", "F401", "F403", "F405", "F821", "E701", "E722",
+  "PLR0912", "PLR0915", "UP031", "RUF012", "B019", "E741",
+  "PLW0602", "PLW0603", "PLR0911", "PLC0206", "PLW2901", "B015"
 ]
-ignore = [
-]
+# Allow a helper to accept many arguments for clarity
+"momo/tools/pcap_utils.py" = ["PLR0913"]
+# Tests: allow common test patterns
+"tests/**/*.py" = ["F401"]
+"momo/apps/momo_core/aggressive.py" = ["PLR0913", "PLR0911"]
+"momo/apps/momo_core/main.py" = ["PLR0912", "PLR0915"]
+"momo/cli.py" = ["PLR0915"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["momo"]

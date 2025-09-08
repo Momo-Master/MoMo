@@ -3,10 +3,8 @@ from __future__ import annotations
 import logging
 import os
 import time
-from pathlib import Path
-from typing import Dict
-
 import urllib.request
+from pathlib import Path
 
 _TOTAL = {"success": 0, "error": 0, "skipped": 0, "dryrun": 0}
 _QUEUE_SIZE = 0
@@ -33,7 +31,7 @@ def _scan_queue(queue_dir: Path) -> list[Path]:
     return sorted([p for p in queue_dir.glob("*.22000") if p.is_file()])
 
 
-def init(cfg: Dict) -> None:
+def init(cfg: dict) -> None:
     global _STOP
     upload = bool(cfg.get("upload", False))
     queue_dir = Path(cfg.get("queue_dir", "/logs/handshakes"))

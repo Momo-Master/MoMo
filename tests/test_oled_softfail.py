@@ -1,4 +1,4 @@
-from momo.apps.momo_oled import try_init_display, render_status, OledStatus
+from momo.apps.momo_oled import OledStatus, render_status, try_init_display
 
 
 def test_oled_soft_fail():

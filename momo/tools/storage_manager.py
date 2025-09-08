@@ -6,8 +6,6 @@ import shutil
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Tuple
-
 
 DAY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -23,10 +21,10 @@ class StorageStats:
     duration_seconds: float = 0.0
 
 
-def _safe_day_dirs(base_dir: Path) -> List[Path]:
+def _safe_day_dirs(base_dir: Path) -> list[Path]:
     if not base_dir.exists():
         return []
-    paths: List[Path] = []
+    paths: list[Path] = []
     for entry in base_dir.iterdir():
         if not entry.is_dir() or entry.is_symlink():
             continue
@@ -37,7 +35,7 @@ def _safe_day_dirs(base_dir: Path) -> List[Path]:
 
 def _dir_size(path: Path) -> int:
     total = 0
-    for root, dirs, files in os.walk(path, followlinks=False):
+    for root, _dirs, files in os.walk(path, followlinks=False):
         for f in files:
             try:
                 total += (Path(root) / f).stat().st_size

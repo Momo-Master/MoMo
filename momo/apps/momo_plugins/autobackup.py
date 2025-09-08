@@ -1,14 +1,14 @@
-import threading
-import socket
 import logging
+import socket
+import threading
 from pathlib import Path
 
 try:  # Prefer local drop-in auto_backup.py; fallback to thirdparty path if present
     from .auto_backup import AutoBackup  # type: ignore
-except Exception:  # noqa: BLE001
+except Exception:
     try:
         from ._thirdparty.autobackup_pwn import AutoBackup  # type: ignore
-    except Exception:  # noqa: BLE001
+    except Exception:
         class AutoBackup:  # type: ignore[no-redef]
             def __init__(self) -> None:
                 self.options = {}
@@ -68,9 +68,9 @@ def _worker(agent: _AgentShim, tick_sec: float) -> None:
                 _plugin.on_internet_available(agent)  # type: ignore[attr-defined]
                 RUNS_TOTAL += 1
                 LAST_SUCCESS_TS = __import__("time").time()
-            except Exception as e:  # noqa: BLE001
+            except Exception as e:
                 FAILURES_TOTAL += 1
-                logging.error(f"[autobackup] on_internet_available error: {e}")
+                logging.exception(f"[autobackup] on_internet_available error: {e}")
         _stop.wait(tick_sec)
 
 

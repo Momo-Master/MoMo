@@ -1,4 +1,3 @@
-from pathlib import Path
 
 from momo.apps.momo_core.main import ServiceState
 

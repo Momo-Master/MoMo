@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import subprocess
-from dataclasses import dataclass
-from typing import List
 import os
 import secrets
+import subprocess
+from dataclasses import dataclass
 
 
 @dataclass
@@ -15,7 +14,7 @@ class InterfaceState:
     channel: int | None
 
 
-def _run(cmd: List[str]) -> subprocess.CompletedProcess[str]:
+def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
     try:
         return subprocess.run(cmd, check=True, text=True, capture_output=True)
     except (FileNotFoundError, subprocess.CalledProcessError, OSError):

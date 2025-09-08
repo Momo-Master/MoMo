@@ -1,4 +1,4 @@
-from momo.tools.supervisor import ProcessSupervisor, ChildSpec, PassiveFallback
+from momo.tools.supervisor import ChildSpec, PassiveFallback, ProcessSupervisor
 
 
 def test_backoff_progression_and_fallback(monkeypatch):

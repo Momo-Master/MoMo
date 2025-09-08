@@ -28,8 +28,9 @@ capture:
     whitespace: "_"
 
 web:
-  enabled: false
-  bind_host: 127.0.0.1
+  # First-boot default: enabled and bound to all interfaces; change later if desired.
+  enabled: true
+  bind_host: 0.0.0.0
   bind_port: 8082
   auth:
     token_env: MOMO_UI_TOKEN
@@ -77,6 +78,18 @@ plugins:
       port: 8088
       allow_unauth: false
       node_name: "momo"
+    active_wifi:
+      enabled: false
+      iface: null
+      channels: [1, 6, 11]
+      bssid_whitelist: []
+      ssid_whitelist: []
+      deauth_clients: []
+      beacon_ssids: []
+      pkts_per_second: 50
+      max_runtime_secs: 15
+      cooldown_secs: 10
+      tool: auto
       files:
         - "/logs"
         - "/etc/momo.yml"
@@ -105,6 +118,21 @@ supervisor:
 
 aggressive:
   enabled: false
+
+server:
+  # First-boot defaults: expose on LAN with token; change later if desired.
+  health:
+    enabled: true
+    bind_host: 0.0.0.0
+    port: 8081
+  metrics:
+    enabled: true
+    bind_host: 0.0.0.0
+    port: 9091
+  web:
+    enabled: true
+    bind_host: 0.0.0.0
+    port: 8082
   require_ack_env: "MOMO_ACK_AGGR=YES"
   ssid_whitelist: []
   bssid_whitelist: []

@@ -1,10 +1,11 @@
 import logging
-import subprocess
 import re
+import subprocess
 import time
+
 from flask import abort, render_template_string
-import pwnagotchi.plugins as plugins
-import pwnagotchi.ui.fonts as fonts
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
 
@@ -139,13 +140,13 @@ class BTTether(plugins.Plugin):
     @staticmethod
     def exec_cmd(cmd, args, pattern=None):
         try:
-            result = subprocess.run([cmd] + args, check=True, capture_output=True, text=True)
+            result = subprocess.run([cmd, *args], check=True, capture_output=True, text=True)
             if pattern:
                 return result.stdout.find(pattern)
             return result
         except Exception as exp:
-            logging.error(f"[BT-Tether] Error with {cmd}")
-            logging.error(f"[BT-Tether] Exception : {exp}")
+            logging.exception(f"[BT-Tether] Error with {cmd}")
+            logging.exception(f"[BT-Tether] Exception : {exp}")
             raise exp
 
     def bluetoothctl(self, args, pattern=None):
@@ -183,11 +184,11 @@ class BTTether(plugins.Plugin):
         dns = self.options.get("dns", "8.8.8.8 1.1.1.1")
         if not re.match(DNS_PTTRN, dns):
             if dns == "":
-                logging.error(f"[BT-Tether] Empty DNS setting")
+                logging.error("[BT-Tether] Empty DNS setting")
             else:
                 logging.error(f"[BT-Tether] Wrong DNS setting: '{dns}'")
             return
-        dns = re.sub("[\s,;]+", " ", dns).strip()  # DNS cleaning
+        dns = re.sub(r"[\s,;]+", " ", dns).strip()  # DNS cleaning
 
         try:
             # Configure connection. Metric is set to 200 to prefer connection over USB
@@ -204,35 +205,35 @@ class BTTether(plugins.Plugin):
                     "ipv4.addresses", f"{address}/24",
                     "ipv4.gateway", f"{gateway}",
                     "ipv4.route-metric", "200",
-                ]
+                ],
             )
             # Configure Device to autoconnect
             self.nmcli([
                 "device", "set", f"{self.mac}",
                 "autoconnect", "yes",
-                "managed", "yes"
+                "managed", "yes",
             ])
             self.nmcli(["connection", "reload"])
             self.ready = True
             logging.info(f"[BT-Tether] Connection {self.phone_name} configured")
         except Exception as e:
-            logging.error(f"[BT-Tether] Error while configuring: {e}")
+            logging.exception(f"[BT-Tether] Error while configuring: {e}")
             return
         try:
             time.sleep(5)  # Give some delay to configure before going up
             self.nmcli(["connection", "up", f"{self.phone_name}"])
         except Exception as e:
-            logging.error(f"[BT-Tether] Failed to connect to device: {e}")
-            logging.error(
-                f"[BT-Tether] Failed to connect to device: have you enabled bluetooth tethering on your phone?"
+            logging.exception(f"[BT-Tether] Failed to connect to device: {e}")
+            logging.exception(
+                "[BT-Tether] Failed to connect to device: have you enabled bluetooth tethering on your phone?",
             )
 
     def on_ready(self, agent):
         try:
-            logging.info(f"[BT-Tether] Disabling bettercap's BLE module")
+            logging.info("[BT-Tether] Disabling bettercap's BLE module")
             agent.run("ble.recon off", verbose_errors=False)
-        except Exception as e:
-            logging.info(f"[BT-Tether] Bettercap BLE was already off.")
+        except Exception:
+            logging.info("[BT-Tether] Bettercap BLE was already off.")
 
     def on_unload(self, ui):
         with ui._lock:
@@ -240,7 +241,7 @@ class BTTether(plugins.Plugin):
         try:
             self.nmcli(["connection", "down", f"{self.phone_name}"])
         except Exception as e:
-            logging.error(f"[BT-Tether] Failed to disconnect from device: {e}")
+            logging.exception(f"[BT-Tether] Failed to disconnect from device: {e}")
 
     def on_ui_setup(self, ui):
         with ui._lock:
@@ -271,9 +272,8 @@ class BTTether(plugins.Plugin):
                 ):
                     ui.set("bluetooth", "U")
                     return
-                else:
-                    ui.set("bluetooth", "D")
-                    status = "BT Conn. down"
+                ui.set("bluetooth", "D")
+                status = "BT Conn. down"
 
                 # Checking device
                 if (
@@ -290,7 +290,7 @@ class BTTether(plugins.Plugin):
                     status += "\nBT dev disconn."
                 ui.set("status", status)
             except Exception as e:
-                logging.error(f"[BT-Tether] Error on update: {e}")
+                logging.exception(f"[BT-Tether] Error on update: {e}")
 
     def on_webhook(self, path, request):
         if not self.ready:
@@ -302,19 +302,19 @@ class BTTether(plugins.Plugin):
             try:
                 bluetooth = self.bluetoothctl(["info", self.mac])
                 bluetooth = bluetooth.stdout.replace("\n", "<br>")
-            except Exception as e:
+            except Exception:
                 bluetooth = "Error while checking bluetoothctl"
 
             try:
                 device = self.nmcli(["-w", "0", "device", "show", self.mac])
                 device = device.stdout.replace("\n", "<br>")
-            except Exception as e:
+            except Exception:
                 device = "Error while checking nmcli device"
 
             try:
                 connection = self.nmcli(["-w", "0", "connection", "show", self.phone_name])
                 connection = connection.stdout.replace("\n", "<br>")
-            except Exception as e:
+            except Exception:
                 connection = "Error while checking nmcli connection"
 
             logging.debug(device)

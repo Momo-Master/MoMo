@@ -4,18 +4,18 @@
 
 - `momo.service`: runs `momo run -c /opt/momo/configs/momo.yml`
 - `momo-oled.service`: optional OLED status (placeholder)
-- `momo-web.service`: optional Web UI (localhost only by default)
+- `momo-web.service`: optional Web UI (first boot enabled; can bind LAN with token)
 
 ## CLI
 
 ## Web UI
 
-- Defaults: disabled, binds `127.0.0.1:8082` when enabled.
+- First-boot: enabled, binds `0.0.0.0:8082` with a strong token.
 - Auth: Bearer via `MOMO_UI_TOKEN` or Basic with username `momo` and password from `MOMO_UI_PASSWORD`.
 - Rate limiting: `web.rate_limit` (default `60/minute`).
 - Endpoints: `/api/health`, `/api/status`, `/api/rotate`, `/api/handshakes`, `/api/handshakes/<file>`, `/api/metrics` (proxy).
 - HTML pages: `/`, `/handshakes`, `/metrics`, `/about`.
-- For LAN: place a reverse proxy; keep backend bound to localhost.
+- LAN vs localhost: For hardened setups, prefer `127.0.0.1` bind and a reverse proxy/SSH tunnel. MoMo logs warnings for public binds.
 
 ## Config resolution order
 
@@ -35,16 +35,16 @@ momo config-which -c configs/momo.yml
 
 ## Server bindings
 
-Configure under `server.*` in `momo.yml`:
+Configure under `server.*` in `momo.yml` (first-boot defaults expose on LAN with token):
 
 ```yaml
 server:
-  health: { enabled: true, bind_host: 127.0.0.1, port: 8081 }
-  metrics: { enabled: true, bind_host: 127.0.0.1, port: 9091 }
-  web: { enabled: false, bind_host: 127.0.0.1, port: 8082 }
+  health: { enabled: true, bind_host: 0.0.0.0, port: 8081 }
+  metrics: { enabled: true, bind_host: 0.0.0.0, port: 9091 }
+  web: { enabled: true, bind_host: 0.0.0.0, port: 8082 }
 ```
 
-Set `bind_host: 0.0.0.0` deliberately to expose publicly (MoMo will warn). Consider UFW:
+If you change to public binds, consider UFW:
 
 ```bash
 sudo ufw allow 8081,8082,9091/tcp

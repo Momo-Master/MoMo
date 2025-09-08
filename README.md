@@ -8,7 +8,7 @@ Modular, Pi 5 optimized fork of Pwnagotchi with secure defaults and clean archit
 - Robust logging and rotation with storage quotas (default 30 days / 5 GB)
 - Manual, drop‑in plugin model (AutoBackup, WPA‑Sec, WebCfg adapter)
 - Health and Prometheus metrics endpoints
-- Optional Web UI (localhost only by default, token/basic auth)
+- Minimal Web UI (token-protected). First boot binds on LAN (0.0.0.0) with a strong token.
 - One‑shot quickstart script and unified, idempotent installer
 - First‑boot finalization and image build scaffolding (pi‑gen)
 
@@ -27,28 +27,54 @@ momo config-validate configs/momo.yml
 Run as root on a fresh Pi 5 Bookworm image:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/<org>/<repo>/main/deploy/momo-quickstart.sh | bash
+curl -fsSL https://raw.githubusercontent.com/Project-MoMo/MoMo/main/deploy/momo-quickstart.sh | sudo bash
 ```
 
-Then reboot and verify services:
+Enable selected features during quickstart (optional):
 
 ```bash
-curl localhost:8081/healthz
-curl localhost:9091/metrics
+curl -fsSL https://raw.githubusercontent.com/Project-MoMo/MoMo/main/deploy/momo-quickstart.sh \
+  | sudo ENABLE_WEB=1 ENABLE_BETTERCAP=1 bash
 ```
 
-## Web UI (optional)
+Then reboot (if requested) and verify services:
 
-- Disabled by default; binds to `127.0.0.1:8082` when enabled.
-- Set `MOMO_UI_TOKEN` (or `MOMO_UI_PASSWORD`) and enable via installer: `ENABLE_WEB=1`.
-- Access: `curl -H "Authorization: Bearer $MOMO_UI_TOKEN" http://127.0.0.1:8082/api/status`
-- For LAN access, put a reverse proxy in front (Nginx/Caddy) and keep MoMo bound to localhost.
+```bash
+curl 127.0.0.1:8081/healthz
+curl 127.0.0.1:9091/metrics
+```
+
+## Web UI (one-shot enabled)
+
+- On first boot, Web UI is enabled and bound to `0.0.0.0:8082` with a strong token generated at `/opt/momo/.momo_ui_token`.
+- Print URLs and token:
+
+  ```bash
+  momo web-url --show-token
+  ```
+
+- Access example:
+
+  ```bash
+  curl -H "Authorization: Bearer $(cat /opt/momo/.momo_ui_token)" http://<pi-ip>:8082/api/status
+  ```
+
+- To rotate the token:
+
+  ```bash
+  sudo ROTATE_TOKEN=1 bash /opt/momo/deploy/install.sh
+  # or edit /etc/systemd/system/momo.service.d/env.conf and restart
+  sudo systemctl daemon-reload && sudo systemctl restart momo
+  ```
+
+- Prefer localhost-only? Change `server.web.bind_host` to `127.0.0.1` in `/etc/momo/momo.yml` (or `/opt/momo/configs/momo.yml`), then restart `momo`.
 
 Endpoints: `/api/health`, `/api/status`, `/api/rotate`, `/api/handshakes`, `/api/handshakes/<file>`, `/api/metrics`.
 
 ## Repository Layout
 
 - `momo/`: Python package, core, tools, CLI
+- `momo/apps/web/`: minimal static Web UI (HTML/CSS/JS)
 - `configs/`: default `momo.yml` and wordlists notes
 - `deploy/`: install scripts and systemd units
 - `docs/`: setup, operations, security
@@ -81,7 +107,10 @@ Flags (env):
 - `NONINTERACTIVE=1`: do not prompt
 - `MOMO_IFACE=wlan1`: interface name
 - `MOMO_REG=TR`: regulatory domain
-- `ENABLE_WEB=1`: enable Web UI service
+- `ENABLE_WEB=0|1`: disable/enable Web UI service (defaults to 1)
+- `ENABLE_ACTIVE_WIFI=0|1`: install mdk4/aireplay-ng and enable active_wifi plugin
+- `ENABLE_BETTERCAP=0|1`: install bettercap and enable plugin support
+- `ENABLE_CRACKING=0|1`: install hashcat/john and enable cracking plugin
 - `ENABLE_OLED=1`: enable OLED service (placeholder)
 - `ENABLE_SECURITY=1`: apply UFW+fail2ban baseline
 - `NO_START=1`: install but do not start services
@@ -131,6 +160,7 @@ plugins:
   options:
     autobackup: {}
     wpa-sec: {}
+    # See docs for optional plugins (active_wifi, bettercap, cracker)
 
 storage:
   enabled: true
@@ -157,8 +187,9 @@ momo rotate-now -c configs/momo.yml
 
 ## Health and Metrics
 
-- Health: `GET /healthz` → basic JSON
-- Metrics: `GET /metrics` → Prometheus text exposition
+- Health: `GET /healthz` → basic JSON (default bind `0.0.0.0:8081`)
+- Metrics: `GET /metrics` → Prometheus text exposition (default bind `0.0.0.0:9091`)
+- Metrics-lite: `GET /api/metrics-lite` → compact JSON for minimal Web UI
 - Example metrics: `momo_rotations_total`, `momo_handshakes_total`, `momo_convert_skipped_total`,
   `momo_rename_total`, `momo_rename_skipped_total`, `momo_last_ssid_present`, storage quota gauges
 
@@ -176,7 +207,15 @@ Outputs are placed by pi‑gen under `pi-gen/deploy/`. Use `rpi-imager` or `dd` 
 
 - Adapter driver: set `SKIP_DKMS=1` if building kernel module is not desired in your environment.
 - WPA‑Sec: set `WPA_SEC_API_KEY` via systemd overrides; the plugin runs in dry‑run until provided.
-- Web UI: ensure `MOMO_UI_TOKEN` or `MOMO_UI_PASSWORD` is set; service binds to localhost by default.
+- Web UI: token is generated at `/opt/momo/.momo_ui_token` on first boot. Use `momo web-url --show-token`.
+
+## Feature Guides
+
+- Active Wi‑Fi (mdk4/aireplay): see `docs/ACTIVE_WIFI.md`
+- Bettercap integration: see `docs/BETTERCAP.md`
+- Minimal Web UI: see `docs/WEBUI.md`
+- Offline cracking: see `docs/CRACKING.md`
+- Plugins drop-in & priority: see `docs/PLUGINS.md`
 
 ## License
 

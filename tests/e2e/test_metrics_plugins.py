@@ -29,7 +29,7 @@ def test_metrics_and_plugins_dry_run(tmp_path: Path):
             "--prom-port",
             "9091",
             "--dry-run",
-        ]
+        ],
     )
     try:
         import urllib.request

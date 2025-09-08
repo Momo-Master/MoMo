@@ -1,14 +1,15 @@
 import logging
-import RPi.GPIO as GPIO
 import subprocess
-import pwnagotchi.plugins as plugins
+
+from pwnagotchi import plugins
+from RPi import GPIO
 
 
 class GPIOButtons(plugins.Plugin):
-    __author__ = 'ratmandu@gmail.com'
-    __version__ = '1.0.0'
-    __license__ = 'GPL3'
-    __description__ = 'GPIO Button support plugin'
+    __author__ = "ratmandu@gmail.com"
+    __version__ = "1.0.0"
+    __license__ = "GPL3"
+    __description__ = "GPIO Button support plugin"
 
     def __init__(self):
         self.running = False
@@ -27,7 +28,7 @@ class GPIOButtons(plugins.Plugin):
         logging.info("GPIO Button plugin loaded.")
 
         # get list of GPIOs
-        gpios = self.options['gpios']
+        gpios = self.options["gpios"]
 
         # set gpio numbering
         GPIO.setmode(GPIO.BCM)

@@ -8,18 +8,18 @@ from __future__ import annotations
 import importlib
 import pkgutil
 from dataclasses import dataclass
-from typing import Any, List, Protocol
+from typing import Any, Protocol
 
 
 class Plugin(Protocol):
-    def on_start(self, cfg: Any) -> None: ...  # noqa: D401,E701
-    def on_event(self, event: Any) -> None: ...  # noqa: D401,E701
+    def on_start(self, cfg: Any) -> None: ...
+    def on_event(self, event: Any) -> None: ...
 
 
 @dataclass
 class PluginManager:
     package: str = "momo.apps.momo_plugins"
-    plugins: List[tuple[str, Plugin]] | None = None
+    plugins: list[tuple[str, Plugin]] | None = None
 
     def discover(self) -> None:
         self.plugins = []
@@ -42,7 +42,7 @@ class PluginManager:
         for _name, p in self.plugins:
             try:
                 p.on_start(cfg)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
 
     def dispatch(self, event: Any) -> None:
@@ -51,19 +51,19 @@ class PluginManager:
         for _name, p in self.plugins:
             try:
                 p.on_event(event)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 continue
 
     def filter_enabled(self, cfg: Any) -> None:
         if not self.plugins:
             return
-        enabled: List[tuple[str, Plugin]] = []
+        enabled: list[tuple[str, Plugin]] = []
         for name, plugin in self.plugins:
             try:
                 toggle = getattr(cfg.plugins, name)
                 if getattr(toggle, "enabled", False):
                     # Pass options to plugin if it accepts them (optional feature)
-                    setattr(plugin, "options", getattr(toggle, "options", {}))
+                    plugin.options = getattr(toggle, "options", {})
                     enabled.append((name, plugin))
             except Exception:
                 continue

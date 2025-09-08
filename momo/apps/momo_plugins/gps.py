@@ -2,8 +2,8 @@ import json
 import logging
 import os
 
-import pwnagotchi.plugins as plugins
-import pwnagotchi.ui.fonts as fonts
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
 
@@ -28,13 +28,12 @@ class GPS(plugins.Plugin):
     def on_ready(self, agent):
         if os.path.exists(self.options["device"]) or ":" in self.options["device"]:
             logging.info(
-                f"enabling bettercap's gps module for {self.options['device']}"
+                f"enabling bettercap's gps module for {self.options['device']}",
             )
             try:
                 agent.run("gps off")
             except Exception:
-                logging.info(f"bettercap gps module was already off")
-                pass
+                logging.info("bettercap gps module was already off")
 
             agent.run(f"set gps.device {self.options['device']}")
             agent.run(f"set gps.baudrate {self.options['speed']}")
@@ -52,10 +51,10 @@ class GPS(plugins.Plugin):
 
             if self.coordinates and all([
                 # avoid 0.000... measurements
-                self.coordinates["Latitude"], self.coordinates["Longitude"]
+                self.coordinates["Latitude"], self.coordinates["Longitude"],
             ]):
                 logging.info(f"saving GPS to {gps_filename} ({self.coordinates})")
-                with open(gps_filename, "w+t") as fp:
+                with open(gps_filename, "w+") as fp:
                     json.dump(self.coordinates, fp)
             else:
                 logging.info("not saving GPS. Couldn't find location.")
@@ -63,14 +62,14 @@ class GPS(plugins.Plugin):
     def on_ui_setup(self, ui):
         try:
             # Configure line_spacing
-            line_spacing = int(self.options['linespacing'])
+            line_spacing = int(self.options["linespacing"])
         except Exception:
             # Set default value
             line_spacing = self.LINE_SPACING
 
         try:
             # Configure position
-            pos = self.options['position'].split(',')
+            pos = self.options["position"].split(",")
             pos = [int(x.strip()) for x in pos]
             lat_pos = (pos[0] + 5, pos[1])
             lon_pos = (pos[0], pos[1] + line_spacing)
@@ -147,15 +146,15 @@ class GPS(plugins.Plugin):
 
     def on_unload(self, ui):
         with ui._lock:
-            ui.remove_element('latitude')
-            ui.remove_element('longitude')
-            ui.remove_element('altitude')
+            ui.remove_element("latitude")
+            ui.remove_element("longitude")
+            ui.remove_element("altitude")
 
     def on_ui_update(self, ui):
         with ui._lock:
             if self.coordinates and all([
                 # avoid 0.000... measurements
-                self.coordinates["Latitude"], self.coordinates["Longitude"]
+                self.coordinates["Latitude"], self.coordinates["Longitude"],
             ]):
                 # last char is sometimes not completely drawn ¯\_(ツ)_/¯
                 # using an ending-whitespace as workaround on each line

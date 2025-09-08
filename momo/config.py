@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from enum import Enum
 import os
+from enum import Enum
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field, ValidationError, field_validator
@@ -28,7 +28,7 @@ class LoggingConfig(BaseModel):
 
     @field_validator("base_dir")
     @classmethod
-    def _expand_base_dir(cls, value: Path) -> Path:  # noqa: N805
+    def _expand_base_dir(cls, value: Path) -> Path:
         return value.expanduser()
 
 
@@ -36,12 +36,12 @@ class InterfaceConfig(BaseModel):
     name: str = Field("wlan0")
     mac_randomization: bool = Field(True)
     channel_hop: bool = Field(True)
-    channels: List[int] = Field(default_factory=lambda: list(range(1, 14)))
+    channels: list[int] = Field(default_factory=lambda: list(range(1, 14)))
     regulatory_domain: str = Field("US")
 
     @field_validator("channels")
     @classmethod
-    def _validate_channels(cls, value: List[int]) -> List[int]:  # noqa: N805
+    def _validate_channels(cls, value: list[int]) -> list[int]:
         if not value:
             raise ValueError("channels cannot be empty")
         for channel in value:
@@ -62,7 +62,7 @@ class CaptureConfig(BaseModel):
     rotate_on_size: bool = Field(True)
     rotate_on_time: bool = Field(True)
     tools: CaptureToolsConfig = Field(default_factory=CaptureToolsConfig)
-    adapters: List[str] = Field(default_factory=list)
+    adapters: list[str] = Field(default_factory=list)
     enable_on_windows: bool = Field(True)
     simulate_bytes_per_file: int = Field(16384, ge=0)
     simulate_dwell_secs: int = Field(2, ge=0)
@@ -91,8 +91,8 @@ class OledConfig(BaseModel):
 
 
 class SecurityConfig(BaseModel):
-    whitelist_bssids: List[str] = Field(default_factory=list)
-    blacklist_bssids: List[str] = Field(default_factory=list)
+    whitelist_bssids: list[str] = Field(default_factory=list)
+    blacklist_bssids: list[str] = Field(default_factory=list)
 
 
 class StatsConfig(BaseModel):
@@ -126,7 +126,7 @@ class SupervisorConfig(BaseModel):
 
     @field_validator("backoff_cap_secs")
     @classmethod
-    def _cap_not_less_than_initial(cls, value: int, info: Any) -> int:  # noqa: ANN401,N805
+    def _cap_not_less_than_initial(cls, value: int, info: Any) -> int:
         initial = info.data.get("backoff_initial_secs", 1)  # type: ignore[assignment]
         if value < initial:
             raise ValueError("backoff_cap_secs must be >= backoff_initial_secs")
@@ -134,12 +134,12 @@ class SupervisorConfig(BaseModel):
 
 
 class AggressiveQuietHours(BaseModel):
-    start: Optional[str] = None
-    end: Optional[str] = None
+    start: str | None = None
+    end: str | None = None
 
     @field_validator("start", "end")
     @classmethod
-    def _validate_hhmm(cls, value: Optional[str]) -> Optional[str]:  # noqa: N805
+    def _validate_hhmm(cls, value: str | None) -> str | None:
         if value is None:
             return value
         import re
@@ -152,10 +152,10 @@ class AggressiveQuietHours(BaseModel):
 class AggressiveConfig(BaseModel):
     enabled: bool = Field(False)
     require_ack_env: str = Field("MOMO_ACK_AGGR=YES")
-    ssid_whitelist: List[str] = Field(default_factory=list)
-    bssid_whitelist: List[str] = Field(default_factory=list)
-    ssid_blacklist: List[str] = Field(default_factory=list)
-    bssid_blacklist: List[str] = Field(default_factory=list)
+    ssid_whitelist: list[str] = Field(default_factory=list)
+    bssid_whitelist: list[str] = Field(default_factory=list)
+    ssid_blacklist: list[str] = Field(default_factory=list)
+    bssid_blacklist: list[str] = Field(default_factory=list)
     max_deauth_per_min: int = Field(60, gt=0)
     max_assoc_per_min: int = Field(30, gt=0)
     burst_len: int = Field(5, ge=1)
@@ -166,7 +166,7 @@ class AggressiveConfig(BaseModel):
 
     @field_validator("bssid_whitelist", "bssid_blacklist")
     @classmethod
-    def _validate_bssids(cls, value: List[str]) -> List[str]:  # noqa: N805
+    def _validate_bssids(cls, value: list[str]) -> list[str]:
         import re
 
         mac_re = re.compile(r"^[0-9A-Fa-f]{2}(:[0-9A-Fa-f]{2}){5}$")
@@ -176,8 +176,9 @@ class AggressiveConfig(BaseModel):
         return [m.upper() for m in value]
 
 class PluginsConfig(BaseModel):
-    enabled: List[str] = Field(default_factory=list)
-    options: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
+    enabled: list[str] = Field(default_factory=list)
+    options: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    priority: dict[str, int] = Field(default_factory=dict)
 
 
 class WebAuthConfig(BaseModel):
@@ -199,7 +200,7 @@ class WebConfig(BaseModel):
 
     @field_validator("bind_host")
     @classmethod
-    def _validate_host(cls, value: str) -> str:  # noqa: N805
+    def _validate_host(cls, value: str) -> str:
         if not value or any(c.isspace() for c in value):
             raise ValueError("bind_host must be a valid hostname or IP")
         return value
@@ -227,7 +228,7 @@ class MomoConfig(BaseModel):
 
         @field_validator("bind_host")
         @classmethod
-        def _validate_host(cls, value: str) -> str:  # noqa: N805
+        def _validate_host(cls, value: str) -> str:
             if not value or any(c.isspace() for c in value):
                 raise ValueError("bind_host must be a valid hostname or IP")
             return value

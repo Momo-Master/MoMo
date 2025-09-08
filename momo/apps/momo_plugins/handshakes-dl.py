@@ -1,16 +1,12 @@
 import glob
-import json
 import logging
 import os
 import zipfile
 from io import BytesIO
 
 import pwnagotchi
-import pwnagotchi.plugins as plugins
-from flask import abort
-from flask import render_template_string
-from flask import send_file
-from flask import send_from_directory
+from flask import abort, render_template_string, send_file, send_from_directory
+from pwnagotchi import plugins
 
 TEMPLATE = """
 {% extends "base.html" %}
@@ -98,8 +94,8 @@ class HandshakesDL(plugins.Plugin):
                 title="Handshakes | " + pwnagotchi.name(),
                 handshakes=handshakes,
             )
-        elif path == "all":
-            logging.info(f"[HandshakesDL] creating Zip-File in memory")
+        if path == "all":
+            logging.info("[HandshakesDL] creating Zip-File in memory")
             memory_file = BytesIO()
             with zipfile.ZipFile(memory_file, "w") as zf:
                 files = glob.glob(
@@ -109,19 +105,18 @@ class HandshakesDL(plugins.Plugin):
                     for individualFile in files:
                         zf.write(individualFile)
                 except Exception as e:
-                    logging.error(f"[HandshakesDL] {e}")
+                    logging.exception(f"[HandshakesDL] {e}")
                     abort(404)
             memory_file.seek(0)
-            logging.info(f"[HandshakesDL] serving handshakes.zip")
+            logging.info("[HandshakesDL] serving handshakes.zip")
             return send_file(memory_file,
                              attachment_filename="handshakes.zip",
                              as_attachment=True)
-        else:
-            dir = self.config["bettercap"]["handshakes"]
-            try:
-                logging.info(f"[HandshakesDL] serving {dir}/{path}.pcap")
-                return send_from_directory(directory=dir,
-                                           path=path + ".pcap",
-                                           as_attachment=True)
-            except FileNotFoundError:
-                abort(404)
+        dir = self.config["bettercap"]["handshakes"]
+        try:
+            logging.info(f"[HandshakesDL] serving {dir}/{path}.pcap")
+            return send_from_directory(directory=dir,
+                                       path=path + ".pcap",
+                                       as_attachment=True)
+        except FileNotFoundError:
+            abort(404)

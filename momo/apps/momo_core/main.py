@@ -1,36 +1,34 @@
 from __future__ import annotations
 
-import subprocess
-import time
-from pathlib import Path
-from typing import Iterable
-import threading
 import json
 import os
-import signal
-import psutil
-import shutil
 import platform
+import shutil
+import signal
+import subprocess
+import threading
+import time
+from collections.abc import Iterable
+from pathlib import Path
 
+import psutil
 from rich.console import Console
 
-from ...config import MomoConfig
+from ...config import ModeEnum, MomoConfig
 from ...tools.iface_utils import randomize_mac, set_channel, set_monitor_mode, set_regulatory_domain
 from ...tools.pcap_utils import (
-    iso_date_folder,
-    next_capture_path,
-    rotate_files,
     convert_to_hashcat_22000,
     extract_primary_network,
+    iso_date_folder,
     make_safe_filename,
     rename_with_collision_guard,
+    rotate_files,
 )
 from ...tools.storage_manager import enforce_quota
-from ..momo_plugins.registry import load_enabled_plugins
+from ...tools.supervisor import ChildSpec, PassiveFallback, ProcessSupervisor
 from ..momo_core.bettercap import build_bettercap_args
-from ...config import ModeEnum
-from ...tools.supervisor import ProcessSupervisor, ChildSpec, PassiveFallback
 from ..momo_oled import OledStatus, render_status, try_init_display
+from ..momo_plugins.registry import load_enabled_plugins
 from ..momo_web import create_app as create_web_app
 
 console = Console()
@@ -55,6 +53,9 @@ class ServiceState:
         # simulation/conversion metrics
         self.capture_simulated_total: int = 0
         self.convert_skipped_total: int = 0
+        self.convert_skipped_tool_missing_total: int = 0
+        self.convert_skipped_too_small_total: int = 0
+        self.convert_skipped_dry_run_total: int = 0
         self.convert_total: int = 0
         self.convert_failed_total: int = 0
         self.last_capture_seq: int = 0
@@ -121,7 +122,7 @@ class HcxRunner:
                 time.sleep(0.2)
             return 0
         cmd = self._hcx_cmd(out_path)
-        process = subprocess.Popen(cmd)  # noqa: S603
+        process = subprocess.Popen(cmd)
         try:
             end = time.time() + duration_sec
             while time.time() < end:
@@ -132,7 +133,7 @@ class HcxRunner:
             process.terminate()
             try:
                 process.wait(timeout=5)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 process.kill()
         return process.returncode or 0
 
@@ -171,6 +172,24 @@ def service_loop(
     signal.signal(signal.SIGINT, _sigterm)
     signal.signal(signal.SIGTERM, _sigterm)
 
+    # Start servers per config bindings (early)
+    if cfg.server.health.enabled:
+        if cfg.server.health.bind_host == "0.0.0.0":
+            console.log(f"WARNING: Health server listening on http://0.0.0.0:{cfg.server.health.port}/healthz")
+        elif cfg.server.health.bind_host == "127.0.0.1":
+            console.log("WARNING: Health is bound to 127.0.0.1; remote access will not work")
+        else:
+            console.log(f"Health server listening on http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz")
+        _start_health_server_in_thread(cfg, state, cfg.server.health.bind_host, cfg.server.health.port)
+    if cfg.server.metrics.enabled:
+        if cfg.server.metrics.bind_host == "0.0.0.0":
+            console.log(f"WARNING: Metrics server listening on http://0.0.0.0:{cfg.server.metrics.port}/metrics")
+        elif cfg.server.metrics.bind_host == "127.0.0.1":
+            console.log("WARNING: Metrics is bound to 127.0.0.1; remote access will not work")
+        else:
+            console.log(f"Metrics server listening on http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics")
+        _start_prometheus_server_in_thread(cfg, state, cfg.server.metrics.bind_host, cfg.server.metrics.port)
+
     if not dry_run and not IS_WINDOWS:
         console.log("Applying regulatory domain")
         set_regulatory_domain(cfg.interface.regulatory_domain)
@@ -180,18 +199,22 @@ def service_loop(
         console.log("Setting interface to monitor mode")
         set_monitor_mode(cfg.interface.name)
     else:
-        console.log("Skipping RF/iface setup (dry-run/Windows)")
+        console.log("[dry-run] RF setup skipped; writing simulated captures")
     ensure_dirs(cfg)
     runner = HcxRunner(cfg, state=state, dry_run=dry_run)
     # Manual drop-in plugin model
     shutdownables: list[object] = []
     try:
+        # Expose dry-run to plugins via env for safety
+        if dry_run:
+            os.environ["MOMO_DRY_RUN"] = "1"
         loaded_names, shutdownables = load_enabled_plugins(
             enabled=getattr(cfg.plugins, "enabled", []),
             options=getattr(cfg.plugins, "options", {}),
+            global_cfg=cfg,
         )
         state.plugins_enabled_count = len(loaded_names)
-    except Exception:  # noqa: BLE001
+    except Exception:
         state.plugins_enabled_count = 0
     oled_device = try_init_display() if cfg.oled.enabled else None
 
@@ -219,21 +242,6 @@ def service_loop(
     cfg.meta_dir.mkdir(parents=True, exist_ok=True)
     (cfg.meta_dir / "momo.pid").write_text(str(os.getpid()), encoding="utf-8")
 
-    # health server
-    # Start servers per config bindings
-    if cfg.server.health.enabled:
-        if cfg.server.health.bind_host == "0.0.0.0":
-            console.log(f"WARNING: Health binding is public at http://0.0.0.0:{cfg.server.health.port}")
-        else:
-            console.log(f"Health: http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz")
-        _start_health_server_in_thread(cfg, state, cfg.server.health.bind_host, cfg.server.health.port)
-    if cfg.server.metrics.enabled:
-        if cfg.server.metrics.bind_host == "0.0.0.0":
-            console.log(f"WARNING: Metrics binding is public at http://0.0.0.0:{cfg.server.metrics.port}")
-        else:
-            console.log(f"Metrics: http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics")
-        _start_prometheus_server_in_thread(cfg, state, cfg.server.metrics.bind_host, cfg.server.metrics.port)
-
     # Start Web UI if enabled
     if hasattr(cfg, "web") and cfg.web.enabled:
         try:
@@ -241,8 +249,10 @@ def service_loop(
             def _run_web():
                 app.run(host=cfg.web.bind_host, port=cfg.web.bind_port, threaded=True)
             threading.Thread(target=_run_web, daemon=True).start()
-            console.log(f"Web UI listening on http://{cfg.web.bind_host}:{cfg.web.bind_port}")
-        except Exception as e:  # noqa: BLE001
+            console.log(f"Web UI listening on http://{cfg.web.bind_host}:{cfg.web.bind_port}/ (token at /opt/momo/.momo_ui_token)")
+            if cfg.web.bind_host == "127.0.0.1":
+                console.log("WARNING: Web UI bound to 127.0.0.1; remote access will not work")
+        except Exception as e:
             console.log(f"Web UI failed to start: {e}")
 
     end_time = time.time() + runtime_minutes * 60
@@ -396,9 +406,9 @@ def service_loop(
         state.storage_total_bytes = sstats.total_bytes  # type: ignore[attr-defined]
         state.storage_free_bytes = sstats.free_bytes  # type: ignore[attr-defined]
         state.storage_low_space = sstats.low_space  # type: ignore[attr-defined]
-        state.storage_quota_events = getattr(state, 'storage_quota_events', 0) + sstats.quota_events_total  # type: ignore[attr-defined]
-        state.storage_pruned_days = getattr(state, 'storage_pruned_days', 0) + sstats.pruned_days_total  # type: ignore[attr-defined]
-        state.storage_low_space_warnings = getattr(state, 'storage_low_space_warnings', 0) + sstats.low_space_warnings_total  # type: ignore[attr-defined]
+        state.storage_quota_events = getattr(state, "storage_quota_events", 0) + sstats.quota_events_total  # type: ignore[attr-defined]
+        state.storage_pruned_days = getattr(state, "storage_pruned_days", 0) + sstats.pruned_days_total  # type: ignore[attr-defined]
+        state.storage_low_space_warnings = getattr(state, "storage_low_space_warnings", 0) + sstats.low_space_warnings_total  # type: ignore[attr-defined]
 
         if oled_device is not None:
             status = OledStatus(
@@ -426,7 +436,7 @@ def service_loop(
     # shutdown plugins
     for mod in shutdownables:
         try:
-            getattr(mod, "shutdown")()
+            mod.shutdown()
         except Exception:
             pass
     try:
@@ -440,7 +450,7 @@ def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, host: s
     import socketserver
 
     class Handler(http.server.BaseHTTPRequestHandler):  # type: ignore[misc]
-        def do_GET(self):  # noqa: N802
+        def do_GET(self):
             if self.path != "/healthz":
                 self.send_response(404)
                 self.end_headers()
@@ -455,8 +465,8 @@ def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, host: s
                 "dry_run": bool(os.name == "nt" or cfg.mode == ModeEnum.PASSIVE),
                 "platform": platform.system(),
                 "storage": {
-                    "low_space": bool(getattr(state, 'storage_low_space', False)),
-                    "free_gb": round((getattr(state, 'storage_free_bytes', 0) / (1024 ** 3)), 2),
+                    "low_space": bool(getattr(state, "storage_low_space", False)),
+                    "free_gb": round((getattr(state, "storage_free_bytes", 0) / (1024 ** 3)), 2),
                 },
             }).encode()
             self.send_response(200)
@@ -465,7 +475,7 @@ def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, host: s
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, format, *args):  # noqa: A003
+        def log_message(self, format, *args):
             return
 
     def _serve():
@@ -484,7 +494,7 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, hos
     import socketserver
 
     class Handler(http.server.BaseHTTPRequestHandler):  # type: ignore[misc]
-        def do_GET(self):  # noqa: N802
+        def do_GET(self):
             if self.path != "/metrics":
                 self.send_response(404)
                 self.end_headers()
@@ -507,6 +517,18 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, hos
             lines.append("# HELP momo_plugins_enabled Count of enabled plugins")
             lines.append("# TYPE momo_plugins_enabled gauge")
             lines.append(f"momo_plugins_enabled {state.plugins_enabled_count}")
+            # Web UI metrics
+            try:
+                enabled = 1 if getattr(cfg.web, "enabled", False) else 0
+                lines.append("# HELP momo_webui_enabled Web UI enabled flag")
+                lines.append("# TYPE momo_webui_enabled gauge")
+                lines.append(f"momo_webui_enabled {enabled}")
+                local_only = 1 if getattr(cfg.web, "bind_host", "127.0.0.1") == "127.0.0.1" else 0
+                lines.append("# HELP momo_bind_local_only Whether Web UI is bound to localhost only")
+                lines.append("# TYPE momo_bind_local_only gauge")
+                lines.append(f"momo_bind_local_only {local_only}")
+            except Exception:
+                pass
             # Simulation/convert custom metrics
             lines.append("# HELP momo_capture_simulated_total Simulated captures under dry-run/Windows")
             lines.append("# TYPE momo_capture_simulated_total counter")
@@ -534,7 +556,7 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, hos
             lines.append("# TYPE momo_last_ssid_present gauge")
             lines.append(f"momo_last_ssid_present {getattr(state, 'last_ssid_present', 0)}")
             # Storage metrics
-            if hasattr(state, 'storage_total_bytes'):
+            if hasattr(state, "storage_total_bytes"):
                 lines.append("# HELP momo_logs_bytes_total Total bytes under logs directory")
                 lines.append("# TYPE momo_logs_bytes_total gauge")
                 lines.append(f"momo_logs_bytes_total {getattr(state, 'storage_total_bytes', 0)}")
@@ -571,23 +593,23 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, hos
                 lines.append("# HELP momo_child_restarts_total Restarts per child process")
                 lines.append("# TYPE momo_child_restarts_total counter")
                 for name, val in state.child_restarts_total.items():
-                    lines.append(f"momo_child_restarts_total{{proc=\"{name}\"}} {val}")
+                    lines.append(f'momo_child_restarts_total{{proc="{name}"}} {val}')
             if state.child_failures_total:
                 lines.append("# HELP momo_child_failures_total Failures per child process")
                 lines.append("# TYPE momo_child_failures_total counter")
                 for name, val in state.child_failures_total.items():
-                    lines.append(f"momo_child_failures_total{{proc=\"{name}\"}} {val}")
+                    lines.append(f'momo_child_failures_total{{proc="{name}"}} {val}')
             if state.child_backoff_seconds:
                 lines.append("# HELP momo_supervisor_backoff_seconds Current backoff per child process")
                 lines.append("# TYPE momo_supervisor_backoff_seconds gauge")
                 for name, val in state.child_backoff_seconds.items():
-                    lines.append(f"momo_supervisor_backoff_seconds{{proc=\"{name}\"}} {val}")
+                    lines.append(f'momo_supervisor_backoff_seconds{{proc="{name}"}} {val}')
             # Mode gauges
             lines.append("# HELP momo_mode Current runtime mode")
             lines.append("# TYPE momo_mode gauge")
             for m in ("passive", "semi", "aggressive"):
                 val = 1 if cfg.mode.value == m else 0
-                lines.append(f"momo_mode{{mode=\"{m}\"}} {val}")
+                lines.append(f'momo_mode{{mode="{m}"}} {val}')
             body = ("\n".join(lines) + "\n").encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/plain; version=0.0.4")
@@ -595,7 +617,7 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, hos
             self.end_headers()
             self.wfile.write(body)
 
-        def log_message(self, format, *args):  # noqa: A003
+        def log_message(self, format, *args):
             return
 
     def _serve():

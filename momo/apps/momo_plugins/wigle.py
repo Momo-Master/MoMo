@@ -1,32 +1,30 @@
-import os
-import logging
-import json
 import csv
-import requests
-import pwnagotchi
+import json
+import logging
+import os
 import re
-from glob import glob
-from threading import Lock
-from io import StringIO
-from datetime import datetime, UTC
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from glob import glob
+from io import StringIO
+from threading import Lock
 
+import pwnagotchi
+import requests
 from flask import make_response, redirect
-from pwnagotchi.utils import (
-    WifiInfo,
-    FieldNotFoundError,
-    extract_from_pcap,
-    StatusFile,
-    remove_whitelisted,
-)
 from pwnagotchi import plugins
-from pwnagotchi.plugins.default.cache import read_ap_cache
 from pwnagotchi._version import __version__ as __pwnagotchi_version__
-
-import pwnagotchi.ui.fonts as fonts
+from pwnagotchi.plugins.default.cache import read_ap_cache
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import Text
 from pwnagotchi.ui.view import BLACK
-
+from pwnagotchi.utils import (
+    FieldNotFoundError,
+    StatusFile,
+    WifiInfo,
+    extract_from_pcap,
+    remove_whitelisted,
+)
 from scapy.all import Scapy_Exception
 
 
@@ -120,13 +118,12 @@ class Wigle(plugins.Plugin):
 
     @staticmethod
     def extract_gps_data(path):
-        """
-        Extract data from gps-file
+        """Extract data from gps-file
         return json-obj
         """
         try:
             if path.endswith(".geo.json"):
-                with open(path, "r") as json_file:
+                with open(path) as json_file:
                     tempJson = json.load(json_file)
                     d = datetime.fromtimestamp(int(tempJson["ts"]), tz=UTC)
                     return {
@@ -136,7 +133,7 @@ class Wigle(plugins.Plugin):
                         "Accuracy": tempJson["accuracy"],
                         "Updated": d.strftime("%Y-%m-%dT%H:%M:%S.%f"),
                     }
-            with open(path, "r") as json_file:
+            with open(path) as json_file:
                 return json.load(json_file)
         except (OSError, json.JSONDecodeError) as exp:
             raise exp
@@ -196,17 +193,17 @@ class Wigle(plugins.Plugin):
         content.write(
             f"WigleWifi-1.6,appRelease={self.__version__},model=pwnagotchi,release={__pwnagotchi_version__},"
             f"device={pwnagotchi.name()},display=kismet,board=RaspberryPi,brand=pwnagotchi,star=Sol,body=3,subBody=0\n"
-            f"MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type\n"
+            f"MAC,SSID,AuthMode,FirstSeen,Channel,Frequency,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,RCOIs,MfgrId,Type\n",
         )
         writer = csv.writer(content, delimiter=",", quoting=csv.QUOTE_NONE, escapechar="\\")
         for gps_data, pcap_data in data:  # write WIFIs
             try:
                 timestamp = datetime.strptime(
-                    gps_data["Updated"].rsplit(".")[0], "%Y-%m-%dT%H:%M:%S"
+                    gps_data["Updated"].rsplit(".")[0], "%Y-%m-%dT%H:%M:%S",
                 ).strftime("%Y-%m-%d %H:%M:%S")
             except ValueError:
                 timestamp = datetime.strptime(
-                    gps_data["Updated"].rsplit(".")[0], "%Y-%m-%d %H:%M:%S"
+                    gps_data["Updated"].rsplit(".")[0], "%Y-%m-%d %H:%M:%S",
                 ).strftime("%Y-%m-%d %H:%M:%S")
             writer.writerow(
                 [
@@ -224,7 +221,7 @@ class Wigle(plugins.Plugin):
                     "",  # RCOIs to populate
                     "",  # MfgrId always empty
                     "WIFI",
-                ]
+                ],
             )
         content.seek(0)
         return filename, content
@@ -238,7 +235,7 @@ class Wigle(plugins.Plugin):
             with open(filename, mode="w") as f:
                 f.write(cvs_content.getvalue())
         except Exception as exp:
-            logging.error(f"[WIGLE] Error while writing CSV file(skipping): {exp}")
+            logging.exception(f"[WIGLE] Error while writing CSV file(skipping): {exp}")
 
     def post_wigle(self, reported, cvs_filename, cvs_content, no_err_entries):
         try:
@@ -294,7 +291,7 @@ class Wigle(plugins.Plugin):
                 },
                 timeout=self.timeout,
             ).json()
-        except (requests.exceptions.RequestException, OSError) as exp:
+        except (requests.exceptions.RequestException, OSError):
             return None
 
     def get_user_statistics(self):

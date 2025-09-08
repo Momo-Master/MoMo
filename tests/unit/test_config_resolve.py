@@ -1,5 +1,3 @@
-from pathlib import Path
-import os
 from momo.config import resolve_config_path
 
 

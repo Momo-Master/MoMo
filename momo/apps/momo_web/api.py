@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from flask import Blueprint, current_app, send_file, request, abort, Response
+
+from flask import Blueprint, Response, abort, current_app, send_file
 
 from ...config import MomoConfig
-from .auth import require_auth, require_app_auth
+from .auth import require_app_auth
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -49,7 +50,8 @@ def status() -> Response:
 def rotate() -> Response:
     # Signal-based rotate: write magic file watched by core or send USR1 if available
     try:
-        import signal, os
+        import os
+        import signal
 
         if hasattr(signal, "SIGUSR1"):
             pidfile = _cfg().meta_dir / "momo.pid"
@@ -107,5 +109,26 @@ def metrics_proxy() -> Response:
                 pass
     except Exception:
         return Response("# momo metrics unavailable\n", status=502, headers={"Connection": "close"})
+
+
+@api_bp.get("/metrics-lite")
+def metrics_lite() -> Response:
+    cfg = _cfg()
+    meta = cfg.meta_dir / "stats.json"
+    base = {"mode": cfg.mode.value}
+    try:
+        text = meta.read_text(encoding="utf-8") if meta.exists() else "{}"
+        data = json.loads(text or "{}")
+    except Exception:
+        data = {}
+    lite = {
+        "mode": base["mode"],
+        "handshakes": data.get("files", 0),
+        "rotations": data.get("files", 0),
+        "last_ssid_present": data.get("last_ssid_present", 0),
+        "temp": data.get("temp"),
+        "free_gb": data.get("free_gb"),
+    }
+    return Response(json.dumps(lite), mimetype="application/json")
 
 

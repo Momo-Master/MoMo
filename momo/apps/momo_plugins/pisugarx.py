@@ -1,21 +1,21 @@
+import itertools
 import logging
-
-from pwnagotchi.ui.components import LabeledValue
-from pwnagotchi.ui.view import BLACK
-import pwnagotchi.ui.fonts as fonts
-import pwnagotchi.plugins as plugins
-import pwnagotchi
+import threading
 import time
-import smbus
-from flask import abort
-from flask import render_template_string
 from collections import deque
 
-import threading
+import pwnagotchi
+import smbus
+from flask import abort, render_template_string
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
+from pwnagotchi.ui.components import LabeledValue
+from pwnagotchi.ui.view import BLACK
+
 PiSugar_addresses = {
     "PiSugar2": 0x75,  # PiSugar2\2Plus
     "PiSugar3": 0x57,  # PiSugar3\3Plus
-    "PiSugar2 RTC": 0x32  # PiSugar2\2Plus RTC
+    "PiSugar2 RTC": 0x32,  # PiSugar2\2Plus RTC
 }
 
 # Use the same battery level curve as pisugar-power-manager
@@ -47,8 +47,7 @@ curve5209 = [
 
 class PiSugarServer:
     def __init__(self):
-        """
-        PiSugar initialization, if unable to connect to any version of PiSugar, return false
+        """PiSugar initialization, if unable to connect to any version of PiSugar, return false
         """
         self._bus = smbus.SMBus(1)
         self.ready = False
@@ -72,8 +71,7 @@ class PiSugarServer:
         self.connection_thread.start()
 
     def _connect_device(self):
-        """
-        Attempt to connect to the PiSugar device in a background thread.
+        """Attempt to connect to the PiSugar device in a background thread.
         """
         while self.model is None:
             if self.check_device(PiSugar_addresses["PiSugar2"]) is not None:
@@ -84,13 +82,13 @@ class PiSugarServer:
                     self.model = "PiSugar2"
                 self.device_init()
             elif self.check_device(PiSugar_addresses["PiSugar3"]) is not None:
-                self.model = 'PiSugar3'
+                self.model = "PiSugar3"
                 self.address = PiSugar_addresses["PiSugar3"]
                 self.device_init()
             else:
                 self.model = None
                 logging.info(
-                    "No PiSugar device was found. Please check if the PiSugar device is powered on."
+                    "No PiSugar device was found. Please check if the PiSugar device is powered on.",
                 )
                 time.sleep(5)
         logging.info(f"{self.model} is connected")
@@ -111,7 +109,7 @@ class PiSugarServer:
         """Update PiSugar status every three seconds, including triggering auto shutdown"""
         while True:
             try:
-                if self.model == 'PiSugar2' or self.model == 'PiSugar2Plus':
+                if self.model in {"PiSugar2", "PiSugar2Plus"}:
                     self.set_battery_notallow_charging()  # Temporarily disable charging to get accurate battery voltage
                     time.sleep(0.05)
                 self.i2creg = []
@@ -128,7 +126,7 @@ class PiSugarServer:
                     time.sleep(0.1)
                 logging.debug(f"Data length: {len(self.i2creg)}")
                 logging.debug(f"Data: {self.i2creg}")
-                if self.model == 'PiSugar3':
+                if self.model == "PiSugar3":
                     low = self.i2creg[0x23]
                     high = self.i2creg[0x22]
                     self.battery_voltage = (((high << 8) + low) / 1000)
@@ -150,7 +148,7 @@ class PiSugarServer:
                             self.address, 0x20) & 0b01111111)
                         self._bus.write_byte_data(
                             self.address, 0x0B, 0x00)  # Enable write protection
-                elif self.model == 'PiSugar2':
+                elif self.model == "PiSugar2":
                     high = self.i2creg[0xa3]
                     low = self.i2creg[0xa2]
                     self.battery_voltage = (2600.0 - (((high | 0b11000000) << 8) + low) * 0.26855) / \
@@ -168,7 +166,7 @@ class PiSugarServer:
                     else:
                         self.set_battery_allow_charging()
 
-                elif self.model == 'PiSugar2Plus':
+                elif self.model == "PiSugar2Plus":
                     low = self.i2creg[0xd0]
                     high = self.i2creg[0xd1]
                     self.battery_voltage = (
@@ -194,12 +192,12 @@ class PiSugarServer:
                         pwnagotchi.shutdown()
                 time.sleep(3)
             except Exception as e:
-                logging.error(f"read error{e}")
+                logging.exception(f"read error{e}")
             time.sleep(3)
 
     def shutdown(self):
         # logging.info("[PiSugarX] PiSugar set shutdown .")
-        if self.model == 'PiSugar3':
+        if self.model == "PiSugar3":
             # Shutdown the power after 10 seconds
             self._bus.write_byte_data(self.address, 0x0B, 0x29)  # Disable write protection
             self._bus.write_byte_data(self.address, 0x09, 10)
@@ -207,9 +205,7 @@ class PiSugarServer:
                 self.address, 0x02) & 0b11011111)
             self._bus.write_byte_data(self.address, 0x0B, 0x00)  # Enable write protection
             logging.info("[PiSugarX] PiSugar shutdown in 10s.")
-        elif self.model == 'PiSugar2':
-            pass
-        elif self.model == 'PiSugar2Plus':
+        elif self.model in {"PiSugar2", "PiSugar2Plus"}:
             pass
 
     def check_device(self, address, reg=0):
@@ -223,7 +219,7 @@ class PiSugarServer:
     def device_init(self):
 
         if self.model == "PiSugar2Plus":
-            '''Initialize GPIO'''
+            """Initialize GPIO"""
             self._bus.write_byte_data(self.address, 0x52, self._bus.read_byte_data(
                 self.address, 0x52) | 0b00000010)
             self._bus.write_byte_data(self.address, 0x54, self._bus.read_byte_data(
@@ -236,14 +232,14 @@ class PiSugarServer:
                 self.address, 0x52) & 0b10011111 | 0b01000000)
             self._bus.write_byte_data(self.address, 0xc2, self._bus.read_byte_data(
                 self.address, 0xc2) | 0b00010000)
-            logging.debug(f"PiSugar2Plus GPIO initialization complete")
-            '''Init boost intensity, 0x3f*50ma, 3A'''
+            logging.debug("PiSugar2Plus GPIO initialization complete")
+            """Init boost intensity, 0x3f*50ma, 3A"""
             self._bus.write_byte_data(self.address, 0x30, self._bus.read_byte_data(
                 self.address, 0x30) & 0b11000000 | 0x3f)
-            logging.debug(f"PiSugar2Plus current setting complete")
+            logging.debug("PiSugar2Plus current setting complete")
 
         elif self.model == "PiSugar2":
-            '''Initialize GPIO'''
+            """Initialize GPIO"""
             self._bus.write_byte_data(self.address, 0x51, (self._bus.read_byte_data(
                 self.address, 0x51) & 0b11110011) | 0b00000100)
             self._bus.write_byte_data(self.address, 0x53, self._bus.read_byte_data(
@@ -256,20 +252,16 @@ class PiSugarServer:
                 self.address, 0x52) & 0b11110011) | 0b00000100)
             self._bus.write_byte_data(self.address, 0x53, (self._bus.read_byte_data(
                 self.address, 0x53) & 0b11101111) | 0b00010000)
-            logging.debug(f"PiSugar2 GPIO initialization complete")
-        pass
+            logging.debug("PiSugar2 GPIO initialization complete")
 
     def convert_battery_voltage_to_level(self):
-        """
-        Convert battery voltage to battery percentage.
+        """Convert battery voltage to battery percentage.
 
         :param voltage: Current battery voltage
         :param curve: Battery threshold curve, format [(voltage1, percentage1), (voltage2, percentage2), ...]
         :return: Battery percentage
         """
-        if self.model == "PiSugar2Plus":
-            curve = curve5312
-        elif self.model == "PiSugar3Plus":
+        if self.model in {"PiSugar2Plus", "PiSugar3Plus"}:
             curve = curve5312
         elif self.model == "PiSugar2":
             curve = curve5209
@@ -286,7 +278,7 @@ class PiSugarServer:
             trimmed_history = sorted_history[2:-2]  # Remove the first two and last two
             avg_voltage = sum(trimmed_history) / len(trimmed_history)  # Calculate truncated mean
         # Traverse each segment of the battery curve
-        for (v1, p1), (v2, p2) in zip(curve, curve[1:]):
+        for (v1, p1), (v2, p2) in itertools.pairwise(curve):
             # If the voltage is within the current interval
             if v2 <= avg_voltage <= v1:
                 # Use linear interpolation to calculate the percentage
@@ -296,63 +288,56 @@ class PiSugarServer:
         return curve[-1][1] if avg_voltage < curve[-1][0] else curve[0][1]
 
     def get_version(self):
-        """
-        Get the firmware version of the PiSugar3.
+        """Get the firmware version of the PiSugar3.
         If not PiSugar3, return None
         :return: Version string or None
         """
-        if self.model == 'PiSugar3':
+        if self.model == "PiSugar3":
             try:
-                return bytes(self.i2creg[0xe2:0xee]).decode('ascii')
+                return bytes(self.i2creg[0xe2:0xee]).decode("ascii")
             except OSError as e:
-                logging.error(f"Failed to read version from PiSugar3: {e}")
+                logging.exception(f"Failed to read version from PiSugar3: {e}")
                 return None
         return None
 
     def get_model(self):
-        """
-        Get the model of the PiSugar hardware.
+        """Get the model of the PiSugar hardware.
 
         :return: Model string.
         """
         return self.model
 
     def get_battery_level(self):
-        """
-        Get the current battery level in percentage.
+        """Get the current battery level in percentage.
 
         :return: Battery level as a percentage (0-100).
         """
         return self.battery_level
 
     def get_battery_voltage(self):
-        """
-        Get the current battery voltage.
+        """Get the current battery voltage.
 
         :return: Battery voltage in volts.
         """
         return self.battery_voltage
 
     def get_battery_current(self):
-        """
-        Get the current battery current.
+        """Get the current battery current.
 
         :return: Battery current in amperes.
         """
-        pass
 
     def get_battery_allow_charging(self):
-        """
-        Check if battery charging is allowed.
+        """Check if battery charging is allowed.
 
         :return: True if charging is allowed, False otherwise.
         """
         return self.allow_charging
 
     def set_battery_allow_charging(self):
-        if self.model == 'PiSugar3':
+        if self.model == "PiSugar3":
             pass
-        elif self.model == 'PiSugar2':
+        elif self.model == "PiSugar2":
             # Disable gpio2 output
             self._bus.write_byte_data(self.address, 0x54, self._bus.read_byte_data(
                 self.address, 0x54) & 0b11111011)
@@ -362,7 +347,7 @@ class PiSugarServer:
             # Enable gpio2 output
             self._bus.write_byte_data(self.address, 0x54, self._bus.read_byte_data(
                 self.address, 0x54) | 0b00000100)
-        elif self.model == 'PiSugar2Plus':
+        elif self.model == "PiSugar2Plus":
             # Disable gpio2 output
             self._bus.write_byte_data(self.address, 0x56, self._bus.read_byte_data(
                 self.address, 0x56) & 0b11111011)
@@ -373,12 +358,11 @@ class PiSugarServer:
             self._bus.write_byte_data(self.address, 0x56, self._bus.read_byte_data(
                 self.address, 0x56) | 0b00000100)
 
-        return
 
     def set_battery_notallow_charging(self):
-        if self.model == 'PiSugar3':
+        if self.model == "PiSugar3":
             pass
-        elif self.model == 'PiSugar2':
+        elif self.model == "PiSugar2":
             # Disable gpio2 output
             self._bus.write_byte_data(self.address, 0x54, self._bus.read_byte_data(
                 self.address, 0x54) & 0b11111011)
@@ -388,7 +372,7 @@ class PiSugarServer:
             # Enable gpio2 output
             self._bus.write_byte_data(self.address, 0x54, self._bus.read_byte_data(
                 self.address, 0x54) | 0b00000100)
-        elif self.model == 'PiSugar2Plus':
+        elif self.model == "PiSugar2Plus":
             # Disable gpio2 output
             self._bus.write_byte_data(self.address, 0x56, self._bus.read_byte_data(
                 self.address, 0x56) & 0b11111011)
@@ -399,135 +383,104 @@ class PiSugarServer:
             self._bus.write_byte_data(self.address, 0x56, self._bus.read_byte_data(
                 self.address, 0x56) | 0b00000100)
 
-        return
 
     def get_battery_charging_range(self):
-        """
-        Get the battery charging range.
+        """Get the battery charging range.
 
         :return: Charging range string.
         """
-        pass
 
     def get_battery_full_charge_duration(self):
-        """
-        Get the duration of keeping the battery charging when full.
+        """Get the duration of keeping the battery charging when full.
 
         :return: Duration in seconds.
         """
-        pass
 
     def get_battery_safe_shutdown_level(self):
-        """
-        Get the safe shutdown level for the battery.
+        """Get the safe shutdown level for the battery.
 
         :return: Safe shutdown level as a percentage.
         """
-        pass
 
     def get_battery_safe_shutdown_delay(self):
-        """
-        Get the safe shutdown delay.
+        """Get the safe shutdown delay.
 
         :return: Delay in seconds.
         """
-        pass
 
     def get_battery_auto_power_on(self):
-        """
-        Check if auto power on is enabled.
+        """Check if auto power on is enabled.
 
         :return: True if enabled, False otherwise.
         """
-        pass
 
     def get_battery_soft_poweroff(self):
-        """
-        Check if soft power off is enabled.
+        """Check if soft power off is enabled.
 
         :return: True if enabled, False otherwise.
         """
-        pass
 
     def get_system_time(self):
-        """
-        Get the system time.
+        """Get the system time.
 
         :return: System time string.
         """
-        pass
 
     def get_rtc_adjust_ppm(self):
-        """
-        Get the RTC adjust PPM.
+        """Get the RTC adjust PPM.
 
         :return: RTC adjust PPM value.
         """
-        pass
 
     def get_rtc_alarm_repeat(self):
-        """
-        Get the RTC alarm repeat setting.
+        """Get the RTC alarm repeat setting.
 
         :return: RTC alarm repeat string.
         """
-        pass
 
     def get_tap_enable(self, tap):
-        """
-        Check if a specific tap (single, double, long) is enabled.
+        """Check if a specific tap (single, double, long) is enabled.
 
         :param tap: Type of tap ('single', 'double', 'long').
         :return: True if enabled, False otherwise.
         """
-        pass
 
     def get_tap_shell(self, tap):
-        """
-        Get the shell command associated with a specific tap.
+        """Get the shell command associated with a specific tap.
 
         :param tap: Type of tap ('single', 'double', 'long').
         :return: Shell command string.
         """
-        pass
 
     def get_anti_mistouch(self):
-        """
-        Check if anti-mistouch protection is enabled.
+        """Check if anti-mistouch protection is enabled.
 
         :return: True if enabled, False otherwise.
         """
-        pass
 
     def get_temperature(self):
-        """
-        Get the current temperature.
+        """Get the current temperature.
 
         :return: Temperature in degrees Celsius.
         """
         return self.temperature
 
     def get_battery_power_plugged(self):
-        """
-        Check if the battery is plugged in.
+        """Check if the battery is plugged in.
 
         :return: True if plugged in, False otherwise.
         """
         return self.power_plugged
 
     def get_battery_charging(self):
-        """
-        Check if the battery is currently charging.
+        """Check if the battery is currently charging.
 
         :return: True if charging, False otherwise.
         """
-        pass
 
     def rtc_web(self):
+        """Synchronize RTC with web time.
         """
-        Synchronize RTC with web time.
-        """
-        pass
 
 
 
@@ -571,8 +524,7 @@ class PiSugar(plugins.Plugin):
         self.default_display = "voltage"  # default display option
 
     def safe_get(self, func, default=None):
-        """
-        Helper function to safely call PiSugar getters. When an exception is detected,
+        """Helper function to safely call PiSugar getters. When an exception is detected,
         return 'default' and log at debug level.
         """
         if self.ps is None:
@@ -586,23 +538,23 @@ class PiSugar(plugins.Plugin):
 
     def on_loaded(self):
         logging.info("[PiSugarX] plugin loaded.")
-        cfg = pwnagotchi.config['main']['plugins']['pisugarx']
-        self.rotation_enabled = cfg.get('rotation', True)
-        self.default_display = cfg.get('default_display', 'voltage').lower()
+        cfg = pwnagotchi.config["main"]["plugins"]["pisugarx"]
+        self.rotation_enabled = cfg.get("rotation", True)
+        self.default_display = cfg.get("default_display", "voltage").lower()
 
-        valid_displays = ['voltage', 'percentage', 'temp']
+        valid_displays = ["voltage", "percentage", "temp"]
         if self.default_display not in valid_displays:
             logging.warning(
                 f"[PiSugarX] Invalid default_display '{self.default_display}'. Using 'voltage'.")
-            self.default_display = 'voltage'
+            self.default_display = "voltage"
 
         logging.info(
             f"[PiSugarX] Rotation is {'enabled' if self.rotation_enabled else 'disabled'}.")
         logging.info(
             f"[PiSugarX] Default display (when rotation disabled): {self.default_display}")
-        self.ps.lowpower_shutdown = self.options['lowpower_shutdown']
-        self.ps.lowpower_shutdown_level = self.options['lowpower_shutdown_level']
-        self.ps.max_charge_voltage_protection = self.options['max_charge_voltage_protection']
+        self.ps.lowpower_shutdown = self.options["lowpower_shutdown"]
+        self.ps.lowpower_shutdown_level = self.options["lowpower_shutdown_level"]
+        self.ps.max_charge_voltage_protection = self.options["max_charge_voltage_protection"]
 
     def on_ready(self, agent):
         try:
@@ -625,53 +577,53 @@ class PiSugar(plugins.Plugin):
             if request.method == "GET":
                 if path == "/" or not path:
                     version = self.safe_get(
-                        self.ps.get_version, default='Unknown')
-                    model = self.safe_get(self.ps.get_model, default='Unknown')
+                        self.ps.get_version, default="Unknown")
+                    model = self.safe_get(self.ps.get_model, default="Unknown")
                     battery_level = self.safe_get(
-                        self.ps.get_battery_level, default='N/A')
+                        self.ps.get_battery_level, default="N/A")
                     battery_voltage = self.safe_get(
-                        self.ps.get_battery_voltage, default='N/A')
+                        self.ps.get_battery_voltage, default="N/A")
                     battery_current = self.safe_get(
-                        self.ps.get_battery_current, default='N/A')
+                        self.ps.get_battery_current, default="N/A")
                     battery_allow_charging = self.safe_get(
                         self.ps.get_battery_allow_charging, default=False)
                     battery_charging_range = self.safe_get(
-                        self.ps.get_battery_charging_range, default='N/A')
+                        self.ps.get_battery_charging_range, default="N/A")
                     battery_full_charge_duration = getattr(
-                        self.ps, 'get_battery_full_charge_duration', lambda: 'N/A')()
+                        self.ps, "get_battery_full_charge_duration", lambda: "N/A")()
                     safe_shutdown_level = self.safe_get(
                         self.ps.get_battery_safe_shutdown_level, default=None)
-                    battery_safe_shutdown_level = f"{safe_shutdown_level}%" if safe_shutdown_level is not None else 'Not set'
+                    battery_safe_shutdown_level = f"{safe_shutdown_level}%" if safe_shutdown_level is not None else "Not set"
                     battery_safe_shutdown_delay = self.safe_get(
-                        self.ps.get_battery_safe_shutdown_delay, default='N/A')
+                        self.ps.get_battery_safe_shutdown_delay, default="N/A")
                     battery_auto_power_on = self.safe_get(
                         self.ps.get_battery_auto_power_on, default=False)
                     battery_soft_poweroff = self.safe_get(
-                        self.ps.get_battery_soft_poweroff, default=False) if model == 'Pisugar 3' else False
+                        self.ps.get_battery_soft_poweroff, default=False) if model == "Pisugar 3" else False
                     system_time = self.safe_get(
-                        self.ps.get_system_time, default='N/A')
+                        self.ps.get_system_time, default="N/A")
                     rtc_adjust_ppm = self.safe_get(
-                        self.ps.get_rtc_adjust_ppm, default='Not supported') if model == 'Pisugar 3' else 'Not supported'
+                        self.ps.get_rtc_adjust_ppm, default="Not supported") if model == "Pisugar 3" else "Not supported"
                     rtc_alarm_repeat = self.safe_get(
-                        self.ps.get_rtc_alarm_repeat, default='N/A')
+                        self.ps.get_rtc_alarm_repeat, default="N/A")
                     single_tap_enabled = self.safe_get(
-                        lambda: self.ps.get_tap_enable(tap='single'), default=False)
+                        lambda: self.ps.get_tap_enable(tap="single"), default=False)
                     double_tap_enabled = self.safe_get(
-                        lambda: self.ps.get_tap_enable(tap='double'), default=False)
+                        lambda: self.ps.get_tap_enable(tap="double"), default=False)
                     long_tap_enabled = self.safe_get(
-                        lambda: self.ps.get_tap_enable(tap='long'), default=False)
+                        lambda: self.ps.get_tap_enable(tap="long"), default=False)
                     single_tap_shell = self.safe_get(
-                        lambda: self.ps.get_tap_shell(tap='single'), default='N/A')
+                        lambda: self.ps.get_tap_shell(tap="single"), default="N/A")
                     double_tap_shell = self.safe_get(
-                        lambda: self.ps.get_tap_shell(tap='double'), default='N/A')
+                        lambda: self.ps.get_tap_shell(tap="double"), default="N/A")
                     long_tap_shell = self.safe_get(
-                        lambda: self.ps.get_tap_shell(tap='long'), default='N/A')
+                        lambda: self.ps.get_tap_shell(tap="long"), default="N/A")
                     anti_mistouch = self.safe_get(
-                        self.ps.get_anti_mistouch, default=False) if model == 'Pisugar 3' else False
+                        self.ps.get_anti_mistouch, default=False) if model == "Pisugar 3" else False
                     temperature = self.safe_get(
-                        self.ps.get_temperature, default='N/A')
+                        self.ps.get_temperature, default="N/A")
 
-                    ret = '''
+                    ret = """
                     <!DOCTYPE html>
                     <html lang="en">
                     <head>
@@ -723,8 +675,8 @@ class PiSugar(plugins.Plugin):
                                 </tr>
                             </thead>
                             <tbody>
-                    '''
-                    ret += f'''
+                    """
+                    ret += f"""
                                 <tr><td>Server version</td><td>{version}</td></tr>
                                 <tr><td>PiSugar Model</td><td>{model}</td></tr>
                                 <tr><td>Battery Level</td><td>{battery_level}%</td></tr>
@@ -755,24 +707,22 @@ class PiSugar(plugins.Plugin):
                         </div>
                     </body>
                     </html>
-                    '''
+                    """
 
                     return render_template_string(ret)
-                else:
-                    abort(404)
+                abort(404)
             elif request.method == "POST":
                 try:
                     ret = '<html><head><title>PiSugarX</title><meta name="csrf_token" content="{{ csrf_token() }}"></head>'
-                    pass
                 except Exception as e:
                     ret = "<html><head><title>PiSugarX error</title></head>"
-                    ret += "<body><h1>%s</h1></body></html>" % repr(e)
-                    logging.debug("[PiSugarX] error during POST: %s" % repr(e))
+                    ret += f"<body><h1>{e!r}</h1></body></html>"
+                    logging.debug(f"[PiSugarX] error during POST: {e!r}")
                     return render_template_string(ret), 500
         except Exception as e:
             ret = "<html><head><title>PiSugarX error</title></head>"
-            ret += "<body><h1>%s</h1></body></html>" % repr(e)
-            logging.debug("[PiSugarX] error: %s" % repr(e))
+            ret += f"<body><h1>{e!r}</h1></body></html>"
+            logging.debug(f"[PiSugarX] error: {e!r}")
             return render_template_string(ret), 404
 
     def on_ui_setup(self, ui):
@@ -795,7 +745,7 @@ class PiSugar(plugins.Plugin):
 
     def on_ui_update(self, ui):
         # Make sure "bat" is in the UI state (guard to prevent KeyError)
-        if 'bat' not in ui._state._state:
+        if "bat" not in ui._state._state:
             return
         try:
             self.ready = self.ps.ready
@@ -811,7 +761,7 @@ class PiSugar(plugins.Plugin):
             capacity = 0
             voltage = 0.00
             temp = 0
-            logging.info(f"[PiSugarX] PiSugar is not ready")
+            logging.info("[PiSugarX] PiSugar is not ready")
 
         # Check if battery is plugged in
         battery_plugged = self.safe_get(
@@ -819,10 +769,10 @@ class PiSugar(plugins.Plugin):
 
         if battery_plugged:
             # If plugged in, display "CHG"
-            ui._state._state['bat'].label = "CHG"
+            ui._state._state["bat"].label = "CHG"
         else:
             # Otherwise, keep it as "BAT"
-            ui._state._state['bat'].label = "BAT"
+            ui._state._state["bat"].label = "BAT"
 
         # Handle rotation or default display logic
         if self.rotation_enabled:
@@ -831,16 +781,15 @@ class PiSugar(plugins.Plugin):
                 self.nextDChg = time.time() + 5
 
             if self.drot == 0:  # show battery voltage
-                ui.set('bat', f"{voltage:.2f}V")
+                ui.set("bat", f"{voltage:.2f}V")
             elif self.drot == 1:  # show battery capacity
-                ui.set('bat', f"{capacity:.0f}%")
+                ui.set("bat", f"{capacity:.0f}%")
             else:  # show battery temperature
-                ui.set('bat', f"{temp}°C")
-        else:
-            # Rotation disabled, show only the selected default display
-            if self.default_display == 'voltage':
-                ui.set('bat', f"{voltage:.2f}V")
-            elif self.default_display in ['percentage', 'percent']:
-                ui.set('bat', f"{capacity:.0f}%")
-            elif self.default_display == 'temp':
-                ui.set('bat', f"{temp}°C")
+                ui.set("bat", f"{temp}°C")
+        # Rotation disabled, show only the selected default display
+        elif self.default_display == "voltage":
+            ui.set("bat", f"{voltage:.2f}V")
+        elif self.default_display in ["percentage", "percent"]:
+            ui.set("bat", f"{capacity:.0f}%")
+        elif self.default_display == "temp":
+            ui.set("bat", f"{temp}°C")

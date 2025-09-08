@@ -3,21 +3,20 @@ from __future__ import annotations
 import random
 import subprocess
 import time
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass
 
 
 @dataclass
 class ChildSpec:
     name: str
-    start_cmd: List[str]
-    env: Optional[Dict[str, str]] = None
+    start_cmd: list[str]
+    env: dict[str, str] | None = None
     enabled: bool = True
 
 
 @dataclass
 class ChildState:
-    proc: Optional[subprocess.Popen] = None
+    proc: subprocess.Popen | None = None
     failures: int = 0
     backoff: float = 0.0
     last_start_ts: float = 0.0
@@ -42,10 +41,10 @@ class ProcessSupervisor:
         self.backoff_cap_secs = backoff_cap_secs
         self.jitter_frac = jitter_frac
         self.fault_injection = fault_injection
-        self.name_to_state: Dict[str, ChildState] = {}
-        self.child_failures_total: Dict[str, int] = {}
-        self.child_restarts_total: Dict[str, int] = {}
-        self.child_backoff_seconds: Dict[str, float] = {}
+        self.name_to_state: dict[str, ChildState] = {}
+        self.child_failures_total: dict[str, int] = {}
+        self.child_restarts_total: dict[str, int] = {}
+        self.child_backoff_seconds: dict[str, float] = {}
 
     def _jitter(self, base: float) -> float:
         delta = base * self.jitter_frac
@@ -55,7 +54,7 @@ class ProcessSupervisor:
         state = self.name_to_state.setdefault(spec.name, ChildState())
         if state.proc and state.proc.poll() is None:
             return
-        state.proc = subprocess.Popen(spec.start_cmd, env=spec.env)  # noqa: S603
+        state.proc = subprocess.Popen(spec.start_cmd, env=spec.env)
         state.last_start_ts = time.time()
         state.backoff = self.backoff_initial_secs
         state.restarts += 1
@@ -77,9 +76,7 @@ class ProcessSupervisor:
             return
         state = self.name_to_state.setdefault(spec.name, ChildState())
         crashed = False
-        if self.fault_injection:
-            crashed = True
-        elif not state.proc or state.proc.poll() is not None:
+        if self.fault_injection or not state.proc or state.proc.poll() is not None:
             crashed = True
         if crashed:
             self._fail(spec)

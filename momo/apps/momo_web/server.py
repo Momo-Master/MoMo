@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from . import create_app
+
 from ...config import load_config
+from . import create_app
 
 
 def main() -> None:

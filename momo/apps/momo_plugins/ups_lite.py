@@ -15,16 +15,13 @@
 # run the script we saved earlier and ensure that the pwnagotchi is plugged in both at the battery and the raspberry pi. The script should start trying to
 # read the battery, and should be successful once there's a USB cable running power to the battery supply.
 
-import logging
 import struct
 
-import RPi.GPIO as GPIO
-
-import pwnagotchi
-import pwnagotchi.plugins as plugins
-import pwnagotchi.ui.fonts as fonts
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
+from RPi import GPIO
 
 CW2015_ADDRESS = 0X62
 CW2015_REG_VCELL = 0X02
@@ -50,7 +47,6 @@ class UPS:
 
     def capacity(self):
         try:
-            address = 0x36
             read = self._bus.read_word_data(CW2015_ADDRESS, CW2015_REG_SOC)
             swapped = struct.unpack("<H", struct.pack(">H", read))[0]
             return swapped / 256
@@ -61,16 +57,16 @@ class UPS:
         try:
             GPIO.setmode(GPIO.BCM)
             GPIO.setup(4, GPIO.IN)
-            return '+' if GPIO.input(4) == GPIO.HIGH else '-'
+            return "+" if GPIO.input(4) == GPIO.HIGH else "-"
         except:
-            return '-'
+            return "-"
 
 
 class UPSLite(plugins.Plugin):
-    __author__ = 'marbasec'
-    __version__ = '1.3.0'
-    __license__ = 'GPL3'
-    __description__ = 'A plugin that will add a voltage indicator for the UPS Lite v1.3'
+    __author__ = "marbasec"
+    __version__ = "1.3.0"
+    __license__ = "GPL3"
+    __description__ = "A plugin that will add a voltage indicator for the UPS Lite v1.3"
 
     def __init__(self):
         self.ups = None
@@ -79,14 +75,14 @@ class UPSLite(plugins.Plugin):
         self.ups = UPS()
 
     def on_ui_setup(self, ui):
-        ui.add_element('ups', LabeledValue(color=BLACK, label='UPS', value='0%', position=(ui.width() / 2 + 15, 0),
+        ui.add_element("ups", LabeledValue(color=BLACK, label="UPS", value="0%", position=(ui.width() / 2 + 15, 0),
                                            label_font=fonts.Bold, text_font=fonts.Medium))
 
     def on_unload(self, ui):
         with ui._lock:
-            ui.remove_element('ups')
+            ui.remove_element("ups")
 
     def on_ui_update(self, ui):
         capacity = self.ups.capacity()
         charging = self.ups.charging()
-        ui.set('ups', "%2i%s" % (capacity, charging))
+        ui.set("ups", "%2i%s" % (capacity, charging))

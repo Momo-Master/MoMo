@@ -1,10 +1,9 @@
 from __future__ import annotations
 
 import subprocess
-from typing import Iterable, Optional
 
 from ...config import MomoConfig
-from .aggressive import check_gate, AggressiveState, TokenBucket
+from .aggressive import AggressiveState, TokenBucket, check_gate
 
 
 def build_bettercap_args(cfg: MomoConfig) -> list[str]:
@@ -26,7 +25,7 @@ def run_bettercap_once(cfg: MomoConfig, duration_sec: int = 30) -> int:
     if not cfg.bettercap.enabled:
         return 0
     args = build_bettercap_args(cfg)
-    proc = subprocess.Popen(args)  # noqa: S603
+    proc = subprocess.Popen(args)
     try:
         proc.wait(timeout=duration_sec)
     except Exception:
@@ -42,11 +41,11 @@ class BettercapGate:
             deauth_bucket=TokenBucket(cfg.aggressive.max_deauth_per_min, cfg.aggressive.max_deauth_per_min, 0),
         )
 
-    def allow_assoc(self, ssid: Optional[str] = None, bssid: Optional[str] = None, dry_run: bool = False) -> bool:
+    def allow_assoc(self, ssid: str | None = None, bssid: str | None = None, dry_run: bool = False) -> bool:
         res = check_gate(self.cfg.mode, self.cfg.aggressive, self.state, "assoc", ssid, bssid, dry_run)
         return res.allowed
 
-    def allow_deauth(self, ssid: Optional[str] = None, bssid: Optional[str] = None, dry_run: bool = False) -> bool:
+    def allow_deauth(self, ssid: str | None = None, bssid: str | None = None, dry_run: bool = False) -> bool:
         res = check_gate(self.cfg.mode, self.cfg.aggressive, self.state, "deauth", ssid, bssid, dry_run)
         return res.allowed
 

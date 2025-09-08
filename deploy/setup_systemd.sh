@@ -40,6 +40,10 @@ else
   USED_UNIT=momo.service
 fi
 
+# Ensure drop-in env directory exists
+mkdir -p "$UNIT_DIR/momo.service.d"
+touch "$UNIT_DIR/momo.service.d/env.conf"
+
 systemctl daemon-reload
 systemctl enable --now momo.service
 log "Enabled momo.service using unit: $USED_UNIT"

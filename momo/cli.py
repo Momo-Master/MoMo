@@ -1,21 +1,21 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-import subprocess  # <-- eklendi
-
-import typer
-from rich.console import Console
+import importlib.metadata as md
 import json
 import os
 import shutil
 import signal
-import importlib.metadata as md
+import subprocess  # <-- eklendi
+import sys
+from pathlib import Path
 
-from .config import MomoConfig, load_config, resolve_config_path
+import typer
+from rich.console import Console
+
 from .apps.momo_core.main import service_loop
+from .config import MomoConfig, load_config, resolve_config_path
 
-# Typer uygulaması: testler bunu import ediyor
+# Typer application: tests import this
 app = typer.Typer(no_args_is_help=True, add_completion=False, help="MoMo CLI")
 console = Console()
 
@@ -87,7 +87,7 @@ def config_validate(path: Path = typer.Argument(Path("configs/momo.yml"))) -> No
     console.print(f"Using config: {resolved}")
     try:
         cfg: MomoConfig = load_config(resolved)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         console.print(f"Config validation failed: {exc}")
         raise typer.Exit(code=1) from exc
     console.print("Config OK. Key paths:")
@@ -122,7 +122,7 @@ def run(
 def launch() -> None:
     """Entry point when executed as a module/script."""
     sys.setrecursionlimit(10_000)
-    cli()  # hazır click komutunu kullan
+    cli()  # use the prepared Click command
 
 
 def _pidfile(meta_dir: Path) -> Path:
@@ -131,7 +131,7 @@ def _pidfile(meta_dir: Path) -> Path:
 
 @app.command()
 def rotate_now(
-    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
 ) -> None:
     """Send SIGUSR1 to running MoMo to force rotation."""
     cfg = load_config(resolve_config_path(config))
@@ -140,7 +140,7 @@ def rotate_now(
         console.print("No pidfile found. Is MoMo running?")
         raise typer.Exit(code=1)
 
-    # Windows'ta SIGUSR1 yok: kibarca çık
+    # On Windows SIGUSR1 is missing: exit politely
     if not hasattr(signal, "SIGUSR1"):
         console.print("SIGUSR1 is not supported on this platform.")
         raise typer.Exit(code=0)
@@ -152,7 +152,7 @@ def rotate_now(
 
 @app.command()
 def status(
-    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
 ) -> None:
     """Show current status from stats file."""
     cfg = load_config(resolve_config_path(config))
@@ -184,27 +184,52 @@ def status(
 
 @app.command()
 def diag(
-    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
 ) -> None:
     """Run diagnostics for required tools and hardware."""
-    cfg = load_config(resolve_config_path(config))
+    load_config(resolve_config_path(config))
     console.print(f"Using config: {resolve_config_path(config)}")
     # systemd/service hints could be added here in future doctor command
 
 
 @app.command()
-def web_url(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")) -> None:
-    """Print effective URLs for health/metrics/web based on config."""
+def web_url(
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
+    show_token: bool = typer.Option(False, "--show-token"),
+) -> None:
+    """Print effective URLs for health/metrics/web and LAN suggestion. Optionally show token."""
     cfg = load_config(resolve_config_path(config))
-    urls = []
+    # Local binds
     if cfg.server.health.enabled:
-        urls.append(f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz")
+        console.print(f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz")
     if cfg.server.metrics.enabled:
-        urls.append(f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics")
+        console.print(f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics")
     if cfg.server.web.enabled:
-        urls.append(f"http://{cfg.server.web.bind_host}:{cfg.server.web.port}")
-    for u in urls:
-        console.print(u)
+        console.print(f"http://{cfg.server.web.bind_host}:{cfg.server.web.port}/")
+    # LAN friendly URL
+    def _first_non_loopback_ip() -> str | None:
+        try:
+            import socket
+            hostname = socket.gethostname()
+            ips = socket.getaddrinfo(hostname, None)
+            for _fam, _a, _b, _c, sockaddr in ips:
+                ip = sockaddr[0]
+                if ip and not ip.startswith("127."):
+                    return ip
+        except Exception:
+            return None
+        return None
+    ip = _first_non_loopback_ip()
+    if ip and cfg.server.web.enabled:
+        console.print(f"LAN: http://{ip}:{cfg.server.web.port}/")
+    # Token
+    token_env = cfg.web.auth.token_env
+    token = os.environ.get(token_env) or (Path("/opt/momo/.momo_ui_token").read_text(encoding="utf-8").strip() if Path("/opt/momo/.momo_ui_token").exists() else "")
+    if token:
+        console.print("Token file: /opt/momo/.momo_ui_token")
+        console.print(f"Token: {token if show_token else (token[:4] + '...' + token[-4:])}")
+        if ip:
+            console.print(f"API: curl -H 'Authorization: Bearer {token if show_token else '<token>'}' http://{ip}:{cfg.server.web.port}/api/status")
     checks: dict[str, object] = {}
 
     # binaries
@@ -212,7 +237,7 @@ def web_url(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-
     checks["hcxpcapngtool"] = bool(shutil.which(cfg.capture.tools.hcxpcapngtool_path) or os.path.exists(cfg.capture.tools.hcxpcapngtool_path))
     checks["bettercap"] = bool(shutil.which("bettercap"))
 
-    # interface presence (Linux dışı platformlarda hataya düşmesin)
+    # Interface presence (avoid crashing on non-Linux platforms)
     iface = cfg.interface.name
     try:
         subprocess.run(["iw", "dev", iface, "info"], check=True, capture_output=True)
@@ -240,6 +265,16 @@ def web_url(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-
         "backoff_initial_secs": cfg.supervisor.backoff_initial_secs,
     }
 
+    # tools presence
+    try:
+        checks["mdk4"] = bool(shutil.which("mdk4"))
+        checks["aireplay_ng"] = bool(shutil.which("aireplay-ng"))
+        checks["bettercap"] = bool(shutil.which("bettercap"))
+        checks["hashcat"] = bool(shutil.which("hashcat"))
+        checks["john"] = bool(shutil.which("john"))
+    except Exception:
+        pass
+
     ag = cfg.aggressive
     checks["aggressive"] = {
         "enabled": ag.enabled,
@@ -250,7 +285,7 @@ def web_url(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-
     if os.name != "nt":
         for svc in ("NetworkManager", "wpa_supplicant"):
             try:
-                r = subprocess.run(["systemctl", "is-active", "--quiet", svc])
+                r = subprocess.run(["systemctl", "is-active", "--quiet", svc], check=False)
                 checks[f"svc_{svc}_active"] = (r.returncode == 0)
             except Exception:
                 checks[f"svc_{svc}_active"] = None
@@ -259,7 +294,7 @@ def web_url(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-
 
 @app.command()
 def doctor(
-    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
 ) -> None:
     """Print deployment details and listening info."""
     cfg_path = resolve_config_path(config)
@@ -270,11 +305,29 @@ def doctor(
         "metrics": {"host": cfg.server.metrics.bind_host, "port": cfg.server.metrics.port, "enabled": cfg.server.metrics.enabled},
         "web": {"host": cfg.server.web.bind_host, "port": cfg.server.web.port, "enabled": cfg.server.web.enabled},
     }
+    # Token path
+    token_path = Path("/opt/momo/.momo_ui_token")
+    info["token_path"] = str(token_path)
+    info["token_exists"] = token_path.exists()
+    # Port checks
+    def _is_listening(port: int) -> bool:
+        try:
+            import socket
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.2)
+                return s.connect_ex(("127.0.0.1", port)) == 0 or s.connect_ex(("0.0.0.0", port)) == 0
+        except Exception:
+            return False
+    info["listening"] = {
+        "8081": _is_listening(8081),
+        "9091": _is_listening(9091),
+        "8082": _is_listening(8082),
+    }
     # Unit path and ExecStart
     try:
-        unit_path = subprocess.run(["systemctl", "show", "-p", "FragmentPath", "momo"], capture_output=True, text=True)
+        unit_path = subprocess.run(["systemctl", "show", "-p", "FragmentPath", "momo"], capture_output=True, text=True, check=False)
         info["unit_path"] = unit_path.stdout.strip().split("=", 1)[-1]
-        exec_start = subprocess.run(["systemctl", "show", "-p", "ExecStart", "momo"], capture_output=True, text=True)
+        exec_start = subprocess.run(["systemctl", "show", "-p", "ExecStart", "momo"], capture_output=True, text=True, check=False)
         info["exec_start"] = exec_start.stdout.strip().split("=", 1)[-1]
     except Exception:
         info["unit_path"] = None
@@ -284,11 +337,11 @@ def doctor(
     # Listening sockets (best-effort)
     listeners = []
     try:
-        out = subprocess.run(["ss", "-ltnp"], capture_output=True, text=True)
+        out = subprocess.run(["ss", "-ltnp"], capture_output=True, text=True, check=False)
         listeners = out.stdout.strip().splitlines()
     except Exception:
         try:
-            out = subprocess.run(["netstat", "-ltn"], capture_output=True, text=True)
+            out = subprocess.run(["netstat", "-ltn"], capture_output=True, text=True, check=False)
             listeners = out.stdout.strip().splitlines()
         except Exception:
             listeners = []

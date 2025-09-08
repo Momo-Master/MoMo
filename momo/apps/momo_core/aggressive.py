@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from ...config import AggressiveConfig, ModeEnum
 
@@ -58,12 +57,10 @@ def _env_ack_present(require_ack_env: str) -> bool:
     return bool(os.environ.get(require_ack_env))
 
 
-def _match_scope(ssid: Optional[str], bssid: Optional[str], cfg: AggressiveConfig) -> bool:
+def _match_scope(ssid: str | None, bssid: str | None, cfg: AggressiveConfig) -> bool:
     if not cfg.ssid_whitelist and not cfg.bssid_whitelist:
         return False
-    if ssid and cfg.ssid_whitelist and ssid in cfg.ssid_whitelist:
-        pass
-    elif bssid and cfg.bssid_whitelist and bssid.upper() in cfg.bssid_whitelist:
+    if (ssid and cfg.ssid_whitelist and ssid in cfg.ssid_whitelist) or (bssid and cfg.bssid_whitelist and bssid.upper() in cfg.bssid_whitelist):
         pass
     else:
         return False
@@ -77,8 +74,8 @@ def _match_scope(ssid: Optional[str], bssid: Optional[str], cfg: AggressiveConfi
 @dataclass
 class GateResult:
     allowed: bool
-    reason: Optional[str] = None
-    action: Optional[str] = None  # assoc|deauth
+    reason: str | None = None
+    action: str | None = None  # assoc|deauth
 
 
 def check_gate(
@@ -86,8 +83,8 @@ def check_gate(
     cfg: AggressiveConfig,
     state: AggressiveState,
     action: str,
-    ssid: Optional[str],
-    bssid: Optional[str],
+    ssid: str | None,
+    bssid: str | None,
     dry_run: bool,
 ) -> GateResult:
     if mode == ModeEnum.PASSIVE:

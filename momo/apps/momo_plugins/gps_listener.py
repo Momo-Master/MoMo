@@ -4,12 +4,12 @@ import os
 import subprocess
 import threading
 
-import pwnagotchi.plugins as plugins
-import pwnagotchi.ui.fonts as fonts
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
 
-"""
+r"""
 # Android
 # Termux:API : https://f-droid.org/en/packages/com.termux.api/
 # Termux : https://f-droid.org/en/packages/com.termux/
@@ -86,13 +86,13 @@ sudo apt-get install socat
 """
 
 class GPS(plugins.Plugin):
-    __author__ = 'https://github.com/krishenriksen'
+    __author__ = "https://github.com/krishenriksen"
     __version__ = "1.0.0"
     __license__ = "GPL3"
     __description__ = "Receive GPS coordinates via termux-location and save whenever an handshake is captured."
 
     def __init__(self):
-        self.listen_ip = self.get_ip_address('bnep0')
+        self.listen_ip = self.get_ip_address("bnep0")
         self.listen_port = "5000"
         self.write_virtual_serial = "/dev/ttyUSB1"
         self.read_virtual_serial = "/dev/ttyUSB0"
@@ -100,7 +100,7 @@ class GPS(plugins.Plugin):
         self.socat_process = None
         self.stop_event = threading.Event()
         self.status_lock = threading.Lock()
-        self.status = '-'
+        self.status = "-"
         self.socat_thread = threading.Thread(target=self.run_socat)
 
     def get_ip_address(self, interface):
@@ -109,11 +109,11 @@ class GPS(plugins.Plugin):
                 ["ip", "addr", "show", interface],
                 capture_output=True,
                 text=True,
-                check=True
+                check=True,
             )
-            for line in result.stdout.split('\n'):
-                if 'inet ' in line:
-                    ip_address = line.strip().split()[1].split('/')[0]
+            for line in result.stdout.split("\n"):
+                if "inet " in line:
+                    ip_address = line.strip().split()[1].split("/")[0]
                     return ip_address
         except subprocess.CalledProcessError:
             logging.warning(f"Could not get IP address for interface {interface}")
@@ -156,24 +156,24 @@ class GPS(plugins.Plugin):
                 ["socat", f"UDP-RECVFROM:{self.listen_port},reuseaddr,bind={self.listen_ip}", "-"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                text=True
+                text=True,
             )
 
-            self.set_status('C')
-  
-            with open(self.write_virtual_serial, 'w') as serial_port:
+            self.set_status("C")
+
+            with open(self.write_virtual_serial, "w") as serial_port:
                 for line in self.socat_process.stdout:
                     if self.stop_event.is_set():
                         break
                     serial_port.write(line)
                     serial_port.flush()  # Ensure the data is written immediately
-                    self.status = 'C'
+                    self.status = "C"
 
             self.socat_process.wait()
             if self.stop_event.is_set():
                 break
 
-        self.set_status('-')
+        self.set_status("-")
 
     def cleanup(self):
         if self.socat_process:
@@ -186,13 +186,12 @@ class GPS(plugins.Plugin):
     def on_ready(self, agent):
         if os.path.exists(self.read_virtual_serial):
             logging.info(
-                f"enabling bettercap's gps module for {self.read_virtual_serial}"
+                f"enabling bettercap's gps module for {self.read_virtual_serial}",
             )
             try:
                 agent.run("gps off")
             except Exception:
-                logging.info(f"bettercap gps module was already off")
-                pass
+                logging.info("bettercap gps module was already off")
 
             agent.run(f"set gps.device {self.read_virtual_serial}")
             agent.run(f"set gps.baudrate {self.baud_rate}")
@@ -200,7 +199,7 @@ class GPS(plugins.Plugin):
 
             logging.info(f"bettercap gps module enabled on {self.read_virtual_serial}")
         else:
-            self.set_status('NF')
+            self.set_status("NF")
             logging.warning("no GPS detected")
 
     def on_handshake(self, agent, filename, access_point, client_station):
@@ -210,24 +209,24 @@ class GPS(plugins.Plugin):
 
         if coordinates and all([
             # avoid 0.000... measurements
-            coordinates["Latitude"], coordinates["Longitude"]
+            coordinates["Latitude"], coordinates["Longitude"],
         ]):
-            self.set_status('S')
+            self.set_status("S")
             logging.info(f"saving GPS to {gps_filename} ({coordinates})")
-            with open(gps_filename, "w+t") as fp:
+            with open(gps_filename, "w+") as fp:
                 json.dump(coordinates, fp)
         else:
             logging.warning("not saving GPS. Couldn't find location.")
 
     def on_ui_setup(self, ui):
         with ui._lock:
-            ui.add_element('gps', LabeledValue(color=BLACK, label='GPS', value='-', position=(ui.width() / 2 - 47, 0), label_font=fonts.Bold, text_font=fonts.Medium))
+            ui.add_element("gps", LabeledValue(color=BLACK, label="GPS", value="-", position=(ui.width() / 2 - 47, 0), label_font=fonts.Bold, text_font=fonts.Medium))
 
     def on_unload(self, ui):
-        self.cleanup()  
+        self.cleanup()
 
         with ui._lock:
-            ui.remove_element('gps')
+            ui.remove_element("gps")
 
     def on_ui_update(self, ui):
-        ui.set('gps', self.get_status())
+        ui.set("gps", self.get_status())

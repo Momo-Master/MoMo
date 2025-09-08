@@ -1,6 +1,7 @@
-import logging, json, os, glob, pwnagotchi
-import pwnagotchi.plugins as plugins
-from flask import abort, send_from_directory, render_template_string
+import logging
+
+from flask import render_template_string
+from pwnagotchi import plugins
 
 TEMPLATE = """
 {% extends "base.html" %}
@@ -109,10 +110,10 @@ TEMPLATE = """
 """
 
 class WpaSecList(plugins.Plugin):
-    __author__ = 'edited by neonlightning'
-    __version__ = '1.0.1'
-    __license__ = 'GPL3'
-    __description__ = 'List cracked passwords from wpa-sec'
+    __author__ = "edited by neonlightning"
+    __version__ = "1.0.1"
+    __license__ = "GPL3"
+    __description__ = "List cracked passwords from wpa-sec"
 
     def __init__(self):
         self.ready = False
@@ -130,7 +131,7 @@ class WpaSecList(plugins.Plugin):
         if path == "/" or not path:
             try:
                 passwords = []
-                with open(self.config['bettercap']['handshakes'] + "/wpa-sec.cracked.potfile", 'r') as file_in:
+                with open(self.config["bettercap"]["handshakes"] + "/wpa-sec.cracked.potfile") as file_in:
                     lines = file_in.readlines()
                 lines = [line.strip() for line in lines if line.strip()]
                 unique_lines = set()
@@ -142,14 +143,14 @@ class WpaSecList(plugins.Plugin):
                     password = {
                         "ssid": line_tuple[1],
                         "bssid": line_tuple[0],
-                        "password": line_tuple[2]
+                        "password": line_tuple[2],
                     }
                     passwords.append(password)
                 return render_template_string(TEMPLATE,
                                         title="Passwords list",
                                         passwords=passwords)
             except Exception as e:
-                logging.error("[wpa-sec-list] error while loading passwords: %s" % e)
+                logging.exception(f"[wpa-sec-list] error while loading passwords: {e}")
                 logging.debug(e, exc_info=True)
 
 

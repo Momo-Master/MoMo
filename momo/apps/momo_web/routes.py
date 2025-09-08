@@ -5,7 +5,17 @@ import json
 import time
 import zipfile
 from pathlib import Path
-from flask import Blueprint, current_app, render_template_string, send_from_directory, request, redirect, url_for, Response
+
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    redirect,
+    render_template_string,
+    request,
+    send_from_directory,
+    url_for,
+)
 
 from ...config import MomoConfig
 from ...tools.handshakes_dl import parse_since
@@ -75,7 +85,7 @@ def dashboard():
       <div>UI: http://{cfg.web.bind_host}:{cfg.web.bind_port}/</div>
       <div>Metrics: {metrics_url}</div>
       <div>Health: {health_url}</div>
-      {('<div class=\"warn\">' + ', '.join(warn) + '</div>') if warn else ''}
+      {('<div class="warn">' + ', '.join(warn) + '</div>') if warn else ''}
     </div>
     """
     return render_template_string(_BASE, title=cfg.web.title, footer=cfg.web.footer, metrics_url=metrics_url, health_url=health_url, content=content)
@@ -176,10 +186,11 @@ def export_zip():
 @ui_bp.get("/config")
 def config_page():
     cfg = _cfg()
-    raw = Path.resolve(Path("/dev/null"))  # placeholder to avoid exposing envs; we show file text
+    Path.resolve(Path("/dev/null"))  # placeholder to avoid exposing envs; we show file text
     text = ""
     try:
-        text = Path(cfg_path := str(current_app.config.get("MOMO_CONFIG_PATH", ""))).read_text(encoding="utf-8") if cfg_path else ""
+        cfg_path = str(current_app.config.get("MOMO_CONFIG_PATH", ""))
+        text = Path(cfg_path).read_text(encoding="utf-8") if cfg_path else ""
     except Exception:
         pass
     code = f"<div class='card'><h2>Config</h2><pre>{(text or '').replace('<','&lt;')}</pre></div>"

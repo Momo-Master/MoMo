@@ -1,12 +1,13 @@
 import logging
 
-import pwnagotchi.plugins as plugins
+from pwnagotchi import plugins
+
 
 class instattack(plugins.Plugin):
-    __author__ = '129890632+Sniffleupagus@users.noreply.github.com'
-    __version__ = '1.0.0'
-    __license__ = 'GPL3'
-    __description__ = 'Pwn more aggressively. Launch immediate associate or deauth attack when bettercap spots a device.'
+    __author__ = "129890632+Sniffleupagus@users.noreply.github.com"
+    __version__ = "1.0.0"
+    __license__ = "GPL3"
+    __description__ = "Pwn more aggressively. Launch immediate associate or deauth attack when bettercap spots a device."
 
     def __init__(self):
         logging.debug("instattack plugin created")
@@ -17,9 +18,9 @@ class instattack(plugins.Plugin):
     # called before the plugin is unloaded
     def on_unload(self, ui):
         if self.old_name:
-            ui.set('name', "%s " % self.old_name)
+            ui.set("name", f"{self.old_name} ")
         else:
-            ui.set('name', "%s>  " % ui.get('name')[:-3])
+            ui.set("name", "{}>  ".format(ui.get("name")[:-3]))
         self.old_name = None
         logging.info("instattack out.")
 
@@ -28,12 +29,12 @@ class instattack(plugins.Plugin):
         self._ui = ui
 
     def on_ui_update(self, ui):
-        if self.old_name == None:
-            self.old_name = ui.get('name')
+        if self.old_name is None:
+            self.old_name = ui.get("name")
             if self.old_name:
-                i = self.old_name.find('>')
+                i = self.old_name.find(">")
                 if i:
-                    ui.set('name', "%s%s" % (self.old_name[:i], "!!!"))
+                    ui.set("name", "{}{}".format(self.old_name[:i], "!!!"))
 
     # called when everything is ready and the main loop is about to start
     def on_ready(self, agent):
@@ -50,54 +51,54 @@ class instattack(plugins.Plugin):
     # name is used to make an "on_" handler to plugins, like below.
 
     def track_recent(self, ap, cl=None):
-        ap['_track_time'] = time.time()
-        self.recents[ap['mac'].lower()] = ap
+        ap["_track_time"] = time.time()
+        self.recents[ap["mac"].lower()] = ap
         if cl:
-            cl['_track_time'] = ap['_track_time']
-            self.recents[cl['mac'].lower()] = cl
+            cl["_track_time"] = ap["_track_time"]
+            self.recents[cl["mac"].lower()] = cl
 
     def ok_to_attack(self, ap):
         if not self._agent:
             return False
 
-        whitelist = list(map(lambda x: x.lower(), self._agent._config['main']['whitelist']))
-        return ap['hostname'].lower() not in whitelist \
-            and ap['mac'].lower() not in whitelist \
-            and ap['mac'][:8].lower() not in whitelist
+        whitelist = list(map(lambda x: x.lower(), self._agent._config["main"]["whitelist"]))
+        return ap["hostname"].lower() not in whitelist \
+            and ap["mac"].lower() not in whitelist \
+            and ap["mac"][:8].lower() not in whitelist
 
     def on_bcap_wifi_ap_new(self, agent, event):
         try:
-            ap = event['data']
-            if agent._config['personality']['associate'] and self.ok_to_attack(ap):
-                logging.info("insta-associate: %s (%s)" % (ap['hostname'], ap['mac']))
+            ap = event["data"]
+            if agent._config["personality"]["associate"] and self.ok_to_attack(ap):
+                logging.info("insta-associate: {} ({})".format(ap["hostname"], ap["mac"]))
                 agent.associate(ap, 0.3)
         except Exception as e:
-            logging.error(repr(e))
+            logging.exception(repr(e))
 
     def on_bcap_wifi_client_new(self, agent, event):
         try:
-            ap = event['data']['AP']
-            cl = event['data']['Client']
-            if agent._config['personality']['deauth'] and self.ok_to_attack(ap) and self.ok_to_attack(cl):
-                logging.info("insta-deauth: %s (%s)->'%s'(%s)(%s)" % (ap['hostname'], ap['mac'],
-                                                                      cl['hostname'], cl['mac'], cl['vendor']))
+            ap = event["data"]["AP"]
+            cl = event["data"]["Client"]
+            if agent._config["personality"]["deauth"] and self.ok_to_attack(ap) and self.ok_to_attack(cl):
+                logging.info("insta-deauth: {} ({})->'{}'({})({})".format(ap["hostname"], ap["mac"],
+                                                                      cl["hostname"], cl["mac"], cl["vendor"]))
                 agent.deauth(ap, cl, 0.75)
         except Exception as e:
-            logging.error(repr(e))
+            logging.exception(repr(e))
 
     def on_handshake(self, agent, filename, ap, cl):
-        logging.info("insta-shake? %s" % ap['mac'])
-        if 'mac' in ap and 'mac' in cl:
-            amac = ap['mac'].lower()
-            cmac = cl['mac'].lower()
+        logging.info("insta-shake? {}".format(ap["mac"]))
+        if "mac" in ap and "mac" in cl:
+            amac = ap["mac"].lower()
+            cmac = cl["mac"].lower()
             if amac in self.recents:
-                logging.info("insta-shake!!! %s (%s)->'%s'(%s)(%s)" % (ap['hostname'], ap['mac'],
-                                                                       cl['hostname'], cl['mac'], cl['vendor']))
+                logging.info("insta-shake!!! {} ({})->'{}'({})({})".format(ap["hostname"], ap["mac"],
+                                                                       cl["hostname"], cl["mac"], cl["vendor"]))
                 del self.recents[amac]
                 if cmac in self.recents:
                     del self.recents[cmac]
 
     def on_epoch(self, agent, epoch, epoch_data):
         for mac in self.recents:
-            if self.recents[mac]['_track_time'] < (time.time() - (self.epoch_duration * 2)):
+            if self.recents[mac]["_track_time"] < (time.time() - (self.epoch_duration * 2)):
                 del self.recents[mac]

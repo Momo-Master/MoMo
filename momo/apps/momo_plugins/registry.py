@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from importlib import import_module
-from typing import Any, List, Dict, Tuple
+from typing import Any
+
+from .base import get_priority
 
 
 def _cfg_to_dict(obj: Any) -> dict:
@@ -19,12 +21,16 @@ def _normalize_name(name: str) -> str:
     return name.replace("-", "_")
 
 
-def load_enabled_plugins(enabled: List[str], options: Dict[str, Dict[str, Any]]) -> Tuple[List[str], List[object]]:
-    loaded: List[str] = []
-    shutdownables: List[object] = []
+def load_enabled_plugins(
+    enabled: list[str], options: dict[str, dict[str, Any]], global_cfg: Any | None = None
+) -> tuple[list[str], list[object]]:
+    loaded: list[str] = []
+    shutdownables: list[object] = []
+    # Priority loading: collect first
+    candidates: list[tuple[int, str, Any]] = []
     for name in enabled or []:
         normalized = _normalize_name(name)
-        tried: List[str] = []
+        tried: list[str] = []
         module = None
         for candidate in (normalized, name):
             modpath = f"momo.apps.momo_plugins.{candidate}"
@@ -38,11 +44,21 @@ def load_enabled_plugins(enabled: List[str], options: Dict[str, Dict[str, Any]])
         if module is None:
             print(f"[plugins] failed to load '{name}': tried {', '.join(tried)}")
             continue
+        prio = get_priority(module) if module else 100
+        candidates.append((prio, name, module))
+    # sort by priority (lower first)
+    for _prio, name, module in sorted(candidates, key=lambda t: t[0]):
+        if module is None:
+            continue
         try:
-            cfg = options.get(name, {}) or options.get(normalized, {})
+            cfg = options.get(name, {}) or options.get(_normalize_name(name), {})
             cfg = _cfg_to_dict(cfg)
             if hasattr(module, "init"):
-                module.init(cfg)
+                # pass global_cfg optionally if plugin supports it
+                try:
+                    module.init(cfg if global_cfg is None else {**cfg, "_global": global_cfg})
+                except TypeError:
+                    module.init(cfg)
             if hasattr(module, "shutdown"):
                 shutdownables.append(module)
             print(f"[plugins] loaded '{name}' via {module.__name__}")

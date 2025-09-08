@@ -1,5 +1,4 @@
 from momo.config import MomoConfig
-from momo.apps.momo_plugins import PluginManager
 
 
 def test_plugin_filter_enabled():

@@ -1,5 +1,5 @@
 from momo.apps.momo_core.bettercap import build_bettercap_args
-from momo.config import MomoConfig, BettercapConfig
+from momo.config import BettercapConfig, MomoConfig
 
 
 def test_bettercap_args_passive():

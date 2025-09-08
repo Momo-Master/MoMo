@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from functools import wraps
-from typing import Callable, Any
-from flask import request, abort, current_app
+from typing import Any
+
+from flask import abort, current_app, request
 
 
 def _get_env(name: str) -> str | None:
@@ -39,8 +41,8 @@ def require_app_auth(fn: Callable[..., Any]) -> Callable[..., Any]:
     @wraps(fn)
     def wrapper(*args: Any, **kwargs: Any):
         cfg = current_app.config.get("MOMO_CONFIG")
-        token_env = getattr(getattr(cfg, "web").auth, "token_env", "MOMO_UI_TOKEN") if cfg else "MOMO_UI_TOKEN"
-        password_env = getattr(getattr(cfg, "web").auth, "password_env", "MOMO_UI_PASSWORD") if cfg else "MOMO_UI_PASSWORD"
+        token_env = getattr(cfg.web.auth, "token_env", "MOMO_UI_TOKEN") if cfg else "MOMO_UI_TOKEN"
+        password_env = getattr(cfg.web.auth, "password_env", "MOMO_UI_PASSWORD") if cfg else "MOMO_UI_PASSWORD"
         # Reuse logic from require_auth by evaluating dynamically
         bearer = request.headers.get("Authorization", "")
         basic = request.authorization

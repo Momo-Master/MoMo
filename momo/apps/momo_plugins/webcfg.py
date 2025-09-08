@@ -4,7 +4,6 @@ import logging
 import os
 import threading
 import time
-from typing import Optional, Tuple
 
 from flask import Flask, Response, jsonify, request
 from werkzeug.serving import make_server
@@ -20,6 +19,7 @@ _ACTIVE_GAUGE = 0
 MOMO_NAME = "MoMo"
 MOMO_VERSION = "dev"
 import os as _os
+
 MOMO_BASEDIR = _os.getenv("MOMO_BASEDIR", "/opt/momo")
 
 
@@ -44,7 +44,7 @@ class _RateLimiter:
 _limiter = _RateLimiter(capacity=30, per_seconds=60)
 
 
-def _auth_ok(allow_unauth: bool) -> Tuple[bool, int]:
+def _auth_ok(allow_unauth: bool) -> tuple[bool, int]:
     if allow_unauth:
         return True, 200
     token = os.environ.get("MOMO_UI_TOKEN")
@@ -60,7 +60,7 @@ def get_app(allow_unauth: bool = False) -> Flask:
     app = Flask(__name__)
 
     @app.before_request
-    def _limit() -> Optional[Response]:  # type: ignore[override]
+    def _limit() -> Response | None:  # type: ignore[override]
         global _REQ_TOTAL
         if not _limiter.allow():
             _REQ_TOTAL["429"] += 1
@@ -119,10 +119,9 @@ def get_metrics() -> dict:
 def is_active() -> bool:
     return _ACTIVE
 
-import logging
 import json
-from flask import abort
-from flask import render_template_string
+
+from flask import abort, render_template_string
 
 INDEX = """
 {% extends "base.html" %}
@@ -603,14 +602,14 @@ def serializer(obj):
 
 
 class WebConfig:
-    __author__ = '33197631+dadav@users.noreply.github.com'
-    __version__ = '1.0.0'
-    __license__ = 'GPL3'
-    __description__ = 'This plugin allows the user to make runtime changes.'
+    __author__ = "33197631+dadav@users.noreply.github.com"
+    __version__ = "1.0.0"
+    __license__ = "GPL3"
+    __description__ = "This plugin allows the user to make runtime changes."
 
     def __init__(self):
         self.ready = False
-        self.mode = 'MANU'
+        self.mode = "MANU"
         self._agent = None
 
     def on_config_changed(self, config):
@@ -619,21 +618,19 @@ class WebConfig:
 
     def on_ready(self, agent):
         self._agent = agent
-        self.mode = 'MANU' if agent.mode == 'manual' else 'AUTO'
+        self.mode = "MANU" if agent.mode == "manual" else "AUTO"
 
     def on_internet_available(self, agent):
         self._agent = agent
-        self.mode = 'MANU' if agent.mode == 'manual' else 'AUTO'
+        self.mode = "MANU" if agent.mode == "manual" else "AUTO"
 
     def on_loaded(self):
-        """
-        Gets called when the plugin gets loaded
+        """Gets called when the plugin gets loaded
         """
         logging.info("webcfg: Plugin loaded.")
 
     def on_webhook(self, path, request):
-        """
-        Serves the current configuration
+        """Serves the current configuration
         """
         if not self.ready:
             return "Plugin not ready"
@@ -641,32 +638,31 @@ class WebConfig:
         if request.method == "GET":
             if path == "/" or not path:
                 return render_template_string(INDEX)
-            elif path == "get-config":
+            if path == "get-config":
                 # send configuration
                 return json.dumps(self.config, default=serializer)
-            else:
-                abort(404)
+            abort(404)
         elif request.method == "POST":
             if path == "save-config":
                 try:
-                    save_config(request.get_json(), '/etc/pwnagotchi/config.toml')  # test
+                    save_config(request.get_json(), "/etc/pwnagotchi/config.toml")  # test
                     _thread.start_new_thread(restart, (self.mode,))
                     return "success"
                 except Exception as ex:
-                    logging.error(ex)
+                    logging.exception(ex)
                     return "config error", 500
             elif path == "merge-save-config":
                 try:
                     self.config = merge_config(request.get_json(), self.config)
                     pwnagotchi.config = merge_config(request.get_json(), pwnagotchi.config)
-                    logging.debug("PWNAGOTCHI CONFIG:\n%s" % repr(pwnagotchi.config))
+                    logging.debug(f"PWNAGOTCHI CONFIG:\n{pwnagotchi.config!r}")
                     if self._agent:
                         self._agent._config = merge_config(request.get_json(), self._agent._config)
-                        logging.debug("    Agent CONFIG:\n%s" % repr(self._agent._config))
-                    logging.debug("   Updated CONFIG:\n%s" % request.get_json())
-                    save_config(request.get_json(), '/etc/pwnagotchi/config.toml')  # test
+                        logging.debug(f"    Agent CONFIG:\n{self._agent._config!r}")
+                    logging.debug(f"   Updated CONFIG:\n{request.get_json()}")
+                    save_config(request.get_json(), "/etc/pwnagotchi/config.toml")  # test
                     return "success"
                 except Exception as ex:
-                    logging.error("[webcfg mergesave] %s" % ex)
+                    logging.exception(f"[webcfg mergesave] {ex}")
                     return "config error", 500
         abort(404)

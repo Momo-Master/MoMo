@@ -3,7 +3,8 @@ set -euo pipefail
 
 # MoMo Unified Installer (idempotent)
 # Env flags:
-# NONINTERACTIVE=1, MOMO_IFACE, MOMO_REG, ENABLE_OLED=0/1, ENABLE_SECURITY=0/1, NO_START=1, SKIP_DKMS=1
+# NONINTERACTIVE=1, MOMO_IFACE, MOMO_REG, ENABLE_OLED=0/1, ENABLE_SECURITY=0/1, ENABLE_WEB=0/1, NO_START=1, SKIP_DKMS=1, ROTATE_TOKEN=1,
+# ENABLE_ACTIVE_WIFI=0/1, ENABLE_BETTERCAP=0/1, ENABLE_CRACKING=0/1
 
 LOGFILE=${LOGFILE:-/var/log/momo_install.log}
 REPO_DIR=${REPO_DIR:-/opt/momo}
@@ -25,6 +26,15 @@ ensure_packages() {
   apt_install git python3-venv python3-pip build-essential dkms libpcap-dev libssl-dev iw rfkill usbutils curl unzip logrotate shellcheck || true
   log "Installing capture tools ..."
   apt_install hcxdumptool hcxtools aircrack-ng || true
+  if [ "${ENABLE_ACTIVE_WIFI:-0}" = "1" ]; then
+    apt_install mdk4 aircrack-ng || true
+  fi
+  if [ "${ENABLE_BETTERCAP:-0}" = "1" ]; then
+    apt_install bettercap || true
+  fi
+  if [ "${ENABLE_CRACKING:-0}" = "1" ]; then
+    apt_install hashcat john || true
+  fi
 }
 
 ensure_repo() {
@@ -72,6 +82,19 @@ ensure_config() {
   if ! grep -q "rotate_secs" "$REPO_DIR/configs/momo.yml"; then
     printf "\n  rotate_secs: 60\n" >> "$REPO_DIR/configs/momo.yml"
   fi
+  # optional plugins enablement
+  if [ "${ENABLE_ACTIVE_WIFI:-0}" = "1" ]; then
+    sed -i 's/^\(\s*enabled: \[.*\)\]/\1, "active_wifi"]/' "$REPO_DIR/configs/momo.yml" || true
+    sed -i 's/^\(\s*active_wifi:\)/\1\n      enabled: true/' "$REPO_DIR/configs/momo.yml" || true
+  fi
+  if [ "${ENABLE_BETTERCAP:-0}" = "1" ]; then
+    # no direct config; plugin reads options.plugins.bettercap if added later
+    true
+  fi
+  if [ "${ENABLE_CRACKING:-0}" = "1" ]; then
+    # enable cracker by plugin list
+    sed -i 's/^\(\s*enabled: \[.*\)\]/\1, "cracker"]/' "$REPO_DIR/configs/momo.yml" || true
+  fi
 }
 
 ensure_driver() {
@@ -104,7 +127,7 @@ ensure_services() {
   if [ "${NO_START:-0}" != "1" ]; then
     systemctl enable --now momo.service || true
     if [ "${ENABLE_OLED:-0}" = "1" ]; then systemctl enable --now momo-oled.service || true; fi
-    if [ "${ENABLE_WEB:-0}" = "1" ]; then systemctl enable --now momo-web.service || true; fi
+    if [ "${ENABLE_WEB:-1}" = "1" ]; then systemctl enable --now momo-web.service || true; fi
   fi
 }
 
@@ -121,10 +144,42 @@ ensure_security() {
   log "Applying baseline security (UFW, fail2ban)"
   apt_install ufw fail2ban || true
   ufw allow 22/tcp || true
-  ufw allow 8080/tcp || true
-  ufw allow 9090/tcp || true
+  ufw allow 8081/tcp || true
+  ufw allow 9091/tcp || true
+  ufw allow 8082/tcp || true
   ufw --force enable || true
   systemctl enable --now fail2ban || true
+}
+
+first_non_loopback_ip() {
+  hostname -I 2>/dev/null | awk '{for(i=1;i<=NF;i++){if($i!~"^127\.") {print $i; exit}}}'
+}
+
+ensure_token() {
+  local dropin_dir=/etc/systemd/system/momo.service.d
+  local env_file="$dropin_dir/env.conf"
+  local token_file="$REPO_DIR/.momo_ui_token"
+  mkdir -p "$dropin_dir"
+  local current_token=""
+  if [ -f "$env_file" ]; then
+    current_token=$(grep -E "^Environment=MOMO_UI_TOKEN=" "$env_file" | sed 's/^Environment=MOMO_UI_TOKEN=//') || true
+  fi
+  if [ "${ROTATE_TOKEN:-0}" = "1" ]; then current_token=""; fi
+  if [ -z "$current_token" ]; then
+    # generate 32-char base64url without padding
+    local token
+    token=$(openssl rand -base64 48 | tr '+/' '-_' | tr -d '=\n' | cut -c1-32)
+    echo "[Service]" > "$env_file"
+    echo "Environment=MOMO_UI_TOKEN=$token" >> "$env_file"
+    echo -n "$token" > "$token_file"
+    chmod 600 "$token_file"
+    log "Generated MOMO_UI_TOKEN and wrote to $env_file and $token_file"
+    systemctl daemon-reload || true
+  else
+    if [ ! -f "$token_file" ]; then
+      echo -n "$current_token" > "$token_file" && chmod 600 "$token_file"
+    fi
+  fi
 }
 
 main() {
@@ -134,11 +189,24 @@ main() {
   ensure_repo
   ensure_venv
   ensure_config
+  ensure_token
   ensure_driver
   ensure_logrotate
   ensure_systemd_setup
   ensure_services
   ensure_security
+  # Print URLs and token
+  local ip
+  ip=$(first_non_loopback_ip)
+  local token
+  if [ -f "$REPO_DIR/.momo_ui_token" ]; then token=$(cat "$REPO_DIR/.momo_ui_token"); else token=""; fi
+  log "Health:  http://$ip:8081/healthz"
+  log "Metrics: http://$ip:9091/metrics"
+  log "Web UI:  http://$ip:8082/"
+  if [ -n "$token" ]; then
+    log "Token file: $REPO_DIR/.momo_ui_token"
+    log "API sample: curl -H \"Authorization: Bearer $token\" http://$ip:8082/api/status"
+  fi
   log "Install complete. Summary:"
   log "  Repo: $REPO_DIR"
   log "  Venv: $VENV_DIR"

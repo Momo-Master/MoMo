@@ -8,7 +8,7 @@ def test_webcfg_refuses_without_token(monkeypatch):
     app = webcfg.get_app(allow_unauth=False)
     client = app.test_client()
     resp = client.get("/")
-    assert resp.status_code == 401 or resp.status_code == 429
+    assert resp.status_code in {401, 429}
 
 
 def test_webcfg_accepts_with_token(monkeypatch):
@@ -16,5 +16,5 @@ def test_webcfg_accepts_with_token(monkeypatch):
     app = webcfg.get_app(allow_unauth=False)
     client = app.test_client()
     resp = client.get("/", headers={"Authorization": "Bearer tok"})
-    assert resp.status_code == 200 or resp.status_code == 429
+    assert resp.status_code in {200, 429}
 

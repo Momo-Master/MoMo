@@ -1,16 +1,16 @@
 import logging
 
-import pwnagotchi.plugins as plugins
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
-import pwnagotchi.ui.fonts as fonts
 
 
 class Example(plugins.Plugin):
-    __author__ = 'evilsocket@gmail.com'
-    __version__ = '1.0.0'
-    __license__ = 'GPL3'
-    __description__ = 'An example plugin for pwnagotchi that implements all the available callbacks.'
+    __author__ = "evilsocket@gmail.com"
+    __version__ = "1.0.0"
+    __license__ = "GPL3"
+    __description__ = "An example plugin for pwnagotchi that implements all the available callbacks."
 
     def __init__(self):
         logging.debug("example plugin created")
@@ -24,7 +24,7 @@ class Example(plugins.Plugin):
 
     # called when the plugin is loaded
     def on_loaded(self):
-        logging.warning("WARNING: this plugin should be disabled! options = %s" % self.options)
+        logging.warning(f"WARNING: this plugin should be disabled! options = {self.options}")
 
     # called before the plugin is unloaded
     def on_unload(self, ui):
@@ -37,7 +37,7 @@ class Example(plugins.Plugin):
     # called to set up the ui elements
     def on_ui_setup(self, ui):
         # add custom UI elements
-        ui.add_element('ups', LabeledValue(color=BLACK, label='UPS', value='0%/0V', position=(ui.width() / 2 - 25, 0),
+        ui.add_element("ups", LabeledValue(color=BLACK, label="UPS", value="0%/0V", position=(ui.width() / 2 - 25, 0),
                                            label_font=fonts.Bold, text_font=fonts.Medium))
 
     # called when the ui is updated
@@ -45,7 +45,7 @@ class Example(plugins.Plugin):
         # update those elements
         some_voltage = 0.1
         some_capacity = 100.0
-        ui.set('ups', "%4.2fV/%2i%%" % (some_voltage, some_capacity))
+        ui.set("ups", "%4.2fV/%2i%%" % (some_voltage, some_capacity))
 
     # called when the hardware display setup is done, display is an hardware specific object
     def on_display_setup(self, display):

@@ -1,10 +1,12 @@
 # Witty Pi 4 L3V7
 #
 import logging
-import pwnagotchi.plugins as plugins
-import pwnagotchi.ui.fonts as fonts
+
+from pwnagotchi import plugins
+from pwnagotchi.ui import fonts
 from pwnagotchi.ui.components import LabeledValue
 from pwnagotchi.ui.view import BLACK
+
 
 class UPS:
     I2C_MC_ADDRESS = 0x08
@@ -45,15 +47,15 @@ class UPS:
     def charging(self):
         try:
             dc = self._bus.read_byte_data(self.I2C_MC_ADDRESS, self.I2C_POWER_MODE)
-            return '+' if dc == 0 else '-'
+            return "+" if dc == 0 else "-"
         except:
-            return '-'
+            return "-"
 
 class WittyPi(plugins.Plugin):
-    __author__ = 'https://github.com/krishenriksen'
-    __version__ = '1.0.0'
-    __license__ = 'GPL3'
-    __description__ = 'A plugin that will display battery info from Witty Pi 4 L3V7'
+    __author__ = "https://github.com/krishenriksen"
+    __version__ = "1.0.0"
+    __license__ = "GPL3"
+    __description__ = "A plugin that will display battery info from Witty Pi 4 L3V7"
 
     def __init__(self):
         self.ups = None
@@ -63,13 +65,13 @@ class WittyPi(plugins.Plugin):
         logging.info("wittypi plugin loaded.")
 
     def on_ui_setup(self, ui):
-        ui.add_element('ups', LabeledValue(color=BLACK, label='UPS', value='0%', position=(ui.width() / 2 + 15, 0), label_font=fonts.Bold, text_font=fonts.Medium))
+        ui.add_element("ups", LabeledValue(color=BLACK, label="UPS", value="0%", position=(ui.width() / 2 + 15, 0), label_font=fonts.Bold, text_font=fonts.Medium))
 
     def on_unload(self, ui):
         with ui._lock:
-            ui.remove_element('ups')
+            ui.remove_element("ups")
 
     def on_ui_update(self, ui):
         capacity = self.ups.capacity()
         charging = self.ups.charging()
-        ui.set('ups', "%2i%s" % (capacity, charging))
+        ui.set("ups", "%2i%s" % (capacity, charging))

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import json
-from flask import Blueprint, current_app, render_template_string, redirect, url_for
+
+from flask import Blueprint, current_app, redirect, render_template_string, url_for
 
 from ...config import MomoConfig
-from .auth import require_auth
 
 pages_bp = Blueprint("pages", __name__)
 

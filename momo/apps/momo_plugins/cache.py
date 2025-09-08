@@ -1,11 +1,12 @@
-import logging
 import json
+import logging
 import os
-import re
 import pathlib
-import pwnagotchi.plugins as plugins
-from datetime import datetime, UTC
+import re
+from datetime import UTC, datetime
 from threading import Lock
+
+from pwnagotchi import plugins
 
 
 def read_ap_cache(cache_dir, file):
@@ -15,7 +16,7 @@ def read_ap_cache(cache_dir, file):
         logging.info("Cache not exist")
         return None
     try:
-        with open(cache_filename, "r") as f:
+        with open(cache_filename) as f:
             return json.load(f)
     except Exception as e:
         logging.info(f"Exception {e}")
@@ -42,11 +43,11 @@ class Cache(plugins.Plugin):
             self.cache_dir = os.path.join(handshake_dir, "cache")
             os.makedirs(self.cache_dir, exist_ok=True)
         except Exception:
-            logging.info(f"[CACHE] Cannot access to the cache directory")
+            logging.info("[CACHE] Cannot access to the cache directory")
             return
         self.last_clean = datetime.now(tz=UTC)
         self.ready = True
-        logging.info(f"[CACHE] Cache plugin configured")
+        logging.info("[CACHE] Cache plugin configured")
         self.clean_ap_cache()
 
     def on_unload(self, ui):
@@ -70,7 +71,7 @@ class Cache(plugins.Plugin):
             for cache_file in cache_to_delete:
                 try:
                     cache_file.unlink()
-                except FileNotFoundError as e:
+                except FileNotFoundError:
                     pass
 
     def write_ap_cache(self, access_point):
@@ -85,8 +86,7 @@ class Cache(plugins.Plugin):
                 with open(cache_file, "w") as f:
                     json.dump(access_point, f)
             except Exception as e:
-                logging.error(f"[CACHE] Cannot write {cache_file}: {e}")
-                pass
+                logging.exception(f"[CACHE] Cannot write {cache_file}: {e}")
 
     def on_wifi_update(self, agent, access_points):
         if self.ready:

@@ -6,7 +6,7 @@
 - No shipped wordlists
 - Whitelist/blacklist enforced by config
 
-MoMo prioritizes a secure-by-default posture. Aggressive actions are disabled unless explicitly allowed and acknowledged. Network-facing components bind to localhost by default.
+MoMo prioritizes a secure-by-default posture. Aggressive actions are disabled unless explicitly allowed and acknowledged. On first boot, network-facing components are enabled on LAN with a strong token; you can change binds to `127.0.0.1` later.
 
 ## SSH Hardening (docs only)
 
@@ -33,18 +33,18 @@ sudo ufw enable
 
 ## Web UI security
 
-- Disabled by default; binds to 127.0.0.1 when enabled.
+- First boot: enabled and bound to `0.0.0.0:8082` with a strong token persisted at `/opt/momo/.momo_ui_token` and exported via a systemd drop-in (`env.conf`).
 - Authentication options (set via environment):
   - Bearer token: `MOMO_UI_TOKEN`
   - Basic auth (username `momo`): `MOMO_UI_PASSWORD`
 - Rate limiting: configured via `web.rate_limit` (defaults to `60/minute`).
-- Recommendation: keep MoMo bound to localhost and expose via a reverse proxy (Nginx/Caddy) with TLS for any LAN access.
+- Recommendation: for hardened setups, change `server.web.bind_host: 127.0.0.1` and expose via a reverse proxy (Nginx/Caddy) with TLS, or use SSH tunneling.
 - Do not store tokens/passwords in git or YAML; pass via systemd environment overrides.
 
 Example systemd override for secrets:
 
 ```bash
-sudo systemctl edit momo-web
+sudo systemctl edit momo
 # In the editor, add:
 [Service]
 Environment="MOMO_UI_TOKEN=change-me-strong"

@@ -1,4 +1,3 @@
-import os
 import time
 
 import momo.apps.momo_plugins.wpa_sec as wp

@@ -1,11 +1,9 @@
-import os
+import http.client
 import threading
 import time
-import http.client
-from pathlib import Path
 
-from momo.config import load_config
 from momo.apps.momo_web import create_app
+from momo.config import load_config
 
 
 def _run_app(app):

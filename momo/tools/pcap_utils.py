@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import datetime as dt
-from pathlib import Path
-from typing import Iterable
-import subprocess
 import re
+import subprocess
 import unicodedata
-from datetime import datetime, timezone
+from collections.abc import Iterable
+from datetime import datetime
+from pathlib import Path
 
 
 def iso_date_folder(base_dir: Path) -> Path:
@@ -81,7 +81,7 @@ def make_safe_filename(ssid: str, bssid: str, channel: int, template: str, limit
     # trim length of ssid part conservatively
     if len(name_ssid) > limit:
         name_ssid = name_ssid[:limit]
-    ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    ts = datetime.now(dt.UTC).strftime("%Y%m%dT%H%M%SZ")
     base = template.format(ts=ts, ssid=name_ssid, bssid=bssid.replace(":", "-"), channel=channel)
     return base
 

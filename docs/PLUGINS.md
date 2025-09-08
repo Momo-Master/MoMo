@@ -1,26 +1,16 @@
 # Plugins
 
-MoMo uses a manual “drop‑in” plugin model. A plugin is a Python module under `momo/apps/momo_plugins/` that may expose:
+## Drop-in model
 
-- `init(cfg: MomoConfig) -> None` — called on startup
-- `shutdown() -> None` — called on shutdown
+Place plugin modules under `momo/apps/momo_plugins/` and enable by name in `plugins.enabled`.
 
-Enable plugins in `configs/momo.yml`:
+## Priority and lifecycle
 
-```yaml
-plugins:
-  enabled: ["autobackup", "wpa-sec"]
-  options:
-    autobackup: {}
-    wpa-sec: {}
-```
+- Each plugin may define `priority` (default 100). Lower priority loads earlier.
+- Lifecycle methods: `init(cfg)`, optional `tick(ctx)`, `shutdown()`.
+- The registry isolates exceptions per plugin and continues loading others.
 
-Guidelines:
-- Keep network operations safe; default to dry‑run without credentials.
-- Read secrets via environment variables; do not hardcode in YAML.
-- Emit Prometheus metrics with `momo_<plugin>_*` names.
+## Metrics
 
-AutoBackup specifics:
-- Ensure destination directory exists (create if missing).
-- On `PermissionError`, log a warning and disable itself gracefully without crashing the core.
+- Core exposes generic plugin loading metrics in the future; individual plugins expose their own `get_metrics()` counters.
 
