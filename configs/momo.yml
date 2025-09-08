@@ -20,6 +20,21 @@ capture:
   enable_on_windows: false
   simulate_bytes_per_file: 16384
   simulate_dwell_secs: 2
+  naming:
+    by_ssid: true
+    template: "{ts}__{ssid}__{bssid}__ch{channel}"
+    max_name_len: 64
+    allow_unicode: false
+    whitespace: "_"
+
+web:
+  enabled: false
+  bind_host: 127.0.0.1
+  bind_port: 8082
+  auth:
+    token_env: MOMO_UI_TOKEN
+    password_env: MOMO_UI_PASSWORD
+  rate_limit: "60/minute"
 
 logging:
   base_dir: logs

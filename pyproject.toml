@@ -28,6 +28,8 @@ dependencies = [
   "PyYAML>=6.0",
   "rich>=13.7",
   "psutil>=5.9",
+  "Flask>=3.0.0",
+  "Flask-Limiter>=3.6.0",
 ]
 
 [project.optional-dependencies]
@@ -42,7 +44,6 @@ dev = [
   "pre-commit>=3.7.0",
   "types-PyYAML>=6.0.12",
   "types-psutil>=5.9.5",
-  "Flask>=3.0.0",
   "toml>=0.10,<1.0",
 ]
 

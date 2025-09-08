@@ -65,6 +65,14 @@ class CaptureConfig(BaseModel):
     enable_on_windows: bool = Field(False)
     simulate_bytes_per_file: int = Field(16384, ge=0)
     simulate_dwell_secs: int = Field(2, ge=0)
+    class CaptureNamingConfig(BaseModel):
+        by_ssid: bool = Field(True)
+        template: str = Field("{ts}__{ssid}__{bssid}__ch{channel}")
+        max_name_len: int = Field(64, ge=16, le=200)
+        allow_unicode: bool = Field(False)
+        whitespace: str = Field("_")
+
+    naming: CaptureNamingConfig = Field(default_factory=CaptureNamingConfig)
 
 
 class BettercapConfig(BaseModel):
@@ -170,6 +178,26 @@ class PluginsConfig(BaseModel):
     options: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
 
 
+class WebAuthConfig(BaseModel):
+    token_env: str = Field("MOMO_UI_TOKEN")
+    password_env: str = Field("MOMO_UI_PASSWORD")
+
+
+class WebConfig(BaseModel):
+    enabled: bool = Field(False)
+    bind_host: str = Field("127.0.0.1")
+    bind_port: int = Field(8082, ge=1, le=65535)
+    auth: WebAuthConfig = Field(default_factory=WebAuthConfig)
+    rate_limit: str = Field("60/minute")
+
+    @field_validator("bind_host")
+    @classmethod
+    def _validate_host(cls, value: str) -> str:  # noqa: N805
+        if not value or any(c.isspace() for c in value):
+            raise ValueError("bind_host must be a valid hostname or IP")
+        return value
+
+
 class MomoConfig(BaseModel):
     mode: ModeEnum = Field(ModeEnum.PASSIVE)
     interface: InterfaceConfig = Field(default_factory=InterfaceConfig)
@@ -183,6 +211,7 @@ class MomoConfig(BaseModel):
     storage: StorageConfig = Field(default_factory=StorageConfig)
     supervisor: SupervisorConfig = Field(default_factory=SupervisorConfig)
     aggressive: AggressiveConfig = Field(default_factory=AggressiveConfig)
+    web: WebConfig = Field(default_factory=WebConfig)
 
     @property
     def handshakes_dir(self) -> Path:

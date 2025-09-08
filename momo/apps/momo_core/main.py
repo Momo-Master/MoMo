@@ -21,6 +21,9 @@ from ...tools.pcap_utils import (
     next_capture_path,
     rotate_files,
     convert_to_hashcat_22000,
+    extract_primary_network,
+    make_safe_filename,
+    rename_with_collision_guard,
 )
 from ...tools.storage_manager import enforce_quota
 from ..momo_plugins.registry import load_enabled_plugins
@@ -52,6 +55,11 @@ class ServiceState:
         self.capture_simulated_total: int = 0
         self.convert_skipped_total: int = 0
         self.last_capture_seq: int = 0
+        # rename metrics
+        self.rename_total: int = 0
+        self.rename_skipped_total: int = 0
+        self.last_ssid_present: int = 0
+        self.last_capture_path: str | None = None
 
 
 def _read_temperature() -> float | None:
@@ -247,19 +255,73 @@ def service_loop(
         captures = (out_path.parent.glob("*.pcapng"))
         rotate_files(captures, cfg.logging.rotation.max_archives)
 
+        # skip tiny files (<1 KiB): no rename/convert
+        try:
+            size_bytes = out_path.stat().st_size
+        except Exception:
+            size_bytes = 0
+        if size_bytes < 1024:
+            convert_skipped_total += 1
+            state.convert_skipped_total = convert_skipped_total
+            state.rename_skipped_total += 1
+            state.last_ssid_present = 0
+            state.last_capture_path = str(out_path)
+            console.log(f"Capture too small; skipping rename/convert for {out_path.name}")
+            # update end-of-iteration stats
+            files = list(out_path.parent.glob("*.pcapng"))
+            state.last_files = len(files)
+            state.last_bytes = sum(f.stat().st_size for f in files)
+            state.last_rotate_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            state.rotations_total += 1
+            state.handshakes_total = len(list(out_path.parent.glob("*.22000")))
+            _write_stats(cfg, state)
+            # proceed with next iteration
+            continue
+
+        # rename by SSID if configured
+        renamed_path = out_path
+        if cfg.capture.naming.by_ssid:
+            info = None
+            if dry_run or IS_WINDOWS:
+                info = {"ssid": "SIMULATED", "bssid": "00-00-00-00-00-00", "channel": 0}
+            else:
+                info = extract_primary_network(out_path)
+            if info:
+                safe = make_safe_filename(
+                    ssid=info.get("ssid", "hidden"),
+                    bssid=info.get("bssid", "00-00-00-00-00-00"),
+                    channel=int(info.get("channel", 0)),
+                    template=cfg.capture.naming.template,
+                    limit=int(cfg.capture.naming.max_name_len),
+                    unicode_ok=bool(cfg.capture.naming.allow_unicode),
+                    ws=str(cfg.capture.naming.whitespace),
+                )
+                candidate = out_path.with_name(safe + ".pcapng")
+                try:
+                    renamed_path = rename_with_collision_guard(out_path, candidate)
+                    state.rename_total += 1
+                    state.last_ssid_present = 1
+                except Exception:
+                    renamed_path = out_path
+                    state.rename_skipped_total += 1
+                    state.last_ssid_present = 0
+            else:
+                state.rename_skipped_total += 1
+                state.last_ssid_present = 0
+        state.last_capture_path = str(renamed_path)
         # conversion to 22000 format parallel path
-        hashcat_out = out_path.with_suffix(".22000")
+        hashcat_out = renamed_path.with_suffix(".22000")
         tool = cfg.capture.tools.hcxpcapngtool_path
         tool_exists = bool(shutil.which(tool) or os.path.exists(tool))
         if tool_exists and not (dry_run or IS_WINDOWS):
             try:
-                convert_to_hashcat_22000(tool, src=out_path, dest=hashcat_out)
+                convert_to_hashcat_22000(tool, src=renamed_path, dest=hashcat_out)
             except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
-                console.log(f"Conversion failed for {out_path.name}: {exc}")
+                console.log(f"Conversion failed for {renamed_path.name}: {exc}")
         else:
             convert_skipped_total += 1
             state.convert_skipped_total = convert_skipped_total
-            console.log(f"hcxpcapngtool not found; skipping conversion for {out_path.name}")
+            console.log(f"hcxpcapngtool not found; skipping conversion for {renamed_path.name}")
 
         # supervisor poll
         if cfg.supervisor.enabled:
@@ -282,7 +344,7 @@ def service_loop(
             state.child_failures_total = supervisor.child_failures_total
             state.child_backoff_seconds = supervisor.child_backoff_seconds
         # update stats
-        files = list(out_path.parent.glob("*.pcapng"))
+        files = list(renamed_path.parent.glob("*.pcapng"))
         state.last_files = len(files)
         state.last_bytes = sum(f.stat().st_size for f in files)
         state.last_rotate_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
@@ -424,6 +486,16 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, por
             lines.append("# HELP momo_last_capture_seq Last capture sequence number")
             lines.append("# TYPE momo_last_capture_seq gauge")
             lines.append(f"momo_last_capture_seq {getattr(state, 'last_capture_seq', 0)}")
+            # Rename metrics
+            lines.append("# HELP momo_rename_total SSID-based renames performed")
+            lines.append("# TYPE momo_rename_total counter")
+            lines.append(f"momo_rename_total {getattr(state, 'rename_total', 0)}")
+            lines.append("# HELP momo_rename_skipped_total Renames skipped (no SSID or errors)")
+            lines.append("# TYPE momo_rename_skipped_total counter")
+            lines.append(f"momo_rename_skipped_total {getattr(state, 'rename_skipped_total', 0)}")
+            lines.append("# HELP momo_last_ssid_present Whether last capture had an SSID detected")
+            lines.append("# TYPE momo_last_ssid_present gauge")
+            lines.append(f"momo_last_ssid_present {getattr(state, 'last_ssid_present', 0)}")
             # Storage metrics
             if hasattr(state, 'storage_total_bytes'):
                 lines.append("# HELP momo_logs_bytes_total Total bytes under logs directory")
