@@ -633,12 +633,25 @@ def wizard(
 
         if not can_root:
             console.print("[yellow]You can apply now with sudo:[/yellow]")
-            block = f"""
-sudo install -d /etc/momo && sudo cp {out} /etc/momo/momo.yml
-sudo bash -c 'cat > /etc/systemd/system/momo.service <<EOF\n[Unit]\nDescription=MoMo core service\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=simple\nWorkingDirectory=/etc/momo\nExecStart=$(command -v momo) run -c /etc/momo/momo.yml\nUser=momo\nGroup=momo\nEnvironmentFile=-/etc/default/momo\nEnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf\nRestart=always\nRestartSec=2\nLimitNOFILE=65535\nNoNewPrivileges=yes\nProtectSystem=full\nProtectHome=true\nPrivateTmp=yes\n\n[Install]\nWantedBy=multi-user.target\nEOF'
-{('sudo install -d /etc/systemd/system/momo.service.d && echo "[Service]\\nEnvironment=MOMO_UI_TOKEN='+token+'" | sudo tee /etc/systemd/system/momo.service.d/env.conf >/dev/null' if token else ':')}
-sudo systemctl daemon-reload && sudo systemctl enable --now momo
-"""
+            block = (
+                "sudo install -d /etc/momo && sudo cp {cfg} /etc/momo/momo.yml\n"
+                "sudo bash -c 'cat > /etc/systemd/system/momo.service <<\"EOF\"\n"
+                "[Unit]\\nDescription=MoMo core service\\nAfter=network-online.target\\nWants=network-online.target\\n\\n"
+                "[Service]\\nType=simple\\nWorkingDirectory=/etc/momo\\n"
+                "ExecStart=$(command -v momo) run -c /etc/momo/momo.yml\\n"
+                "User=momo\\nGroup=momo\\n"
+                "EnvironmentFile=-/etc/default/momo\\nEnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf\\n"
+                "Restart=always\\nRestartSec=2\\nLimitNOFILE=65535\\nNoNewPrivileges=yes\\nProtectSystem=full\\nProtectHome=true\\nPrivateTmp=yes\\n\\n"
+                "[Install]\\nWantedBy=multi-user.target\\n"
+                "EOF'\n"
+            ).format(cfg=str(out))
+            if token:
+                block += (
+                    "sudo install -d /etc/systemd/system/momo.service.d && "
+                    "printf \"[Service]\\nEnvironment=MOMO_UI_TOKEN={tok}\\n\" | "
+                    "sudo tee /etc/systemd/system/momo.service.d/env.conf >/dev/null\n"
+                ).format(tok=token)
+            block += "sudo systemctl daemon-reload && sudo systemctl enable --now momo\n"
             console.print(f"[cyan]{block}[/cyan]")
     except KeyboardInterrupt:
         console.print("[yellow]Wizard cancelled[/yellow]")
