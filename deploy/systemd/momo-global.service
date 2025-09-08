@@ -1,12 +1,12 @@
 [Unit]
-Description=MoMo core service
+Description=MoMo core service (global install)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/momo
-ExecStart=/opt/momo/.venv/bin/momo run -c /etc/momo/momo.yml
+ExecStart=/usr/bin/momo run -c /etc/momo/momo.yml
 EnvironmentFile=-/etc/default/momo
 Restart=always
 RestartSec=3

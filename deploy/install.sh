@@ -108,6 +108,10 @@ ensure_services() {
   fi
 }
 
+ensure_systemd_setup() {
+  bash "$REPO_DIR/deploy/setup_systemd.sh"
+}
+
 ensure_logrotate() {
   install -m 0644 "$REPO_DIR/deploy/logrotate.d/momo" /etc/logrotate.d/momo
 }
@@ -132,6 +136,7 @@ main() {
   ensure_config
   ensure_driver
   ensure_logrotate
+  ensure_systemd_setup
   ensure_services
   ensure_security
   log "Install complete. Summary:"

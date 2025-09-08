@@ -87,8 +87,9 @@ def metrics_proxy() -> Response:
     cfg = _cfg()
     try:
         import http.client
-
-        conn = http.client.HTTPConnection("127.0.0.1", 9091, timeout=1)
+        host = cfg.server.metrics.bind_host
+        port = cfg.server.metrics.port
+        conn = http.client.HTTPConnection(host, port, timeout=1)
         try:
             conn.request("GET", "/metrics")
             resp = conn.getresponse()

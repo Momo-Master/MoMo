@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+import os
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -62,9 +63,10 @@ class CaptureConfig(BaseModel):
     rotate_on_time: bool = Field(True)
     tools: CaptureToolsConfig = Field(default_factory=CaptureToolsConfig)
     adapters: List[str] = Field(default_factory=list)
-    enable_on_windows: bool = Field(False)
+    enable_on_windows: bool = Field(True)
     simulate_bytes_per_file: int = Field(16384, ge=0)
     simulate_dwell_secs: int = Field(2, ge=0)
+    min_bytes_for_convert: int = Field(10000, ge=0)
     class CaptureNamingConfig(BaseModel):
         by_ssid: bool = Field(True)
         template: str = Field("{ts}__{ssid}__{bssid}__ch{channel}")
@@ -189,6 +191,11 @@ class WebConfig(BaseModel):
     bind_port: int = Field(8082, ge=1, le=65535)
     auth: WebAuthConfig = Field(default_factory=WebAuthConfig)
     rate_limit: str = Field("60/minute")
+    allow_delete: bool = Field(False)
+    allow_query_token: bool = Field(False)
+    title: str = Field("MoMo")
+    footer: str = Field("MoMo • Pi 5")
+    date_format: str = Field("%Y-%m-%d %H:%M:%S")
 
     @field_validator("bind_host")
     @classmethod
@@ -213,6 +220,25 @@ class MomoConfig(BaseModel):
     aggressive: AggressiveConfig = Field(default_factory=AggressiveConfig)
     web: WebConfig = Field(default_factory=WebConfig)
 
+    class ServerEndpoint(BaseModel):
+        enabled: bool = Field(True)
+        bind_host: str = Field("127.0.0.1")
+        port: int = Field(0, ge=1, le=65535)
+
+        @field_validator("bind_host")
+        @classmethod
+        def _validate_host(cls, value: str) -> str:  # noqa: N805
+            if not value or any(c.isspace() for c in value):
+                raise ValueError("bind_host must be a valid hostname or IP")
+            return value
+
+    class ServerConfig(BaseModel):
+        health: MomoConfig.ServerEndpoint = Field(default_factory=lambda: MomoConfig.ServerEndpoint(enabled=True, bind_host="127.0.0.1", port=8081))
+        metrics: MomoConfig.ServerEndpoint = Field(default_factory=lambda: MomoConfig.ServerEndpoint(enabled=True, bind_host="127.0.0.1", port=9091))
+        web: MomoConfig.ServerEndpoint = Field(default_factory=lambda: MomoConfig.ServerEndpoint(enabled=False, bind_host="127.0.0.1", port=8082))
+
+    server: ServerConfig = Field(default_factory=ServerConfig)
+
     @property
     def handshakes_dir(self) -> Path:
         return self.logging.base_dir / "handshakes"
@@ -229,5 +255,27 @@ def load_config(path: Path) -> MomoConfig:
         return MomoConfig.model_validate(raw)
     except ValidationError as exc:  # pragma: no cover - formatting
         raise ValueError(str(exc)) from exc
+
+
+def resolve_config_path(cli_path: Path | None) -> Path:
+    """Resolve config path by priority: CLI, env, /etc/momo, /opt/momo/configs, repo configs."""
+    candidates: list[Path] = []
+    if cli_path:
+        p = Path(cli_path).expanduser()
+        if p.exists():
+            return p.resolve()
+        candidates.append(p)
+    env = os.environ.get("MOMO_CONFIG")
+    if env:
+        p = Path(env).expanduser()
+        if p.exists():
+            return p.resolve()
+        candidates.append(p)
+    for p in [Path("/etc/momo/momo.yml"), Path("/opt/momo/configs/momo.yml"), Path("configs/momo.yml")]:
+        if p.exists():
+            return p.resolve()
+        candidates.append(p)
+    # Fallback to first candidate even if not exists to surface errors consistently
+    return candidates[0] if candidates else Path("configs/momo.yml").resolve()
 
 

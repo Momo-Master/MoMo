@@ -1,6 +1,54 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+log(){ echo "[setup_systemd] $*"; }
+
+UNIT_DIR=/etc/systemd/system
+CONF_DIR=/etc/momo
+DEFAULTS=/etc/default/momo
+REPO_DIR=${REPO_DIR:-/opt/momo}
+
+mkdir -p "$CONF_DIR"
+mkdir -p "$REPO_DIR"
+
+# Ensure config exists once
+if [ ! -f "$CONF_DIR/momo.yml" ]; then
+  if [ -f "$REPO_DIR/configs/momo.yml" ]; then
+    cp "$REPO_DIR/configs/momo.yml" "$CONF_DIR/momo.yml"
+    log "Installed default config to $CONF_DIR/momo.yml"
+  else
+    log "WARN: No repo config found at $REPO_DIR/configs/momo.yml"
+  fi
+fi
+
+# Create defaults env file if missing
+if [ ! -f "$DEFAULTS" ]; then
+  cat > "$DEFAULTS" <<EOF
+# MoMo environment overrides
+# MOMO_UI_TOKEN=
+# MOMO_UI_PASSWORD=
+EOF
+  log "Created $DEFAULTS"
+fi
+
+# Choose unit based on venv presence
+if [ -x "$REPO_DIR/.venv/bin/momo" ]; then
+  install -m 0644 "$REPO_DIR/deploy/systemd/momo.service" "$UNIT_DIR/momo.service"
+  USED_UNIT=momo.service
+else
+  install -m 0644 "$REPO_DIR/deploy/systemd/momo-global.service" "$UNIT_DIR/momo.service"
+  USED_UNIT=momo.service
+fi
+
+systemctl daemon-reload
+systemctl enable --now momo.service
+log "Enabled momo.service using unit: $USED_UNIT"
+log "ExecStart: $(systemctl show -p ExecStart momo | cut -d= -f2-)"
+log "Config: $CONF_DIR/momo.yml"
+
+#!/usr/bin/env bash
+set -euo pipefail
+
 SRC_DIR=${1:-$(pwd)}
 DEST_DIR=/opt/momo
 ENABLE_OLED=${ENABLE_OLED:-0}

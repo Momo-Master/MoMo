@@ -12,7 +12,7 @@ import shutil
 import signal
 import importlib.metadata as md
 
-from .config import MomoConfig, load_config
+from .config import MomoConfig, load_config, resolve_config_path
 from .apps.momo_core.main import service_loop
 
 # Typer uygulaması: testler bunu import ediyor
@@ -83,8 +83,10 @@ def handshakes_dl(
 @app.command(name="config-validate")
 def config_validate(path: Path = typer.Argument(Path("configs/momo.yml"))) -> None:
     """Validate and show resolved configuration."""
+    resolved = resolve_config_path(path)
+    console.print(f"Using config: {resolved}")
     try:
-        cfg: MomoConfig = load_config(path)
+        cfg: MomoConfig = load_config(resolved)
     except Exception as exc:  # noqa: BLE001
         console.print(f"Config validation failed: {exc}")
         raise typer.Exit(code=1) from exc
@@ -95,6 +97,13 @@ def config_validate(path: Path = typer.Argument(Path("configs/momo.yml"))) -> No
 
 
 @app.command()
+def config_which(path: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")) -> None:
+    """Print resolved config path by priority rules."""
+    resolved = resolve_config_path(path)
+    console.print(str(resolved))
+
+
+@app.command()
 def run(
     config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
     health_port: int | None = typer.Option(None, "--health-port"),
@@ -102,7 +111,9 @@ def run(
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Start MoMo core service using CONFIG."""
-    cfg = load_config(config)
+    resolved = resolve_config_path(config)
+    console.print(f"Using config: {resolved}")
+    cfg = load_config(resolved)
     console.print("Starting MoMo core ...")
     service_loop(cfg, runtime_minutes=1, health_port=health_port, prom_port=prom_port, dry_run=dry_run)
     console.print("MoMo core stopped.")
@@ -123,7 +134,7 @@ def rotate_now(
     config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
 ) -> None:
     """Send SIGUSR1 to running MoMo to force rotation."""
-    cfg = load_config(config)
+    cfg = load_config(resolve_config_path(config))
     pid_path = _pidfile(cfg.meta_dir)
     if not pid_path.exists():
         console.print("No pidfile found. Is MoMo running?")
@@ -144,7 +155,7 @@ def status(
     config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
 ) -> None:
     """Show current status from stats file."""
-    cfg = load_config(config)
+    cfg = load_config(resolve_config_path(config))
     stats_path = cfg.meta_dir / "stats.json"
     data = {}
     if stats_path.exists():
@@ -176,7 +187,24 @@ def diag(
     config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
 ) -> None:
     """Run diagnostics for required tools and hardware."""
-    cfg = load_config(config)
+    cfg = load_config(resolve_config_path(config))
+    console.print(f"Using config: {resolve_config_path(config)}")
+    # systemd/service hints could be added here in future doctor command
+
+
+@app.command()
+def web_url(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")) -> None:
+    """Print effective URLs for health/metrics/web based on config."""
+    cfg = load_config(resolve_config_path(config))
+    urls = []
+    if cfg.server.health.enabled:
+        urls.append(f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz")
+    if cfg.server.metrics.enabled:
+        urls.append(f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics")
+    if cfg.server.web.enabled:
+        urls.append(f"http://{cfg.server.web.bind_host}:{cfg.server.web.port}")
+    for u in urls:
+        console.print(u)
     checks: dict[str, object] = {}
 
     # binaries
@@ -218,7 +246,54 @@ def diag(
         "ack_env_ok": _ack_env_ok(ag.require_ack_env),
         "whitelist_present": bool(ag.ssid_whitelist or ag.bssid_whitelist),
     }
+    # Interference checks (Linux only)
+    if os.name != "nt":
+        for svc in ("NetworkManager", "wpa_supplicant"):
+            try:
+                r = subprocess.run(["systemctl", "is-active", "--quiet", svc])
+                checks[f"svc_{svc}_active"] = (r.returncode == 0)
+            except Exception:
+                checks[f"svc_{svc}_active"] = None
     console.print(checks)
+
+
+@app.command()
+def doctor(
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+) -> None:
+    """Print deployment details and listening info."""
+    cfg_path = resolve_config_path(config)
+    cfg = load_config(cfg_path)
+    info: dict[str, object] = {
+        "config": str(cfg_path),
+        "health": {"host": cfg.server.health.bind_host, "port": cfg.server.health.port, "enabled": cfg.server.health.enabled},
+        "metrics": {"host": cfg.server.metrics.bind_host, "port": cfg.server.metrics.port, "enabled": cfg.server.metrics.enabled},
+        "web": {"host": cfg.server.web.bind_host, "port": cfg.server.web.port, "enabled": cfg.server.web.enabled},
+    }
+    # Unit path and ExecStart
+    try:
+        unit_path = subprocess.run(["systemctl", "show", "-p", "FragmentPath", "momo"], capture_output=True, text=True)
+        info["unit_path"] = unit_path.stdout.strip().split("=", 1)[-1]
+        exec_start = subprocess.run(["systemctl", "show", "-p", "ExecStart", "momo"], capture_output=True, text=True)
+        info["exec_start"] = exec_start.stdout.strip().split("=", 1)[-1]
+    except Exception:
+        info["unit_path"] = None
+        info["exec_start"] = None
+    # venv path
+    info["venv"] = str(Path(sys.executable).parent) if ".venv" in sys.executable else None
+    # Listening sockets (best-effort)
+    listeners = []
+    try:
+        out = subprocess.run(["ss", "-ltnp"], capture_output=True, text=True)
+        listeners = out.stdout.strip().splitlines()
+    except Exception:
+        try:
+            out = subprocess.run(["netstat", "-ltn"], capture_output=True, text=True)
+            listeners = out.stdout.strip().splitlines()
+        except Exception:
+            listeners = []
+    info["listeners"] = listeners[:50]
+    console.print(info)
 
 
 def _ui_active() -> bool:

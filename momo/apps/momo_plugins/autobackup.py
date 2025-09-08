@@ -78,7 +78,11 @@ def init(cfg: dict) -> None:
     global _plugin, _thread
     node_name = cfg.get("node_name", "momo")
     backup_location = Path(cfg.get("backup_location", "/opt/momo_backups"))
-    backup_location.mkdir(parents=True, exist_ok=True)
+    try:
+        backup_location.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        logging.warning("[autobackup] cannot create %s; disabling plugin", backup_location)
+        return
 
     ab = AutoBackup()
     ab.options = {

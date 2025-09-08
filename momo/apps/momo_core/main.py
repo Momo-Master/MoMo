@@ -31,6 +31,7 @@ from ..momo_core.bettercap import build_bettercap_args
 from ...config import ModeEnum
 from ...tools.supervisor import ProcessSupervisor, ChildSpec, PassiveFallback
 from ..momo_oled import OledStatus, render_status, try_init_display
+from ..momo_web import create_app as create_web_app
 
 console = Console()
 IS_WINDOWS = (os.name == "nt") or (platform.system() == "Windows")
@@ -54,6 +55,8 @@ class ServiceState:
         # simulation/conversion metrics
         self.capture_simulated_total: int = 0
         self.convert_skipped_total: int = 0
+        self.convert_total: int = 0
+        self.convert_failed_total: int = 0
         self.last_capture_seq: int = 0
         # rename metrics
         self.rename_total: int = 0
@@ -217,10 +220,30 @@ def service_loop(
     (cfg.meta_dir / "momo.pid").write_text(str(os.getpid()), encoding="utf-8")
 
     # health server
-    if health_port:
-        _start_health_server_in_thread(cfg, state, health_port)
-    if prom_port:
-        _start_prometheus_server_in_thread(cfg, state, prom_port)
+    # Start servers per config bindings
+    if cfg.server.health.enabled:
+        if cfg.server.health.bind_host == "0.0.0.0":
+            console.log(f"WARNING: Health binding is public at http://0.0.0.0:{cfg.server.health.port}")
+        else:
+            console.log(f"Health: http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz")
+        _start_health_server_in_thread(cfg, state, cfg.server.health.bind_host, cfg.server.health.port)
+    if cfg.server.metrics.enabled:
+        if cfg.server.metrics.bind_host == "0.0.0.0":
+            console.log(f"WARNING: Metrics binding is public at http://0.0.0.0:{cfg.server.metrics.port}")
+        else:
+            console.log(f"Metrics: http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics")
+        _start_prometheus_server_in_thread(cfg, state, cfg.server.metrics.bind_host, cfg.server.metrics.port)
+
+    # Start Web UI if enabled
+    if hasattr(cfg, "web") and cfg.web.enabled:
+        try:
+            app = create_web_app(cfg)
+            def _run_web():
+                app.run(host=cfg.web.bind_host, port=cfg.web.bind_port, threaded=True)
+            threading.Thread(target=_run_web, daemon=True).start()
+            console.log(f"Web UI listening on http://{cfg.web.bind_host}:{cfg.web.bind_port}")
+        except Exception as e:  # noqa: BLE001
+            console.log(f"Web UI failed to start: {e}")
 
     end_time = time.time() + runtime_minutes * 60
     seq = 0
@@ -313,15 +336,23 @@ def service_loop(
         hashcat_out = renamed_path.with_suffix(".22000")
         tool = cfg.capture.tools.hcxpcapngtool_path
         tool_exists = bool(shutil.which(tool) or os.path.exists(tool))
-        if tool_exists and not (dry_run or IS_WINDOWS):
+        size_ok = False
+        try:
+            size_ok = renamed_path.stat().st_size >= cfg.capture.min_bytes_for_convert
+        except Exception:
+            size_ok = False
+        if tool_exists and size_ok and not (dry_run or IS_WINDOWS):
             try:
                 convert_to_hashcat_22000(tool, src=renamed_path, dest=hashcat_out)
+                state.convert_total += 1
             except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+                state.convert_failed_total += 1
                 console.log(f"Conversion failed for {renamed_path.name}: {exc}")
         else:
             convert_skipped_total += 1
             state.convert_skipped_total = convert_skipped_total
-            console.log(f"hcxpcapngtool not found; skipping conversion for {renamed_path.name}")
+            reason = "tool missing/disabled" if not tool_exists or (dry_run or IS_WINDOWS) else "file too small"
+            console.log(f"Skipping conversion for {renamed_path.name} ({reason})")
 
         # supervisor poll
         if cfg.supervisor.enabled:
@@ -404,7 +435,7 @@ def service_loop(
         pass
 
 
-def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, port: int, prom_port: int | None = None) -> None:
+def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, host: str, port: int) -> None:
     import http.server
     import socketserver
 
@@ -438,7 +469,7 @@ def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, port: i
             return
 
     def _serve():
-        with socketserver.TCPServer(("0.0.0.0", port), Handler) as httpd:
+        with socketserver.TCPServer((host, port), Handler) as httpd:
             httpd.timeout = 1
             while not state.stop_event.is_set():
                 httpd.handle_request()
@@ -447,7 +478,7 @@ def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, port: i
     t.start()
 
 
-def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, port: int) -> None:
+def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, host: str, port: int) -> None:
     # Very small Prometheus text exposition without external deps
     import http.server
     import socketserver
@@ -483,6 +514,12 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, por
             lines.append("# HELP momo_convert_skipped_total Skipped conversions due to missing tool")
             lines.append("# TYPE momo_convert_skipped_total counter")
             lines.append(f"momo_convert_skipped_total {getattr(state, 'convert_skipped_total', 0)}")
+            lines.append("# HELP momo_convert_total Successful conversions to 22000 format")
+            lines.append("# TYPE momo_convert_total counter")
+            lines.append(f"momo_convert_total {getattr(state, 'convert_total', 0)}")
+            lines.append("# HELP momo_convert_failed_total Failed conversions to 22000 format")
+            lines.append("# TYPE momo_convert_failed_total counter")
+            lines.append(f"momo_convert_failed_total {getattr(state, 'convert_failed_total', 0)}")
             lines.append("# HELP momo_last_capture_seq Last capture sequence number")
             lines.append("# TYPE momo_last_capture_seq gauge")
             lines.append(f"momo_last_capture_seq {getattr(state, 'last_capture_seq', 0)}")
@@ -562,7 +599,7 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, por
             return
 
     def _serve():
-        with socketserver.TCPServer(("0.0.0.0", port), Handler) as httpd:
+        with socketserver.TCPServer((host, port), Handler) as httpd:
             httpd.timeout = 1
             while not state.stop_event.is_set():
                 httpd.handle_request()

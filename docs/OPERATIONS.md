@@ -16,6 +16,52 @@
 - Endpoints: `/api/health`, `/api/status`, `/api/rotate`, `/api/handshakes`, `/api/handshakes/<file>`, `/api/metrics` (proxy).
 - HTML pages: `/`, `/handshakes`, `/metrics`, `/about`.
 - For LAN: place a reverse proxy; keep backend bound to localhost.
+
+## Config resolution order
+
+MoMo resolves configuration in this order (first match wins):
+
+1. `-c/--config` CLI argument
+2. `MOMO_CONFIG` environment variable
+3. `/etc/momo/momo.yml`
+4. `/opt/momo/configs/momo.yml`
+5. `configs/momo.yml` (repo default)
+
+Print the chosen path:
+
+```bash
+momo config-which -c configs/momo.yml
+```
+
+## Server bindings
+
+Configure under `server.*` in `momo.yml`:
+
+```yaml
+server:
+  health: { enabled: true, bind_host: 127.0.0.1, port: 8081 }
+  metrics: { enabled: true, bind_host: 127.0.0.1, port: 9091 }
+  web: { enabled: false, bind_host: 127.0.0.1, port: 8082 }
+```
+
+Set `bind_host: 0.0.0.0` deliberately to expose publicly (MoMo will warn). Consider UFW:
+
+```bash
+sudo ufw allow 8081,8082,9091/tcp
+```
+
+## Systemd setup
+
+- Virtualenv install uses `deploy/systemd/momo.service`.
+- Global install uses `deploy/systemd/momo-global.service`.
+- `deploy/setup_systemd.sh` selects the right unit and writes `/etc/momo/momo.yml` and `/etc/default/momo`.
+
+Troubleshooting:
+
+```bash
+systemctl status momo
+momo doctor
+```
 - `momo version`
 - `momo init <path>`
 - `momo config-validate <configs/momo.yml>`
