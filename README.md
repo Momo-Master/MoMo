@@ -30,6 +30,12 @@ Run as root on a fresh Pi 5 Bookworm image:
 curl -fsSL https://raw.githubusercontent.com/Project-MoMo/MoMo/main/deploy/momo-quickstart.sh | sudo bash
 ```
 
+After install, MoMo should be running immediately. You can also run the guided setup to apply/update config and systemd:
+
+```bash
+sudo momo wizard --apply
+```
+
 Enable selected features during quickstart (optional):
 
 ```bash
@@ -37,7 +43,7 @@ curl -fsSL https://raw.githubusercontent.com/Project-MoMo/MoMo/main/deploy/momo-
   | sudo ENABLE_WEB=1 ENABLE_BETTERCAP=1 bash
 ```
 
-Then reboot (if requested) and verify services:
+Then verify services:
 
 ```bash
 curl 127.0.0.1:8081/healthz
@@ -71,12 +77,21 @@ curl 127.0.0.1:9091/metrics
 
 Endpoints: `/api/health`, `/api/status`, `/api/rotate`, `/api/handshakes`, `/api/handshakes/<file>`, `/api/metrics`.
 
+After install (examples):
+
+```bash
+curl http://127.0.0.1:8081/healthz
+curl http://127.0.0.1:9091/metrics
+momo doctor   # shows URLs and token info
+```
+
 ## Repository Layout
 
 - `momo/`: Python package, core, tools, CLI
 - `momo/apps/web/`: minimal static Web UI (HTML/CSS/JS)
 - `configs/`: default `momo.yml` and wordlists notes
 - `deploy/`: install scripts and systemd units
+- `deploy/momo-quickstart.sh`: one-shot installer (curl | bash)
 - `docs/`: setup, operations, security
 - `tests/`: unit and e2e tests
 
@@ -216,6 +231,10 @@ Outputs are placed by pi‑gen under `pi-gen/deploy/`. Use `rpi-imager` or `dd` 
 - Minimal Web UI: see `docs/WEBUI.md`
 - Offline cracking: see `docs/CRACKING.md`
 - Plugins drop-in & priority: see `docs/PLUGINS.md`
+
+## Security
+
+See `docs/SECURITY.md` for hardening guidance (tokens, binds, UFW/Fail2ban, secrets via systemd drop-ins, aggressive-mode guardrails). By default, a strong token is generated and stored in a systemd drop-in for the Web UI.
 
 ## License
 

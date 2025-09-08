@@ -1,6 +1,120 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# One-shot installer for MoMo on Raspberry Pi / Debian
+# Usage:
+#   curl -fsSL https://raw.githubusercontent.com/Project-MoMo/MoMo/main/deploy/momo-quickstart.sh | sudo bash
+
+ENABLE_WEB=${ENABLE_WEB:-1}
+ENABLE_ACTIVE_WIFI=${ENABLE_ACTIVE_WIFI:-0}
+ENABLE_BETTERCAP=${ENABLE_BETTERCAP:-0}
+ENABLE_CRACKING=${ENABLE_CRACKING:-0}
+
+REPO_URL=${REPO_URL:-https://github.com/Project-MoMo/MoMo}
+DEST=/opt/momo
+ETC=/etc/momo
+UNIT=/etc/systemd/system/momo.service
+DROPIN_DIR=/etc/systemd/system/momo.service.d
+
+log(){ echo "[momo-quickstart] $*"; }
+
+require_root(){ if [ "${EUID:-$(id -u)}" -ne 0 ]; then echo "Run as root" >&2; exit 1; fi; }
+
+pkg_install(){
+  DEBIAN_FRONTEND=noninteractive apt-get update -y || true
+  DEBIAN_FRONTEND=noninteractive apt-get install -y "$@" || true
+}
+
+main(){
+  require_root
+  log "Installing base dependencies..."
+  pkg_install git python3-venv python3-pip build-essential ufw curl ca-certificates
+  log "Installing capture tools..."
+  pkg_install hcxdumptool hcxpcapngtool || true
+  [ "$ENABLE_BETTERCAP" = "1" ] && pkg_install bettercap || true
+  [ "$ENABLE_CRACKING" = "1" ] && pkg_install hashcat john || true
+  [ "$ENABLE_ACTIVE_WIFI" = "1" ] && pkg_install mdk4 aircrack-ng || true
+
+  log "Cloning MoMo to ${DEST}..."
+  mkdir -p "$DEST"
+  if [ ! -d "$DEST/.git" ]; then
+    git clone --depth 1 "$REPO_URL" "$DEST"
+  else
+    git -C "$DEST" fetch --depth 1 origin || true
+    git -C "$DEST" reset --hard origin/main || true
+  fi
+
+  log "Creating venv and installing..."
+  python3 -m venv "$DEST/.venv"
+  . "$DEST/.venv/bin/activate"
+  pip install --upgrade pip setuptools wheel
+  pip install -e "$DEST" || pip install "$DEST"
+
+  log "Writing default config..."
+  install -d "$ETC"
+  [ ! -f "$ETC/defaults.yml" ] && cp "$DEST/configs/momo.yml" "$ETC/defaults.yml" || true
+  if [ ! -f "$ETC/momo.yml" ]; then
+    cp "$DEST/configs/momo.yml" "$ETC/momo.yml" || true
+  fi
+
+  # Token & drop-in
+  if [ "$ENABLE_WEB" = "1" ]; then
+    install -d "$DROPIN_DIR"
+    if ! grep -q '^Environment=MOMO_UI_TOKEN=' "$DROPIN_DIR/env.conf" 2>/dev/null; then
+      TOKEN=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+      printf "[Service]\nEnvironment=MOMO_UI_TOKEN=%s\n" "$TOKEN" > "$DROPIN_DIR/env.conf"
+      log "Generated Web UI token (saved in env.conf)"
+    fi
+  fi
+
+  log "Installing systemd unit..."
+  MOMO_BIN="$DEST/.venv/bin/momo"
+  cat > "$UNIT" <<EOF
+[Unit]
+Description=MoMo core service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=$DEST
+ExecStart=$MOMO_BIN run -c /etc/momo/momo.yml
+EnvironmentFile=-/etc/default/momo
+EnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf
+Restart=always
+RestartSec=2
+LimitNOFILE=65535
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+  systemctl daemon-reload
+  systemctl enable --now momo || true
+
+  # UFW
+  if command -v ufw >/dev/null 2>&1; then
+    ufw allow 22/tcp || true
+    ufw allow 8081/tcp || true
+    ufw allow 9091/tcp || true
+    ufw allow 8083/tcp || true
+  fi
+
+  log "Done. Quick check:"
+  echo "  Health:  http://127.0.0.1:8081/healthz"
+  echo "  Metrics: http://127.0.0.1:9091/metrics"
+  echo "  Web UI:  http://127.0.0.1:8083/"
+}
+
+main "$@"
+
+#!/usr/bin/env bash
+set -euo pipefail
+
 # MoMo Quickstart (cURL-able)
 # Usage:
 #   curl -fsSL https://raw.githubusercontent.com/<org>/<repo>/main/deploy/momo-quickstart.sh | bash
