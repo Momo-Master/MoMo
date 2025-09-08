@@ -20,6 +20,12 @@ app = typer.Typer(no_args_is_help=True, add_completion=False, help="MoMo CLI")
 console = Console()
 
 
+def _bind_to_url(host: str, port: int, path: str = "") -> str:
+    # If bound to 0.0.0.0 / ::, show localhost for a clickable URL.
+    safe_host = "127.0.0.1" if host in ("0.0.0.0", "::") else host
+    return f"http://{safe_host}:{port}{path}"
+
+
 @app.callback(invoke_without_command=True)
 def main(ctx: typer.Context) -> None:
     """Entry point for `momo` command.
@@ -299,12 +305,76 @@ def doctor(
     """Print deployment details and listening info."""
     cfg_path = resolve_config_path(config)
     cfg = load_config(cfg_path)
-    info: dict[str, object] = {
-        "config": str(cfg_path),
-        "health": {"host": cfg.server.health.bind_host, "port": cfg.server.health.port, "enabled": cfg.server.health.enabled},
-        "metrics": {"host": cfg.server.metrics.bind_host, "port": cfg.server.metrics.port, "enabled": cfg.server.metrics.enabled},
-        "web": {"host": cfg.server.web.bind_host, "port": cfg.server.web.port, "enabled": cfg.server.web.enabled},
-    }
+    # Resolve health/metrics/web bindings from config, supporting both new and legacy layouts.
+    web_url = None
+    health_url = None
+    metrics_url = None
+    bind_notes: list[str] = []
+
+    web_cfg = getattr(cfg, "web", None)
+    server_cfg = getattr(cfg, "server", None)
+
+    # WEB
+    if web_cfg and getattr(web_cfg, "enabled", False):
+        try:
+            web_host = getattr(web_cfg, "bind_host")
+            web_port = getattr(web_cfg, "bind_port")
+            web_url = _bind_to_url(web_host, web_port, "/")
+            if web_host in ("0.0.0.0", "::"):
+                bind_notes.append("web bound to 0.0.0.0; use localhost or device IP in browser")
+        except Exception:
+            if server_cfg and getattr(server_cfg, "web", None):
+                w = server_cfg.web
+                web_host = getattr(w, "bind_host", "127.0.0.1")
+                web_port = getattr(w, "port", 8082)
+                web_url = _bind_to_url(web_host, web_port, "/")
+                if web_host in ("0.0.0.0", "::"):
+                    bind_notes.append("web bound to 0.0.0.0 (legacy); use localhost or device IP")
+
+    # HEALTH
+    health_cfg = None
+    if server_cfg and getattr(server_cfg, "health", None):
+        health_cfg = server_cfg.health
+        if getattr(health_cfg, "enabled", True):
+            h_host = getattr(health_cfg, "bind_host", "127.0.0.1")
+            h_port = getattr(health_cfg, "port", 8081)
+            health_url = _bind_to_url(h_host, h_port, "/healthz")
+            if h_host in ("0.0.0.0", "::"):
+                bind_notes.append("health bound to 0.0.0.0; use localhost or device IP")
+    else:
+        h_port = getattr(cfg, "health_port", None)
+        if h_port:
+            health_url = _bind_to_url("127.0.0.1", h_port, "/healthz")
+
+    # METRICS
+    metrics_cfg = None
+    if server_cfg and getattr(server_cfg, "metrics", None):
+        metrics_cfg = server_cfg.metrics
+        if getattr(metrics_cfg, "enabled", True):
+            m_host = getattr(metrics_cfg, "bind_host", "127.0.0.1")
+            m_port = getattr(metrics_cfg, "port", 9091)
+            metrics_url = _bind_to_url(m_host, m_port, "/metrics")
+            if m_host in ("0.0.0.0", "::"):
+                bind_notes.append("metrics bound to 0.0.0.0; use localhost or device IP")
+    else:
+        m_port = getattr(cfg, "prom_port", None)
+        if m_port:
+            metrics_url = _bind_to_url("127.0.0.1", m_port, "/metrics")
+
+    console.print({
+        "ok": True,
+        "paths": {
+            "logs": str(cfg.logging.base_dir),
+            "handshakes": str(cfg.handshakes_dir),
+            "meta": str(cfg.meta_dir),
+        },
+        "urls": {
+            "web": web_url,
+            "health": health_url,
+            "metrics": metrics_url,
+        },
+        "notes": bind_notes or None,
+    })
     # URLs
     info["urls"] = {
         "health": f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz" if cfg.server.health.enabled else None,
