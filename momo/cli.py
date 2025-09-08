@@ -27,11 +27,29 @@ def _bind_to_url(host: str, port: int, path: str = "") -> str:
 
 
 @app.callback(invoke_without_command=True)
-def main(ctx: typer.Context) -> None:
+def main(
+    ctx: typer.Context,
+    wizard_flag: bool = typer.Option(False, "--wizard", help="Run interactive setup wizard"),
+    apply_flag: bool = typer.Option(False, "--apply", help="With --wizard, apply immediately"),
+) -> None:
     """Entry point for `momo` command.
 
-    If no subcommand is provided, show help and exit.
+    If no subcommand is provided, show help and exit. Supports `--wizard` for one-shot setup.
     """
+    if wizard_flag:
+        try:
+            # Run the wizard inline; if --apply is provided, do non-interactive apply
+            if apply_flag:
+                wizard.callback(yes=False, apply=True)  # type: ignore[attr-defined]
+            else:
+                wizard.callback(yes=False, apply=False)  # type: ignore[attr-defined]
+        except Exception:
+            # Fallback: call by name if Typer changes wrapper
+            try:
+                wizard()  # type: ignore[misc]
+            except Exception:
+                pass
+        raise typer.Exit(code=0)
     if ctx.invoked_subcommand is None:
         console.print("MoMo CLI - use `momo --help` to see commands.")
         raise typer.Exit(code=0)
