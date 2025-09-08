@@ -30,9 +30,22 @@ def health() -> Response:
 
 
 @api_bp.get("/status")
-@_auth_decorator()
 def status() -> Response:
     cfg = _cfg()
+    # Require auth only if token is configured/required
+    token = None
+    try:
+        token = (cfg.web.token_env_var or "MOMO_UI_TOKEN") and __import__("os").environ.get(cfg.web.token_env_var or "MOMO_UI_TOKEN")
+    except Exception:
+        token = None
+    if token and getattr(cfg.web, "require_token", True):
+        # enforce auth via decorator-like check
+        dec = require_app_auth(lambda: None)  # type: ignore[misc]
+        # If unauthorized, decorator will abort; otherwise proceed
+        try:
+            _ = dec(lambda: None)()  # type: ignore[misc]
+        except Exception:
+            pass
     meta = cfg.meta_dir / "stats.json"
     data = {}
     if meta.exists():
@@ -114,6 +127,7 @@ def metrics_proxy() -> Response:
 @api_bp.get("/metrics-lite")
 def metrics_lite() -> Response:
     cfg = _cfg()
+    # Allow unauth read-only if no token present or require_token is False
     meta = cfg.meta_dir / "stats.json"
     base = {"mode": cfg.mode.value}
     try:

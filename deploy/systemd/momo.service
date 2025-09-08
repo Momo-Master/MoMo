@@ -11,7 +11,12 @@ ExecStart=/opt/momo/.venv/bin/momo run -c /opt/momo/configs/momo.yml --health-po
 EnvironmentFile=-/etc/default/momo
 EnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf
 Restart=always
-RestartSec=3
+RestartSec=2
+LimitNOFILE=65535
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=yes
 
 [Install]
 WantedBy=multi-user.target

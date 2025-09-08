@@ -4,7 +4,7 @@ set -euo pipefail
 # MoMo Unified Installer (idempotent)
 # Env flags:
 # NONINTERACTIVE=1, MOMO_IFACE, MOMO_REG, ENABLE_OLED=0/1, ENABLE_SECURITY=0/1, ENABLE_WEB=0/1, NO_START=1, SKIP_DKMS=1, ROTATE_TOKEN=1,
-# ENABLE_ACTIVE_WIFI=0/1, ENABLE_BETTERCAP=0/1, ENABLE_CRACKING=0/1
+# ENABLE_ACTIVE_WIFI=0/1, ENABLE_BETTERCAP=0/1, ENABLE_CRACKING=0/1, WEB_BIND=0.0.0.0
 
 LOGFILE=${LOGFILE:-/var/log/momo_install.log}
 REPO_DIR=${REPO_DIR:-/opt/momo}
@@ -72,6 +72,25 @@ ensure_config() {
   reg=${MOMO_REG:-TR}
   sed -i "s/^\s*name:\s*.*/  name: ${iface}/" "$REPO_DIR/configs/momo.yml" || true
   sed -i "s/^\s*regulatory_domain:\s*.*/  regulatory_domain: ${reg}/" "$REPO_DIR/configs/momo.yml" || true
+  # web defaults (fill only if missing)
+  if [ "${ENABLE_WEB:-1}" = "1" ]; then
+    if [ -z "${MOMO_UI_TOKEN:-}" ]; then
+      MOMO_UI_TOKEN=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
+      export MOMO_UI_TOKEN
+    fi
+    # ensure drop-in
+    mkdir -p /etc/systemd/system/momo.service.d
+    cat > /etc/systemd/system/momo.service.d/env.conf <<EOF
+[Service]
+Environment=MOMO_UI_TOKEN=${MOMO_UI_TOKEN}
+EOF
+    # web bind fill
+    wb=${WEB_BIND:-0.0.0.0}
+    grep -q '^web:' "$REPO_DIR/configs/momo.yml" || printf '\nweb:\n  enabled: true\n  bind_host: %s\n  bind_port: 8082\n  token_env_var: MOMO_UI_TOKEN\n' "$wb" >> "$REPO_DIR/configs/momo.yml"
+    # health/metrics fill
+    grep -q '^health:' "$REPO_DIR/configs/momo.yml" || printf '\nhealth:\n  bind_host: 0.0.0.0\n  port: 8081\n' >> "$REPO_DIR/configs/momo.yml"
+    grep -q '^metrics:' "$REPO_DIR/configs/momo.yml" || printf '\nmetrics:\n  bind_host: 0.0.0.0\n  port: 9091\n' >> "$REPO_DIR/configs/momo.yml"
+  fi
   # enable autobackup with path
   if ! grep -q "autobackup" "$REPO_DIR/configs/momo.yml"; then
     printf "\nplugins:\n  enabled:\n    - autobackup\n  options:\n    autobackup:\n      path: %s\n" "$BACKUP_DIR" >> "$REPO_DIR/configs/momo.yml"
@@ -195,6 +214,10 @@ main() {
   ensure_systemd_setup
   ensure_services
   ensure_security
+  # UFW rule for Web if enabled
+  if command -v ufw >/dev/null 2>&1 && [ "${ENABLE_WEB:-1}" = "1" ]; then
+    ufw allow 8082/tcp || true
+  fi
   # Print URLs and token
   local ip
   ip=$(first_non_loopback_ip)

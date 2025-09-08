@@ -10,6 +10,8 @@ REPO_DIR=${REPO_DIR:-/opt/momo}
 
 mkdir -p "$CONF_DIR"
 mkdir -p "$REPO_DIR"
+mkdir -p "$UNIT_DIR/momo.service.d"
+touch "$UNIT_DIR/momo.service.d/env.conf"
 
 # Ensure config exists once
 if [ ! -f "$CONF_DIR/momo.yml" ]; then

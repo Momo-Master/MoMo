@@ -14,16 +14,23 @@ except Exception:
     webui_bp = None  # type: ignore
 
 
-def _resolve_token(token_env: str, token_path: Path) -> str:
+def _read_token(token_env: str, token_path: Path) -> str | None:
     val = os.environ.get(token_env, "").strip()
     if val:
         return val
     try:
         if token_path.exists():
-            return token_path.read_text(encoding="utf-8").strip()
+            t = token_path.read_text(encoding="utf-8").strip()
+            return t if t else None
     except Exception:
         pass
-    # generate, persist, warn
+    return None
+
+
+def _resolve_token(token_env: str, token_path: Path) -> str:
+    t = _read_token(token_env, token_path)
+    if t:
+        return t
     import secrets
     token = secrets.token_urlsafe(24)[:32]
     try:
@@ -41,14 +48,17 @@ def create_app(cfg: MomoConfig) -> Flask:
     # Auth middleware: Bearer, X-Token, optional ?token=
     @app.before_request
     def _auth_guard():  # type: ignore[override]
-        # Allow /api/metrics without auth (link-out/proxy)
-        if request.path == "/api/metrics":
+        # Allow unauth for /api/metrics (proxy) and /api/metrics-lite (read-only)
+        if request.path in ("/api/metrics", "/api/metrics-lite"):
             return None
         token_env = cfg.web.auth.token_env
         token_file = Path("/opt/momo/.momo_ui_token")
-        expected = _resolve_token(token_env, token_file)
+        expected = _read_token(token_env, token_file)
+        require = getattr(cfg.web, "require_token", True)
+        # /api/status requires auth unless require_token is False
+        if request.path == "/api/status" and not require:
+            return None
         if not expected:
-            # If no token configured, reject all
             return Response('{"error":"unauthorized"}', status=401, mimetype="application/json")
         supplied = None
         auth = request.headers.get("Authorization", "")

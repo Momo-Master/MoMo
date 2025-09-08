@@ -249,9 +249,10 @@ def service_loop(
             def _run_web():
                 app.run(host=cfg.web.bind_host, port=cfg.web.bind_port, threaded=True)
             threading.Thread(target=_run_web, daemon=True).start()
-            console.log(f"Web UI listening on http://{cfg.web.bind_host}:{cfg.web.bind_port}/ (token at /opt/momo/.momo_ui_token)")
             if cfg.web.bind_host == "127.0.0.1":
-                console.log("WARNING: Web UI bound to 127.0.0.1; remote access will not work")
+                console.log("WARNING: Web is bound to 127.0.0.1; remote access disabled")
+            else:
+                console.log(f"Web UI: http://{cfg.web.bind_host}:{cfg.web.bind_port}/ (auth: Bearer $MOMO_UI_TOKEN)")
         except Exception as e:
             console.log(f"Web UI failed to start: {e}")
 

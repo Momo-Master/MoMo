@@ -28,10 +28,17 @@ capture:
     whitespace: "_"
 
 web:
-  # First-boot default: enabled and bound to all interfaces; change later if desired.
+  # First-boot default; resolver adapts per-platform (Windows binds 127.0.0.1)
   enabled: true
-  bind_host: 0.0.0.0
+  bind_host: 0.0.0.0    # Pi profile; on Windows resolver sets 127.0.0.1
   bind_port: 8082
+  token_env_var: MOMO_UI_TOKEN
+health:
+  bind_host: 0.0.0.0
+  port: 8081
+metrics:
+  bind_host: 0.0.0.0
+  port: 9091
   auth:
     token_env: MOMO_UI_TOKEN
     password_env: MOMO_UI_PASSWORD

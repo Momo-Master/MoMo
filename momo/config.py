@@ -194,6 +194,8 @@ class WebConfig(BaseModel):
     rate_limit: str = Field("60/minute")
     allow_delete: bool = Field(False)
     allow_query_token: bool = Field(False)
+    require_token: bool = Field(True)
+    token_env_var: str = Field("MOMO_UI_TOKEN")
     title: str = Field("MoMo")
     footer: str = Field("MoMo • Pi 5")
     date_format: str = Field("%Y-%m-%d %H:%M:%S")
@@ -252,6 +254,34 @@ class MomoConfig(BaseModel):
 def load_config(path: Path) -> MomoConfig:
     with Path(path).expanduser().open("r", encoding="utf-8") as fp:
         raw = yaml.safe_load(fp) or {}
+    # Apply platform-based defaults only when keys are missing/None
+    try:
+        is_windows = os.name == "nt"
+        srv = raw.setdefault("server", {})
+        health = srv.setdefault("health", {})
+        metrics = srv.setdefault("metrics", {})
+        web_srv = srv.setdefault("web", {})
+        web = raw.setdefault("web", {})
+        if web.get("enabled") is None:
+            web["enabled"] = True
+        # token env name default
+        if not web.get("token_env_var"):
+            web["token_env_var"] = "MOMO_UI_TOKEN"
+        # fill bind hosts if missing
+        default_host = "127.0.0.1" if is_windows else "0.0.0.0"
+        health.setdefault("bind_host", default_host)
+        health.setdefault("port", 8081)
+        metrics.setdefault("bind_host", default_host)
+        metrics.setdefault("port", 9091)
+        if web.get("bind_host") in (None, ""):
+            web["bind_host"] = default_host
+        if web.get("bind_port") in (None, ""):
+            web["bind_port"] = 8082
+        # keep server.web in sync as informational (if used elsewhere)
+        web_srv.setdefault("bind_host", web.get("bind_host"))
+        web_srv.setdefault("port", web.get("bind_port", 8082))
+    except Exception:
+        pass
     try:
         return MomoConfig.model_validate(raw)
     except ValidationError as exc:  # pragma: no cover - formatting

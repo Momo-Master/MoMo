@@ -305,6 +305,62 @@ def doctor(
         "metrics": {"host": cfg.server.metrics.bind_host, "port": cfg.server.metrics.port, "enabled": cfg.server.metrics.enabled},
         "web": {"host": cfg.server.web.bind_host, "port": cfg.server.web.port, "enabled": cfg.server.web.enabled},
     }
+    # URLs
+    info["urls"] = {
+        "health": f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz" if cfg.server.health.enabled else None,
+        "metrics": f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics" if cfg.server.metrics.enabled else None,
+        "web": f"http://{cfg.web.bind_host}:{cfg.web_bind_port if hasattr(cfg.web, 'bind_port') else cfg.server.web.port}/" if getattr(cfg, "web", None) and cfg.web.enabled else None,
+    }
+    # Web auth info
+    token_env = getattr(cfg.web, "token_env_var", "MOMO_UI_TOKEN") if getattr(cfg, "web", None) else "MOMO_UI_TOKEN"
+    require_token = getattr(cfg.web, "require_token", True) if getattr(cfg, "web", None) else True
+    info["web_auth"] = {"token_env": token_env, "require_token": require_token}
+    # Plugins
+    try:
+        info["plugins"] = {
+            "enabled": list(cfg.plugins.enabled),
+            "options_present": list(cfg.plugins.options.keys()),
+        }
+    except Exception:
+        info["plugins"] = {"enabled": [], "options_present": []}
+    # Storage sizes
+    try:
+        import shutil as _sh
+        logs_dir = cfg.logging.base_dir
+        total_bytes = 0
+        for p in logs_dir.rglob("*"):
+            try:
+                if p.is_file():
+                    total_bytes += p.stat().st_size
+            except Exception:
+                continue
+        du = _sh.disk_usage(str(logs_dir))
+        info["storage"] = {
+            "logs_size_gb": round(total_bytes / (1024 ** 3), 3),
+            "free_gb": round(du.free / (1024 ** 3), 3),
+        }
+    except Exception:
+        info["storage"] = {"logs_size_gb": None, "free_gb": None}
+    # Radio / network info
+    info["radio"] = {
+        "regdomain": cfg.interface.regulatory_domain,
+        "iface": cfg.interface.name,
+        "mode": None,
+        "dkms": None,
+    }
+    try:
+        out = subprocess.run(["iw", "dev", cfg.interface.name, "info"], capture_output=True, text=True, check=False)
+        for line in out.stdout.splitlines():
+            if "type" in line:
+                info["radio"]["mode"] = line.split(":", 1)[-1].strip()
+                break
+    except Exception:
+        pass
+    try:
+        dk = subprocess.run(["dkms", "status"], capture_output=True, text=True, check=False)
+        info["radio"]["dkms"] = dk.stdout.strip().splitlines()[:3]
+    except Exception:
+        pass
     # Token path
     token_path = Path("/opt/momo/.momo_ui_token")
     info["token_path"] = str(token_path)
