@@ -305,76 +305,43 @@ def doctor(
     """Print deployment details and listening info."""
     cfg_path = resolve_config_path(config)
     cfg = load_config(cfg_path)
-    # Resolve health/metrics/web bindings from config, supporting both new and legacy layouts.
-    web_url = None
-    health_url = None
-    metrics_url = None
-    bind_notes: list[str] = []
+    # --- begin safe port/host resolvers for doctor ---
+    def _bind_host(obj, default="127.0.0.1"):
+        return getattr(obj, "bind_host", default)
 
-    web_cfg = getattr(cfg, "web", None)
-    server_cfg = getattr(cfg, "server", None)
+    def _bind_port(obj, default=None):
+        if hasattr(obj, "bind_port"):
+            return getattr(obj, "bind_port")
+        if hasattr(obj, "port"):
+            return getattr(obj, "port")
+        return default
 
-    # WEB
-    if web_cfg and getattr(web_cfg, "enabled", False):
-        try:
-            web_host = getattr(web_cfg, "bind_host")
-            web_port = getattr(web_cfg, "bind_port")
-            web_url = _bind_to_url(web_host, web_port, "/")
-            if web_host in ("0.0.0.0", "::"):
-                bind_notes.append("web bound to 0.0.0.0; use localhost or device IP in browser")
-        except Exception:
-            if server_cfg and getattr(server_cfg, "web", None):
-                w = server_cfg.web
-                web_host = getattr(w, "bind_host", "127.0.0.1")
-                web_port = getattr(w, "port", 8082)
-                web_url = _bind_to_url(web_host, web_port, "/")
-                if web_host in ("0.0.0.0", "::"):
-                    bind_notes.append("web bound to 0.0.0.0 (legacy); use localhost or device IP")
+    web_enabled = bool(getattr(cfg, "web", None) and getattr(cfg.web, "enabled", False))
+    web_host = _bind_host(getattr(cfg, "web", None) or getattr(getattr(cfg, "server", None), "web", None) or type("x", (), {})())
+    web_port = _bind_port(getattr(cfg, "web", None) or getattr(getattr(cfg, "server", None), "web", None) or type("x", (), {})())
 
-    # HEALTH
-    health_cfg = None
-    if server_cfg and getattr(server_cfg, "health", None):
-        health_cfg = server_cfg.health
-        if getattr(health_cfg, "enabled", True):
-            h_host = getattr(health_cfg, "bind_host", "127.0.0.1")
-            h_port = getattr(health_cfg, "port", 8081)
-            health_url = _bind_to_url(h_host, h_port, "/healthz")
-            if h_host in ("0.0.0.0", "::"):
-                bind_notes.append("health bound to 0.0.0.0; use localhost or device IP")
-    else:
-        h_port = getattr(cfg, "health_port", None)
-        if h_port:
-            health_url = _bind_to_url("127.0.0.1", h_port, "/healthz")
+    health_cfg = getattr(getattr(cfg, "server", None), "health", None)
+    health_host = _bind_host(health_cfg) if health_cfg else "127.0.0.1"
+    health_port = _bind_port(health_cfg, getattr(getattr(cfg, "server", None), "health_port", None)) or getattr(cfg, "health_port", None)
 
-    # METRICS
-    metrics_cfg = None
-    if server_cfg and getattr(server_cfg, "metrics", None):
-        metrics_cfg = server_cfg.metrics
-        if getattr(metrics_cfg, "enabled", True):
-            m_host = getattr(metrics_cfg, "bind_host", "127.0.0.1")
-            m_port = getattr(metrics_cfg, "port", 9091)
-            metrics_url = _bind_to_url(m_host, m_port, "/metrics")
-            if m_host in ("0.0.0.0", "::"):
-                bind_notes.append("metrics bound to 0.0.0.0; use localhost or device IP")
-    else:
-        m_port = getattr(cfg, "prom_port", None)
-        if m_port:
-            metrics_url = _bind_to_url("127.0.0.1", m_port, "/metrics")
+    metrics_cfg = getattr(getattr(cfg, "server", None), "metrics", None)
+    metrics_host = _bind_host(metrics_cfg) if metrics_cfg else "127.0.0.1"
+    metrics_port = _bind_port(metrics_cfg, getattr(getattr(cfg, "server", None), "prom_port", None)) or getattr(cfg, "prom_port", None)
+    # --- end safe port/host resolvers for doctor ---
 
-    console.print({
-        "ok": True,
-        "paths": {
-            "logs": str(cfg.logging.base_dir),
-            "handshakes": str(cfg.handshakes_dir),
-            "meta": str(cfg.meta_dir),
-        },
-        "urls": {
-            "web": web_url,
-            "health": health_url,
-            "metrics": metrics_url,
-        },
-        "notes": bind_notes or None,
-    })
+    urls = {
+        "web": f"http://{web_host}:{web_port}/" if (web_enabled and web_host and web_port) else None,
+        "health": f"http://{health_host}:{health_port}/healthz" if (health_host and health_port) else None,
+        "metrics": f"http://{metrics_host}:{metrics_port}/metrics" if (metrics_host and metrics_port) else None,
+    }
+
+    notes: list[str] = []
+    if web_enabled and web_host in ("0.0.0.0", "::"):
+        notes.append("web bound to 0.0.0.0; use localhost or device IP in browser")
+    if health_host in ("0.0.0.0", "::"):
+        notes.append("health bound to 0.0.0.0; use localhost or device IP")
+    if metrics_host in ("0.0.0.0", "::"):
+        notes.append("metrics bound to 0.0.0.0; use localhost or device IP")
     # URLs
     info["urls"] = {
         "health": f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz" if cfg.server.health.enabled else None,
