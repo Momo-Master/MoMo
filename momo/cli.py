@@ -457,6 +457,140 @@ def _ack_env_ok(env_spec: str) -> bool:
     return bool(os.environ.get(env_spec))
 
 
+def _ensure_etc_defaults_copy() -> None:
+    try:
+        etc = Path("/etc/momo")
+        etc.mkdir(parents=True, exist_ok=True)
+        defaults = etc / "defaults.yml"
+        if not defaults.exists():
+            repo_cfg = Path("configs/momo.yml")
+            if repo_cfg.exists():
+                defaults.write_text(repo_cfg.read_text(encoding="utf-8"), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _port_is_free(host: str, port: int) -> bool:
+    try:
+        import socket
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.settimeout(0.2)
+            return s.connect_ex((host, port)) != 0
+    except Exception:
+        return True
+
+
+@app.command()
+def wizard() -> None:
+    """Interactive setup to create /etc/momo/momo.yml."""
+    _ensure_etc_defaults_copy()
+    console.print("[cyan]MoMo Setup Wizard[/cyan]")
+    try:
+        iface = input("Interface [wlan1]: ").strip() or "wlan1"
+        reg = input("Regulatory domain [00]: ").strip() or "00"
+        host = input("Bind host [0.0.0.0]: ").strip() or "0.0.0.0"
+        # Preferred defaults
+        hp = input("Health port [8081]: ").strip() or "8081"
+        mp = input("Metrics port [9091]: ").strip() or "9091"
+        wp = input("Web UI port [8082]: ").strip() or "8082"
+        web_en = (input("Enable Web UI? [Y/n]: ").strip() or "Y").lower().startswith("y")
+        plugins = input("Enable plugins (comma, e.g. autobackup,wpa-sec) []: ").strip()
+        enabled_plugins = [p.strip() for p in plugins.split(",") if p.strip()] if plugins else []
+
+        try:
+            hp_i = int(hp)
+            mp_i = int(mp)
+            wp_i = int(wp)
+        except Exception:
+            hp_i, mp_i, wp_i = 8081, 9091, 8082
+
+        # choose next free if busy
+        while not _port_is_free(host, hp_i):
+            hp_i += 1
+        while not _port_is_free(host, mp_i):
+            mp_i += 1
+        while not _port_is_free(host, wp_i):
+            wp_i += 1
+
+        token = ""
+        if web_en:
+            import secrets
+            token = secrets.token_urlsafe(24)[:32]
+
+        cfg = {
+            "interface": {"name": iface, "regulatory_domain": reg},
+            "logging": {"base_dir": "logs"},
+            "server": {
+                "health": {"enabled": True, "bind_host": host, "port": hp_i},
+                "metrics": {"enabled": True, "bind_host": host, "port": mp_i},
+                "web": {"enabled": web_en, "bind_host": host, "port": wp_i},
+            },
+            "web": {"enabled": web_en, "bind_host": host, "bind_port": wp_i, "token_env_var": "MOMO_UI_TOKEN"},
+            "plugins": {"enabled": enabled_plugins, "options": {}},
+        }
+
+        etc = Path("/etc/momo")
+        etc.mkdir(parents=True, exist_ok=True)
+        out = etc / "momo.yml"
+        import yaml as _yaml
+        out.write_text(_yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+        # write drop-in token if generated
+        if token:
+            dropin = Path("/etc/systemd/system/momo.service.d")
+            dropin.mkdir(parents=True, exist_ok=True)
+            (dropin / "env.conf").write_text(f"[Service]\nEnvironment=MOMO_UI_TOKEN={token}\n", encoding="utf-8")
+        console.print(f"[green]Wrote[/green] {out}")
+        console.print("Next: [cyan]momo config-validate /etc/momo/momo.yml[/cyan]")
+        console.print("Then: [cyan]sudo momo systemd install[/cyan]")
+    except KeyboardInterrupt:
+        console.print("[yellow]Wizard cancelled[/yellow]")
+
+
+@app.command()
+def systemd(action: str = typer.Argument(..., help="install|remove|restart|status")) -> None:
+    """Manage momo systemd service."""
+    unit = Path("/etc/systemd/system/momo.service")
+    if action == "install":
+        try:
+            unit.parent.mkdir(parents=True, exist_ok=True)
+            # resolve venv binary path
+            bin_path = Path(sys.executable).parent / "momo"
+            cfg = Path("/etc/momo/momo.yml")
+            content = (
+                "[Unit]\nDescription=MoMo core service\nAfter=network-online.target\nWants=network-online.target\n\n"
+                "[Service]\nType=simple\nWorkingDirectory=/opt/momo\n"
+                f"ExecStart={bin_path} run -c {cfg}\n"
+                "EnvironmentFile=-/etc/default/momo\nEnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf\n"
+                "Restart=always\nRestartSec=2\nLimitNOFILE=65535\nNoNewPrivileges=yes\nProtectSystem=full\nProtectHome=true\nPrivateTmp=yes\n\n"
+                "[Install]\nWantedBy=multi-user.target\n"
+            )
+            unit.write_text(content, encoding="utf-8")
+            subprocess.run(["systemctl", "daemon-reload"], check=False)
+            subprocess.run(["systemctl", "enable", "--now", "momo"], check=False)
+            console.print("[green]Installed and started momo.service[/green]")
+        except Exception as exc:
+            console.print(f"[yellow]Install failed:[/yellow] {exc}")
+    elif action == "remove":
+        subprocess.run(["systemctl", "disable", "--now", "momo"], check=False)
+        try:
+            for p in [unit, Path("/etc/systemd/system/momo.service.d/env.conf")]:
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+            console.print("[green]Removed unit and drop-ins[/green]")
+        except Exception as exc:
+            console.print(f"[yellow]Remove warnings:[/yellow] {exc}")
+        subprocess.run(["systemctl", "daemon-reload"], check=False)
+    elif action == "restart":
+        subprocess.run(["systemctl", "restart", "momo"], check=False)
+        console.print("[green]Restarted momo.service[/green]")
+    elif action == "status":
+        subprocess.run(["systemctl", "status", "momo", "--no-pager"], check=False)
+    else:
+        console.print("[yellow]Unknown action[/yellow]")
+
+
 # Click command export (entrypoint için)
 cli = typer.main.get_command(app)
 

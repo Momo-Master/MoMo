@@ -67,6 +67,11 @@ ensure_config() {
   if [ ! -f "$REPO_DIR/configs/momo.yml" ]; then
     cp "$REPO_DIR/configs/momo.yml" "$REPO_DIR/configs/momo.yml" 2>/dev/null || true
   fi
+  # copy defaults to /etc/momo/defaults.yml if missing
+  mkdir -p /etc/momo
+  if [ ! -f /etc/momo/defaults.yml ] && [ -f "$REPO_DIR/configs/momo.yml" ]; then
+    cp "$REPO_DIR/configs/momo.yml" /etc/momo/defaults.yml || true
+  fi
   # apply patches
   iface=${MOMO_IFACE:-wlan1}
   reg=${MOMO_REG:-TR}
@@ -230,6 +235,8 @@ main() {
     log "Token file: $REPO_DIR/.momo_ui_token"
     log "API sample: curl -H \"Authorization: Bearer $token\" http://$ip:8082/api/status"
   fi
+  log "Run setup wizard: sudo momo wizard"
+  log "Install systemd unit: sudo momo systemd install"
   log "Install complete. Summary:"
   log "  Repo: $REPO_DIR"
   log "  Venv: $VENV_DIR"
