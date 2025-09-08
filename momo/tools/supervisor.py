@@ -77,7 +77,7 @@ class ProcessSupervisor:
             return
         state = self.name_to_state.setdefault(spec.name, ChildState())
         crashed = False
-        if self.fault_injection and state.restarts == 0:
+        if self.fault_injection:
             crashed = True
         elif not state.proc or state.proc.poll() is not None:
             crashed = True

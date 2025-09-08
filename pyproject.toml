@@ -43,6 +43,7 @@ dev = [
   "types-PyYAML>=6.0.12",
   "types-psutil>=5.9.5",
   "Flask>=3.0.0",
+  "toml>=0.10,<1.0",
 ]
 
 [project.scripts]
@@ -52,6 +53,9 @@ source = "vcs"
 
 [tool.hatch.build.hooks.vcs]
 version-file = "momo/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["momo"]
 
 
 [tool.ruff]

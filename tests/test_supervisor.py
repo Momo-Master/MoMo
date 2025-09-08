@@ -9,7 +9,7 @@ def test_backoff_progression_and_fallback(monkeypatch):
         jitter_frac=0.0,
         fault_injection=True,
     )
-    spec = ChildSpec(name="testproc", start_cmd=["/bin/true"], enabled=True)
+    spec = ChildSpec(name="testproc", start_cmd=["python", "-c", "print('ok')"], enabled=True)
 
     # Replace sleep to avoid delays
     monkeypatch.setattr("time.sleep", lambda s: None)

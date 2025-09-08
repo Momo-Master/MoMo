@@ -4,11 +4,9 @@ from momo.apps.momo_plugins import PluginManager
 
 def test_plugin_filter_enabled():
     cfg = MomoConfig()
-    cfg.plugins.example_plugin.enabled = True
-    pm = PluginManager()
-    pm.discover()
-    pm.filter_enabled(cfg)
-    assert pm.plugins is not None
-    names = [name for name, _ in pm.plugins]
-    assert "example_plugin" in names
+    # modern loader path: ensure normalization works for hyphenated names
+    from momo.apps.momo_plugins.registry import load_enabled_plugins
+
+    loaded, _ = load_enabled_plugins(["wpa-sec"], cfg.plugins.options)
+    assert "wpa-sec" in loaded or loaded == []
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+import subprocess  # <-- eklendi
 
 import typer
 from rich.console import Console
@@ -14,7 +15,8 @@ import importlib.metadata as md
 from .config import MomoConfig, load_config
 from .apps.momo_core.main import service_loop
 
-app = typer.Typer(add_completion=False, help="MoMo CLI")
+# Typer uygulaması: testler bunu import ediyor
+app = typer.Typer(no_args_is_help=True, add_completion=False, help="MoMo CLI")
 console = Console()
 
 
@@ -35,9 +37,14 @@ def version() -> None:
     try:
         dist_version = md.version("momo")
         console.print(f"momo {dist_version}")
-    except Exception as exc:  # noqa: BLE001
-        console.print(f"Error determining version: {exc}")
-        raise typer.Exit(code=1) from exc
+    except Exception:
+        # Fallback to package __version__ or dev
+        try:
+            from . import __version__  # type: ignore
+            console.print(f"momo {__version__}")
+        except Exception:
+            console.print("momo dev")
+    raise typer.Exit(code=0)
 
 
 @app.command()
@@ -73,12 +80,11 @@ def handshakes_dl(
     console.print({"copied": count, "dest": str(dest)})
 
 
-@app.command()
+@app.command(name="config-validate")
 def config_validate(path: Path = typer.Argument(Path("configs/momo.yml"))) -> None:
     """Validate and show resolved configuration."""
-    cfg: MomoConfig
     try:
-        cfg = load_config(path)
+        cfg: MomoConfig = load_config(path)
     except Exception as exc:  # noqa: BLE001
         console.print(f"Config validation failed: {exc}")
         raise typer.Exit(code=1) from exc
@@ -91,20 +97,21 @@ def config_validate(path: Path = typer.Argument(Path("configs/momo.yml"))) -> No
 @app.command()
 def run(
     config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c"),
-    health_port: int = typer.Option(None, "--health-port"),
-    prom_port: int = typer.Option(None, "--prom-port"),
+    health_port: int | None = typer.Option(None, "--health-port"),
+    prom_port: int | None = typer.Option(None, "--prom-port"),
     dry_run: bool = typer.Option(False, "--dry-run"),
 ) -> None:
     """Start MoMo core service using CONFIG."""
     cfg = load_config(config)
     console.print("Starting MoMo core ...")
-    service_loop(cfg, runtime_minutes=1, health_port=health_port, dry_run=dry_run)
+    service_loop(cfg, runtime_minutes=1, health_port=health_port, prom_port=prom_port, dry_run=dry_run)
     console.print("MoMo core stopped.")
 
 
 def launch() -> None:
+    """Entry point when executed as a module/script."""
     sys.setrecursionlimit(10_000)
-    app()
+    cli()  # hazır click komutunu kullan
 
 
 def _pidfile(meta_dir: Path) -> Path:
@@ -112,20 +119,30 @@ def _pidfile(meta_dir: Path) -> Path:
 
 
 @app.command()
-def rotate_now(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")) -> None:
+def rotate_now(
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+) -> None:
     """Send SIGUSR1 to running MoMo to force rotation."""
     cfg = load_config(config)
     pid_path = _pidfile(cfg.meta_dir)
     if not pid_path.exists():
         console.print("No pidfile found. Is MoMo running?")
         raise typer.Exit(code=1)
+
+    # Windows'ta SIGUSR1 yok: kibarca çık
+    if not hasattr(signal, "SIGUSR1"):
+        console.print("SIGUSR1 is not supported on this platform.")
+        raise typer.Exit(code=0)
+
     pid = int(pid_path.read_text(encoding="utf-8").strip())
     os.kill(pid, signal.SIGUSR1)
     console.print("Rotate signal sent.")
 
 
 @app.command()
-def status(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")) -> None:
+def status(
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+) -> None:
     """Show current status from stats file."""
     cfg = load_config(config)
     stats_path = cfg.meta_dir / "stats.json"
@@ -140,55 +157,62 @@ def status(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c
         "bytes": data.get("bytes"),
         "temp": data.get("temp"),
         "storage": {
-            "enabled": load_config(config).storage.enabled,
-            "days": load_config(config).storage.max_days,
-            "cap_gb": load_config(config).storage.max_gb,
+            "enabled": cfg.storage.enabled,
+            "days": cfg.storage.max_days,
+            "cap_gb": cfg.storage.max_gb,
             "logs_size_gb": round((data.get("bytes", 0) / (1024 ** 3)), 2) if data.get("bytes") else 0,
             "free_gb": None,
         },
         "supervisor": {
-            "retries_before_passive": load_config(config).supervisor.retries_before_passive,
-            "backoff_initial_secs": load_config(config).supervisor.backoff_initial_secs,
+            "retries_before_passive": cfg.supervisor.retries_before_passive,
+            "backoff_initial_secs": cfg.supervisor.backoff_initial_secs,
         },
-        "ui": {
-            "active": _ui_active(),
-        },
+        "ui": {"active": _ui_active()},
     })
 
 
 @app.command()
-def diag(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")) -> None:
+def diag(
+    config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
+) -> None:
     """Run diagnostics for required tools and hardware."""
     cfg = load_config(config)
-    checks = {}
+    checks: dict[str, object] = {}
+
     # binaries
-    checks["hcxdumptool"] = shutil.which(cfg.capture.tools.hcxdumptool_path) or os.path.exists(cfg.capture.tools.hcxdumptool_path)
-    checks["hcxpcapngtool"] = shutil.which(cfg.capture.tools.hcxpcapngtool_path) or os.path.exists(cfg.capture.tools.hcxpcapngtool_path)
+    checks["hcxdumptool"] = bool(shutil.which(cfg.capture.tools.hcxdumptool_path) or os.path.exists(cfg.capture.tools.hcxdumptool_path))
+    checks["hcxpcapngtool"] = bool(shutil.which(cfg.capture.tools.hcxpcapngtool_path) or os.path.exists(cfg.capture.tools.hcxpcapngtool_path))
     checks["bettercap"] = bool(shutil.which("bettercap"))
-    # interface presence
+
+    # interface presence (Linux dışı platformlarda hataya düşmesin)
     iface = cfg.interface.name
     try:
         subprocess.run(["iw", "dev", iface, "info"], check=True, capture_output=True)
         checks["iface_present"] = True
     except Exception:
         checks["iface_present"] = False
+
     # monitor capability
     try:
         out = subprocess.run(["iw", "list"], check=True, text=True, capture_output=True).stdout
         checks["monitor_capable"] = ("* monitor" in out)
     except Exception:
         checks["monitor_capable"] = False
+
     # i2c if enabled
     if cfg.oled.enabled:
         checks["i2c_bus"] = os.path.exists("/dev/i2c-1")
+
     # permissions
     checks["is_root"] = (os.geteuid() == 0) if hasattr(os, "geteuid") else True
+
     checks["supervisor_policy"] = {
-        "enabled": load_config(config).supervisor.enabled,
-        "retries_before_passive": load_config(config).supervisor.retries_before_passive,
-        "backoff_initial_secs": load_config(config).supervisor.backoff_initial_secs,
+        "enabled": cfg.supervisor.enabled,
+        "retries_before_passive": cfg.supervisor.retries_before_passive,
+        "backoff_initial_secs": cfg.supervisor.backoff_initial_secs,
     }
-    ag = load_config(config).aggressive
+
+    ag = cfg.aggressive
     checks["aggressive"] = {
         "enabled": ag.enabled,
         "ack_env_ok": _ack_env_ok(ag.require_ack_env),
@@ -200,7 +224,6 @@ def diag(config: Path = typer.Option(Path("configs/momo.yml"), "--config", "-c")
 def _ui_active() -> bool:
     try:
         from .apps.momo_plugins import webcfg as _w  # type: ignore
-
         return bool(getattr(_w, "is_active", lambda: False)())
     except Exception:
         return False
@@ -213,7 +236,10 @@ def _ack_env_ok(env_spec: str) -> bool:
     return bool(os.environ.get(env_spec))
 
 
+# Click command export (entrypoint için)
+cli = typer.main.get_command(app)
+
+__all__ = ["app", "cli"]
+
 if __name__ == "__main__":
     launch()
-
-

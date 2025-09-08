@@ -17,6 +17,9 @@ capture:
     hcxpcapngtool_path: /usr/bin/hcxpcapngtool
     tcpdump_path: /usr/sbin/tcpdump
   adapters: []
+  enable_on_windows: false
+  simulate_bytes_per_file: 16384
+  simulate_dwell_secs: 2
 
 logging:
   base_dir: logs
@@ -47,7 +50,7 @@ stats:
 plugins:
   enabled: ["autobackup", "wpa-sec"]
   options:
-    autobackup:
+    autobackup: {}
     wpa-sec:
       upload: false
       endpoint: "https://wpa-sec.stanev.org"

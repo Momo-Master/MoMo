@@ -32,11 +32,16 @@ def test_metrics_and_plugins_dry_run(tmp_path: Path):
         ]
     )
     try:
-        time.sleep(1.0)
-        # Fetch metrics
         import urllib.request
-
-        body = urllib.request.urlopen("http://127.0.0.1:9091/metrics").read().decode()
+        # Poll for the metrics endpoint to be ready
+        body = None
+        for _ in range(20):
+            try:
+                body = urllib.request.urlopen("http://127.0.0.1:9091/metrics").read().decode()
+                break
+            except Exception:
+                time.sleep(0.3)
+        assert body is not None
         assert "momo_plugins_enabled" in body
         assert "momo_current_channel" in body
     finally:

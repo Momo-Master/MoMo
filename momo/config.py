@@ -62,6 +62,9 @@ class CaptureConfig(BaseModel):
     rotate_on_time: bool = Field(True)
     tools: CaptureToolsConfig = Field(default_factory=CaptureToolsConfig)
     adapters: List[str] = Field(default_factory=list)
+    enable_on_windows: bool = Field(False)
+    simulate_bytes_per_file: int = Field(16384, ge=0)
+    simulate_dwell_secs: int = Field(2, ge=0)
 
 
 class BettercapConfig(BaseModel):
@@ -178,6 +181,8 @@ class MomoConfig(BaseModel):
     stats: StatsConfig = Field(default_factory=StatsConfig)
     plugins: PluginsConfig = Field(default_factory=PluginsConfig)
     storage: StorageConfig = Field(default_factory=StorageConfig)
+    supervisor: SupervisorConfig = Field(default_factory=SupervisorConfig)
+    aggressive: AggressiveConfig = Field(default_factory=AggressiveConfig)
 
     @property
     def handshakes_dir(self) -> Path:

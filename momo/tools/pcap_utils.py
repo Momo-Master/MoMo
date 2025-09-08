@@ -7,7 +7,7 @@ import subprocess
 
 
 def iso_date_folder(base_dir: Path) -> Path:
-    today = dt.datetime.utcnow().date()
+    today = dt.datetime.now(dt.UTC).date()
     return base_dir / today.isoformat()
 
 

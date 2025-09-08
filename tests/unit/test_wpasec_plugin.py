@@ -1,7 +1,7 @@
 import os
 import time
 
-from momo.apps.momo_plugins import wpa-sec as wp
+import momo.apps.momo_plugins.wpa_sec as wp
 
 
 def test_wpasec_dryrun_without_key(monkeypatch, tmp_path):

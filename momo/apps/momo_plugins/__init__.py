@@ -27,7 +27,10 @@ class PluginManager:
         for info in pkgutil.iter_modules(pkg.__path__, pkg.__name__ + "."):
             if info.name.endswith(".__init__"):
                 continue
-            module = importlib.import_module(info.name)
+            try:
+                module = importlib.import_module(info.name)
+            except Exception:
+                continue
             plugin = getattr(module, "plugin", None)
             if plugin is not None:
                 name = info.name.rsplit(".", 1)[-1]

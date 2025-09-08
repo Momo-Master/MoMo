@@ -9,6 +9,8 @@ import json
 import os
 import signal
 import psutil
+import shutil
+import platform
 
 from rich.console import Console
 
@@ -28,6 +30,7 @@ from ...tools.supervisor import ProcessSupervisor, ChildSpec, PassiveFallback
 from ..momo_oled import OledStatus, render_status, try_init_display
 
 console = Console()
+IS_WINDOWS = (os.name == "nt") or (platform.system() == "Windows")
 
 
 class ServiceState:
@@ -45,6 +48,10 @@ class ServiceState:
         self.child_restarts_total: dict[str, int] = {}
         self.child_failures_total: dict[str, int] = {}
         self.child_backoff_seconds: dict[str, float] = {}
+        # simulation/conversion metrics
+        self.capture_simulated_total: int = 0
+        self.convert_skipped_total: int = 0
+        self.last_capture_seq: int = 0
 
 
 def _read_temperature() -> float | None:
@@ -58,6 +65,24 @@ def _read_temperature() -> float | None:
     except Exception:
         return None
     return None
+
+
+def _write_stats(cfg: MomoConfig, state: ServiceState) -> None:
+    """Persist lightweight runtime stats to meta/stats.json."""
+    try:
+        stats = {
+            "mode": getattr(cfg.mode, "value", str(cfg.mode)),
+            "channel": state.current_channel,
+            "last_rotate": state.last_rotate_iso,
+            "files": state.last_files,
+            "bytes": state.last_bytes,
+            "temp": _read_temperature(),
+        }
+        cfg.meta_dir.mkdir(parents=True, exist_ok=True)
+        (cfg.meta_dir / "stats.json").write_text(json.dumps(stats), encoding="utf-8")
+    except Exception:
+        # Never crash the loop on stats write
+        pass
 
 
 class HcxRunner:
@@ -129,17 +154,22 @@ def service_loop(
     def _sigterm(_signum, _frame):
         state.stop_event.set()
 
-    signal.signal(signal.SIGUSR1, _sigusr1)
+    # On Windows SIGUSR1 may not exist
+    if hasattr(signal, "SIGUSR1"):
+        signal.signal(signal.SIGUSR1, _sigusr1)
     signal.signal(signal.SIGINT, _sigterm)
     signal.signal(signal.SIGTERM, _sigterm)
 
-    console.log("Applying regulatory domain")
-    set_regulatory_domain(cfg.interface.regulatory_domain)
-    if cfg.interface.mac_randomization:
-        mac = randomize_mac(cfg.interface.name)
-        console.log(f"Randomized MAC to {mac}")
-    console.log("Setting interface to monitor mode")
-    set_monitor_mode(cfg.interface.name)
+    if not dry_run and not IS_WINDOWS:
+        console.log("Applying regulatory domain")
+        set_regulatory_domain(cfg.interface.regulatory_domain)
+        if cfg.interface.mac_randomization:
+            mac = randomize_mac(cfg.interface.name)
+            console.log(f"Randomized MAC to {mac}")
+        console.log("Setting interface to monitor mode")
+        set_monitor_mode(cfg.interface.name)
+    else:
+        console.log("Skipping RF/iface setup (dry-run/Windows)")
     ensure_dirs(cfg)
     runner = HcxRunner(cfg, state=state, dry_run=dry_run)
     # Manual drop-in plugin model
@@ -185,13 +215,33 @@ def service_loop(
         _start_prometheus_server_in_thread(cfg, state, prom_port)
 
     end_time = time.time() + runtime_minutes * 60
+    seq = 0
+    convert_skipped_total = 0
+    simulated_total = 0
     while time.time() < end_time:
         if cfg.interface.channel_hop:
             _hop_channels(cfg.interface.channels, cfg.interface.name, state)
-        out_path = next_capture_path(cfg.logging.base_dir)
+        day_dir = iso_date_folder(cfg.logging.base_dir)
+        hand_dir = day_dir / cfg.capture.out_dir_name
+        hand_dir.mkdir(parents=True, exist_ok=True)
+        out_path = hand_dir / f"capture-{seq:05d}.pcapng"
+        seq += 1
+        state.last_capture_seq = seq - 1
         console.log(f"Capturing to {out_path}")
-        rc = runner.run_once(out_path, duration_sec=cfg.stats.sample_interval_sec)
-        console.log(f"Capture return code: {rc}")
+        if dry_run or (IS_WINDOWS and not cfg.capture.enable_on_windows):
+            # simulate a small pcap file
+            try:
+                with out_path.open("wb") as fp:
+                    fp.write(b"\x00" * int(cfg.capture.simulate_bytes_per_file))
+            except Exception:
+                pass
+            time.sleep(max(0, int(cfg.capture.simulate_dwell_secs)))
+            simulated_total += 1
+            state.capture_simulated_total = simulated_total
+            rc = 0
+        else:
+            rc = runner.run_once(out_path, duration_sec=cfg.stats.sample_interval_sec)
+            console.log(f"Capture return code: {rc}")
 
         # rotation
         captures = (out_path.parent.glob("*.pcapng"))
@@ -199,14 +249,17 @@ def service_loop(
 
         # conversion to 22000 format parallel path
         hashcat_out = out_path.with_suffix(".22000")
-        try:
-            convert_to_hashcat_22000(
-                cfg.capture.tools.hcxpcapngtool_path,
-                src=out_path,
-                dest=hashcat_out,
-            )
-        except Exception as exc:  # noqa: BLE001
-            console.log(f"Conversion failed for {out_path.name}: {exc}")
+        tool = cfg.capture.tools.hcxpcapngtool_path
+        tool_exists = bool(shutil.which(tool) or os.path.exists(tool))
+        if tool_exists and not (dry_run or IS_WINDOWS):
+            try:
+                convert_to_hashcat_22000(tool, src=out_path, dest=hashcat_out)
+            except (subprocess.CalledProcessError, FileNotFoundError, OSError) as exc:
+                console.log(f"Conversion failed for {out_path.name}: {exc}")
+        else:
+            convert_skipped_total += 1
+            state.convert_skipped_total = convert_skipped_total
+            console.log(f"hcxpcapngtool not found; skipping conversion for {out_path.name}")
 
         # supervisor poll
         if cfg.supervisor.enabled:
@@ -305,6 +358,9 @@ def _start_health_server_in_thread(cfg: MomoConfig, state: ServiceState, port: i
                 "files": state.last_files,
                 "bytes": state.last_bytes,
                 "temp": _read_temperature(),
+                "ok": True,
+                "dry_run": bool(os.name == "nt" or cfg.mode == ModeEnum.PASSIVE),
+                "platform": platform.system(),
                 "storage": {
                     "low_space": bool(getattr(state, 'storage_low_space', False)),
                     "free_gb": round((getattr(state, 'storage_free_bytes', 0) / (1024 ** 3)), 2),
@@ -358,6 +414,16 @@ def _start_prometheus_server_in_thread(cfg: MomoConfig, state: ServiceState, por
             lines.append("# HELP momo_plugins_enabled Count of enabled plugins")
             lines.append("# TYPE momo_plugins_enabled gauge")
             lines.append(f"momo_plugins_enabled {state.plugins_enabled_count}")
+            # Simulation/convert custom metrics
+            lines.append("# HELP momo_capture_simulated_total Simulated captures under dry-run/Windows")
+            lines.append("# TYPE momo_capture_simulated_total counter")
+            lines.append(f"momo_capture_simulated_total {getattr(state, 'capture_simulated_total', 0)}")
+            lines.append("# HELP momo_convert_skipped_total Skipped conversions due to missing tool")
+            lines.append("# TYPE momo_convert_skipped_total counter")
+            lines.append(f"momo_convert_skipped_total {getattr(state, 'convert_skipped_total', 0)}")
+            lines.append("# HELP momo_last_capture_seq Last capture sequence number")
+            lines.append("# TYPE momo_last_capture_seq gauge")
+            lines.append(f"momo_last_capture_seq {getattr(state, 'last_capture_seq', 0)}")
             # Storage metrics
             if hasattr(state, 'storage_total_bytes'):
                 lines.append("# HELP momo_logs_bytes_total Total bytes under logs directory")

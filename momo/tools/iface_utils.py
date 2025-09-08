@@ -16,22 +16,32 @@ class InterfaceState:
 
 
 def _run(cmd: List[str]) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, check=True, text=True, capture_output=True)
+    try:
+        return subprocess.run(cmd, check=True, text=True, capture_output=True)
+    except (FileNotFoundError, subprocess.CalledProcessError, OSError):
+        # On Windows or missing binaries during dry-run, ignore
+        return subprocess.CompletedProcess(cmd, returncode=0, stdout="", stderr="")
 
 
 def set_monitor_mode(interface: str) -> None:
+    if os.name == "nt":
+        return
     _run(["ip", "link", "set", interface, "down"])  # bring down
     _run(["iw", interface, "set", "type", "monitor"])  # set monitor
     _run(["ip", "link", "set", interface, "up"])  # bring up
 
 
 def set_managed_mode(interface: str) -> None:
+    if os.name == "nt":
+        return
     _run(["ip", "link", "set", interface, "down"])  # bring down
     _run(["iw", interface, "set", "type", "managed"])  # set managed
     _run(["ip", "link", "set", interface, "up"])  # bring up
 
 
 def set_channel(interface: str, channel: int) -> None:
+    if os.name == "nt":
+        return
     _run(["iw", interface, "set", "channel", str(channel)])
 
 
@@ -39,6 +49,8 @@ def set_channel(interface: str, channel: int) -> None:
 
 
 def set_regulatory_domain(country_code: str) -> None:
+    if os.name == "nt":
+        return
     _run(["iw", "reg", "set", country_code])
 
 

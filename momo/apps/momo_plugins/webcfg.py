@@ -16,6 +16,12 @@ _ACTIVE = False
 _REQ_TOTAL = {"200": 0, "401": 0, "429": 0}
 _ACTIVE_GAUGE = 0
 
+# Local fallbacks (avoid external deps)
+MOMO_NAME = "MoMo"
+MOMO_VERSION = "dev"
+import os as _os
+MOMO_BASEDIR = _os.getenv("MOMO_BASEDIR", "/opt/momo")
+
 
 class _RateLimiter:
     def __init__(self, capacity: int, per_seconds: int) -> None:
@@ -78,6 +84,10 @@ def init(cfg: dict) -> None:
     global _SERVER, _THREAD, _ACTIVE, _ACTIVE_GAUGE
     port = int(cfg.get("port", 8088))
     allow_unauth = bool(cfg.get("allow_unauth", False))
+    # If token required but missing, do not start
+    if not allow_unauth and not _os.getenv("MOMO_UI_TOKEN"):
+        logging.warning("[webcfg] not starting: MOMO_UI_TOKEN missing and allow_unauth=false")
+        return
     app = get_app(allow_unauth=allow_unauth)
     _SERVER = make_server("127.0.0.1", port, app)
     _THREAD = threading.Thread(target=_SERVER.serve_forever, daemon=True)
@@ -111,11 +121,6 @@ def is_active() -> bool:
 
 import logging
 import json
-import toml
-import _thread
-import pwnagotchi
-from pwnagotchi import restart, plugins
-from pwnagotchi.utils import save_config, merge_config
 from flask import abort
 from flask import render_template_string
 
@@ -597,7 +602,7 @@ def serializer(obj):
     raise TypeError
 
 
-class WebConfig(plugins.Plugin):
+class WebConfig:
     __author__ = '33197631+dadav@users.noreply.github.com'
     __version__ = '1.0.0'
     __license__ = 'GPL3'
