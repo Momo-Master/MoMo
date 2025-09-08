@@ -13,14 +13,14 @@
 - Install `ufw` and allow only needed ports
 - Install `fail2ban`
 
-### SSH sertleştirme örnekleri
+### SSH hardening examples
 
 - `/etc/ssh/sshd_config`:
   - `PasswordAuthentication no`
   - `PermitRootLogin prohibit-password`
   - `KexAlgorithms` and `Ciphers` per hardening guides
 
-### UFW LAN kısıtlama snippet’i
+### UFW LAN restriction snippet
 
 ```bash
 sudo ufw default deny incoming
