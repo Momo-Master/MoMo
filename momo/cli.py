@@ -530,17 +530,30 @@ def wizard() -> None:
         }
 
         etc = Path("/etc/momo")
-        etc.mkdir(parents=True, exist_ok=True)
         out = etc / "momo.yml"
         import yaml as _yaml
-        out.write_text(_yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
-        # write drop-in token if generated
-        if token:
+        # decide writable path
+        can_write_etc = bool(hasattr(os, "geteuid") and os.geteuid() == 0)
+        wrote_out: Path
+        if can_write_etc:
+            etc.mkdir(parents=True, exist_ok=True)
+            wrote_out = out
+        else:
+            wrote_out = Path.cwd() / "momo.generated.yml"
+            console.print(f"[yellow]No permission to write {out}, generating {wrote_out} instead[/yellow]")
+        wrote_out.write_text(_yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+        # write drop-in token if generated (only if root)
+        if token and can_write_etc:
             dropin = Path("/etc/systemd/system/momo.service.d")
             dropin.mkdir(parents=True, exist_ok=True)
             (dropin / "env.conf").write_text(f"[Service]\nEnvironment=MOMO_UI_TOKEN={token}\n", encoding="utf-8")
-        console.print(f"[green]Wrote[/green] {out}")
+        elif token and not can_write_etc:
+            console.print("[yellow]Token generated; create drop-in:[/yellow] /etc/systemd/system/momo.service.d/env.conf")
+            console.print(f"[cyan][Service]\nEnvironment=MOMO_UI_TOKEN={token}[/cyan]")
+        console.print(f"[green]Wrote[/green] {wrote_out}")
         console.print("Next: [cyan]momo config-validate /etc/momo/momo.yml[/cyan]")
+        if not can_write_etc:
+            console.print(f"Then move config: [cyan]sudo mv {wrote_out} /etc/momo/momo.yml[/cyan]")
         console.print("Then: [cyan]sudo momo systemd install[/cyan]")
     except KeyboardInterrupt:
         console.print("[yellow]Wizard cancelled[/yellow]")
