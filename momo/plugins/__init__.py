@@ -1,7 +1,11 @@
-"""MoMo Core - Event bus, plugin system, and shared utilities."""
+"""
+MoMo Plugins - Modern plugin system.
 
-from .events import Event, EventBus, EventType
-from .plugin import (
+New plugins should be created in this directory using the BasePlugin class.
+See example_plugin.py for a template.
+"""
+
+from momo.core.plugin import (
     BasePlugin,
     PluginManager,
     PluginMetadata,
@@ -11,11 +15,6 @@ from .plugin import (
 )
 
 __all__ = [
-    # Events
-    "Event",
-    "EventBus",
-    "EventType",
-    # Plugin System
     "BasePlugin",
     "PluginManager",
     "PluginMetadata",
