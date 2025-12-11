@@ -87,6 +87,8 @@ ignore = ["E501", "PLR2004", "B008"]
 "momo/domain/models.py" = ["PLC0415"]
 # Allow a helper to accept many arguments for clarity
 "momo/tools/pcap_utils.py" = ["PLR0913"]
+# Web modules may use lazy imports for plugin access
+"momo/apps/momo_web/*.py" = ["PLC0415"]
 # Tests: allow common test patterns, local imports, mock data with tabs, and import order
 "tests/**/*.py" = ["F401", "PLC0415", "E101", "W191", "I001"]
 "momo/apps/momo_core/aggressive.py" = ["PLR0913", "PLR0911"]
