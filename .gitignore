@@ -21,11 +21,14 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Documentation (keep private)
+# Documentation (private)
 docs/
 
-# Tests (keep private)
-tests/
+# Test artifacts (not source files)
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
 
 # Logs and captures
 logs/
