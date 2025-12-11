@@ -173,6 +173,17 @@ class EvilTwinConfig(BaseModel):
     log_dir: str = Field("logs/eviltwin")
 
 
+class CrackingConfig(BaseModel):
+    """Hashcat cracking configuration."""
+    enabled: bool = Field(False)  # Disabled by default
+    auto_crack: bool = Field(False)  # Auto-crack new handshakes
+    workload_profile: int = Field(3, ge=1, le=4)  # 1=low, 4=nightmare
+    max_runtime_seconds: int = Field(0, ge=0)  # 0 = unlimited
+    check_interval: int = Field(60, ge=10)  # Seconds between auto-crack checks
+    handshakes_dir: str = Field("logs/handshakes")
+    potfile: str = Field("logs/hashcat.potfile")
+
+
 class AggressiveConfig(BaseModel):
     """Aggressive mode config - NO RESTRICTIONS by default."""
     enabled: bool = Field(True)                                    # Aggressive ON by default
@@ -289,6 +300,7 @@ class MomoConfig(BaseModel):
     wardriving: WardrivingConfig = Field(default_factory=WardrivingConfig)
     ble: BLEConfig = Field(default_factory=BLEConfig)
     eviltwin: EvilTwinConfig = Field(default_factory=EvilTwinConfig)
+    cracking: CrackingConfig = Field(default_factory=CrackingConfig)
 
     class ServerEndpoint(BaseModel):
         enabled: bool = Field(True)

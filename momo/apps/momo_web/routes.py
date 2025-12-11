@@ -377,6 +377,7 @@ _BASE = """
         <a href="/captures" class="nav-item {{ 'active' if active == 'captures' else '' }}" title="Captures">📡</a>
         <a href="/bluetooth" class="nav-item {{ 'active' if active == 'bluetooth' else '' }}" title="Bluetooth">📶</a>
         <a href="/eviltwin" class="nav-item {{ 'active' if active == 'eviltwin' else '' }}" title="Evil Twin">👿</a>
+        <a href="/cracking" class="nav-item {{ 'active' if active == 'cracking' else '' }}" title="Cracking">🔓</a>
         <a href="/config" class="nav-item {{ 'active' if active == 'config' else '' }}" title="Config">⚙️</a>
     </nav>
     
@@ -1603,3 +1604,244 @@ def eviltwin_page():
     </script>
     """
     return render_template_string(_BASE, title=cfg.web.title, active="eviltwin", content=content)
+
+
+@ui_bp.route("/cracking")
+def cracking_page():
+    """Password cracking page."""
+    cfg = _cfg()
+    content = """
+    <h1 class="page-title">🔓 Password Cracking</h1>
+    
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-value" id="jobs-total">0</span>
+            <span class="stat-label">Total Jobs</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="jobs-cracked" style="color:var(--accent-green);">0</span>
+            <span class="stat-label">Cracked</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="active-jobs">0</span>
+            <span class="stat-label">Active</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="wordlists">0</span>
+            <span class="stat-label">Wordlists</span>
+        </div>
+    </div>
+    
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🚀 Start Crack Job</span>
+            </div>
+            <div class="card-body">
+                <form id="crack-form">
+                    <div class="form-group">
+                        <label>Hash File (.22000)</label>
+                        <input type="text" id="hash-file" placeholder="logs/handshakes/capture.22000" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                    </div>
+                    <div class="form-group" style="margin-top:15px;">
+                        <label>Attack Mode</label>
+                        <select id="attack-mode" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                            <option value="0">Dictionary (Wordlist)</option>
+                            <option value="3">Brute-Force (Mask)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top:15px;">
+                        <label>Wordlist</label>
+                        <select id="wordlist" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                            <option value="">Auto-select best</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top:15px;">
+                        <label>Mask (for brute-force)</label>
+                        <input type="text" id="mask" placeholder="?d?d?d?d?d?d?d?d" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                        <small style="color:var(--text-muted);">?d=digit, ?l=lower, ?u=upper, ?s=special</small>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="margin-top:20px;">Start Cracking</button>
+                </form>
+                <div id="crack-result" style="margin-top:15px;"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🔑 Cracked Passwords</span>
+            </div>
+            <div class="card-body">
+                <div id="cracked-list" style="max-height:400px; overflow-y:auto;">
+                    <p style="color:var(--text-muted);">No passwords cracked yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+            <span class="card-title">📋 Recent Jobs</span>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>File</th>
+                        <th>Status</th>
+                        <th>Progress</th>
+                        <th>Speed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="jobs-list">
+                    <tr><td colspan="6" style="color:var(--text-muted);">No jobs yet.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        async function loadStats() {
+            try {
+                const resp = await fetch('/api/cracking/status');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                document.getElementById('jobs-total').textContent = data.stats?.jobs_total || 0;
+                document.getElementById('jobs-cracked').textContent = data.stats?.jobs_cracked || 0;
+                document.getElementById('active-jobs').textContent = data.active_jobs || 0;
+                document.getElementById('wordlists').textContent = data.wordlists_available || 0;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadWordlists() {
+            try {
+                const resp = await fetch('/api/cracking/wordlists');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                const select = document.getElementById('wordlist');
+                data.wordlists.forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.path;
+                    opt.textContent = `${w.name} (${w.word_count.toLocaleString()} words)`;
+                    select.appendChild(opt);
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadJobs() {
+            try {
+                const resp = await fetch('/api/cracking/jobs');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                const tbody = document.getElementById('jobs-list');
+                if (!data.jobs || data.jobs.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" style="color:var(--text-muted);">No jobs yet.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.jobs.reverse().slice(0, 10).map(j => {
+                    const statusClass = j.status === 'cracked' ? 'badge-success' : 
+                                       j.status === 'running' ? 'badge-info' : 
+                                       j.status === 'exhausted' ? 'badge-warning' : 'badge-secondary';
+                    return `
+                        <tr>
+                            <td><code>${j.id}</code></td>
+                            <td>${j.hash_file.split('/').pop()}</td>
+                            <td><span class="badge ${statusClass}">${j.status}</span></td>
+                            <td>${j.progress_percent.toFixed(1)}%</td>
+                            <td>${(j.speed_hps / 1000).toFixed(1)} kH/s</td>
+                            <td>
+                                ${j.status === 'running' ? 
+                                    `<button class="btn btn-danger btn-sm" onclick="stopJob('${j.id}')">Stop</button>` : 
+                                    ''}
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadCracked() {
+            try {
+                const resp = await fetch('/api/cracking/cracked');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                const container = document.getElementById('cracked-list');
+                if (!data.cracked || data.cracked.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-muted);">No passwords cracked yet.</p>';
+                    return;
+                }
+                
+                container.innerHTML = data.cracked.reverse().map(c => `
+                    <div style="background:var(--bg-card-hover); padding:12px; border-radius:8px; margin-bottom:8px; border-left:3px solid var(--accent-green);">
+                        <div style="font-family:monospace; font-size:18px; color:var(--accent-green);">🔑 ${c.password}</div>
+                        <small style="color:var(--text-muted);">${c.hash_file} | ${c.duration_seconds?.toFixed(1) || 0}s</small>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function stopJob(jobId) {
+            try {
+                await fetch('/api/cracking/jobs/' + jobId, {method: 'DELETE'});
+                loadJobs();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        document.getElementById('crack-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const result = document.getElementById('crack-result');
+            result.innerHTML = '<span style="color:var(--accent-cyan);">Starting job...</span>';
+            
+            try {
+                const resp = await fetch('/api/cracking/jobs', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        hash_file: document.getElementById('hash-file').value,
+                        attack_mode: parseInt(document.getElementById('attack-mode').value),
+                        wordlist: document.getElementById('wordlist').value || null,
+                        mask: document.getElementById('mask').value || null,
+                    })
+                });
+                const data = await resp.json();
+                
+                if (data.ok) {
+                    result.innerHTML = `<span style="color:var(--accent-green);">✅ Job started: ${data.job_id}</span>`;
+                    loadStats();
+                    loadJobs();
+                } else {
+                    result.innerHTML = `<span style="color:var(--accent-red);">❌ ${data.error}</span>`;
+                }
+            } catch (e) {
+                result.innerHTML = `<span style="color:var(--accent-red);">❌ ${e.message}</span>`;
+            }
+        });
+        
+        // Initial load
+        loadStats();
+        loadWordlists();
+        loadJobs();
+        loadCracked();
+        setInterval(loadStats, 5000);
+        setInterval(loadJobs, 5000);
+        setInterval(loadCracked, 10000);
+    </script>
+    """
+    return render_template_string(_BASE, title=cfg.web.title, active="cracking", content=content)

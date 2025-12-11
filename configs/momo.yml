@@ -195,6 +195,18 @@ eviltwin:
   redirect_url: https://www.google.com
   log_dir: logs/eviltwin      # Credential log directory
 
+# ==============================================================================
+# Cracking - Hashcat/John Integration
+# ==============================================================================
+cracking:
+  enabled: false              # Enable password cracking
+  auto_crack: false           # Auto-crack new handshakes
+  workload_profile: 3         # 1=low, 2=default, 3=high, 4=nightmare
+  max_runtime_seconds: 0      # 0 = unlimited
+  check_interval: 60          # Seconds between auto-crack checks
+  handshakes_dir: logs/handshakes
+  potfile: logs/hashcat.potfile
+
 server:
   # Aggressive mode: No restrictions
   health:

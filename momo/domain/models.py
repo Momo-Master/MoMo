@@ -454,3 +454,81 @@ class EvilTwinStats(BaseModel):
     clients_total: int = 0
     credentials_total: int = 0
     errors: int = 0
+
+
+# =============================================================================
+# Cracking Models (Phase 0.7.0)
+# =============================================================================
+
+
+class CrackJobStatus(str, Enum):
+    """Crack job status."""
+
+    PENDING = "pending"
+    RUNNING = "running"
+    CRACKED = "cracked"
+    EXHAUSTED = "exhausted"
+    STOPPED = "stopped"
+    ERROR = "error"
+
+
+class CrackAttackMode(int, Enum):
+    """Hashcat attack modes."""
+
+    DICTIONARY = 0
+    COMBINATION = 1
+    BRUTE_FORCE = 3
+    HYBRID_WL_MASK = 6
+    HYBRID_MASK_WL = 7
+
+
+class CrackJobRecord(BaseModel):
+    """Crack job database record."""
+
+    id: int | None = None
+    job_id: str = ""
+    hash_file: str = ""
+    handshake_id: int | None = None
+    status: CrackJobStatus = CrackJobStatus.PENDING
+    attack_mode: CrackAttackMode = CrackAttackMode.DICTIONARY
+    wordlist: str | None = None
+    mask: str | None = None
+
+    # Progress
+    progress_percent: float = 0.0
+    speed_hps: float = 0.0
+    recovered: int = 0
+    total_hashes: int = 0
+
+    # Result
+    password: str | None = None
+    cracked_at: datetime | None = None
+
+    # Timing
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    finished_at: datetime | None = None
+
+    @property
+    def is_complete(self) -> bool:
+        return self.status in (
+            CrackJobStatus.CRACKED,
+            CrackJobStatus.EXHAUSTED,
+            CrackJobStatus.STOPPED,
+            CrackJobStatus.ERROR,
+        )
+
+    @property
+    def duration_seconds(self) -> float:
+        end = self.finished_at or datetime.now(UTC)
+        return (end - self.started_at).total_seconds()
+
+
+class CrackStats(BaseModel):
+    """Cracking runtime statistics."""
+
+    jobs_total: int = 0
+    jobs_cracked: int = 0
+    jobs_exhausted: int = 0
+    passwords_found: int = 0
+    active_jobs: int = 0
+    errors: int = 0
