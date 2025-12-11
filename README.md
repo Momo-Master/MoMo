@@ -49,6 +49,7 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 | **PMKID Capture** | Clientless WPA2 attack via hcxdumptool | ✅ |
 | **Deauth Attacks** | Targeted client disconnection | ✅ |
 | **Evil Twin** | Rogue AP with captive portal (6 templates) | ✅ |
+| **Evilginx AiTM** | MFA bypass via session cookie capture | ✅ |
 | **Handshake Capture** | EAPOL 4-way handshake collection | ✅ |
 | **Auto Cracking** | hashcat integration with wordlist management | ✅ |
 | **BLE Scanner** | Bluetooth device & beacon detection | ✅ |
@@ -309,6 +310,7 @@ curl -H "Authorization: Bearer <token>" http://<ip>:8082/api/status
 | `/api/wardriver/aps.geojson` | Access points as GeoJSON |
 | `/api/ble/*` | BLE scanner API |
 | `/api/eviltwin/*` | Evil Twin API |
+| `/api/evilginx/*` | Evilginx AiTM API |
 | `/api/cracking/*` | Cracking API |
 | `/sse/events` | Real-time event stream |
 | `/metrics` | Prometheus metrics |
@@ -365,6 +367,7 @@ plugins:
 | [HARDWARE.md](docs/HARDWARE.md) | Hardware setup |
 | [ACTIVE_WIFI.md](docs/ACTIVE_WIFI.md) | Deauth/beacon attacks |
 | [CRACKING.md](docs/CRACKING.md) | Password cracking |
+| [EVILGINX.md](docs/EVILGINX.md) | MFA bypass (AiTM) |
 | [PLUGINS.md](docs/PLUGINS.md) | Plugin documentation |
 | [Plugin Development](#-plugin-development) | Create custom plugins |
 
@@ -426,6 +429,7 @@ pytest tests/ -v --cov=momo
 | Evil Twin | v0.6.0 | ✅ Complete |
 | Cracking Integration | v0.7.0 | ✅ Complete |
 | Plugin Architecture | v0.8.0 | ✅ Complete |
+| Evilginx AiTM | v0.9.0 | ✅ Complete |
 
 ---
 

@@ -1,6 +1,6 @@
 # MoMo Development Roadmap
 
-> **Version:** 0.8.0 | **Last Updated:** 2025-12-12
+> **Version:** 0.9.0 | **Last Updated:** 2025-12-12
 
 ## 🎯 Vision
 
@@ -80,11 +80,22 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] Example plugins (wifi_scanner, ble_scanner)
 - [x] Comprehensive documentation
 
+### Phase 0.9.0 - Evilginx AiTM Integration ✅
+- [x] EvilginxManager (binary wrapper)
+- [x] PhishletManager (5 built-in: M365, Google, Okta, LinkedIn, GitHub)
+- [x] SessionManager (cookie storage & export)
+- [x] Lure generation (phishing URLs)
+- [x] Multiple export formats (JSON, curl, Netscape)
+- [x] MockEvilginxManager for testing
+- [x] Evilginx plugin
+- [x] Evilginx API & Web integration
+- [x] 22 unit tests
+
 ---
 
 ## 🚧 In Progress
 
-### Phase 0.9.0 - Real Hardware Testing
+### Phase 0.10.0 - Real Hardware Testing
 - [ ] Raspberry Pi 5 deployment
 - [ ] Multi-adapter stress testing
 - [ ] GPS accuracy validation

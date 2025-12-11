@@ -1,5 +1,10 @@
 name: CI
 
+# ============================================================================
+# CI SUSPENDED - Project under active development
+# Remove 'if: false' below when ready to enable CI again
+# ============================================================================
+
 on:
   push:
     branches: [ main, develop ]
@@ -8,6 +13,7 @@ on:
 
 jobs:
   build:
+    if: false  # SUSPENDED: Enable after project core is complete
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
