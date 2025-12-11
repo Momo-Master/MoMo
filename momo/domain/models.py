@@ -375,3 +375,82 @@ class BLEStats(BaseModel):
     scans_completed: int = 0
     errors: int = 0
     last_scan_at: datetime | None = None
+
+
+# =============================================================================
+# Evil Twin Models (Phase 0.6.0)
+# =============================================================================
+
+
+class EvilTwinStatus(str, Enum):
+    """Evil Twin AP status."""
+
+    STOPPED = "stopped"
+    STARTING = "starting"
+    RUNNING = "running"
+    STOPPING = "stopping"
+    ERROR = "error"
+
+
+class PortalTemplateType(str, Enum):
+    """Captive portal template types."""
+
+    GENERIC = "generic"
+    HOTEL = "hotel"
+    CORPORATE = "corporate"
+    FACEBOOK = "facebook"
+    GOOGLE = "google"
+    ROUTER = "router"
+    CUSTOM = "custom"
+
+
+class CapturedCredentialRecord(BaseModel):
+    """Captured credential from evil twin attack."""
+
+    id: int | None = None
+    session_id: int | None = None
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    client_mac: str = ""
+    client_ip: str = ""
+    username: str = ""
+    password: str = ""
+    user_agent: str = ""
+    target_ssid: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+
+
+class EvilTwinSession(BaseModel):
+    """Evil Twin attack session record."""
+
+    id: int | None = None
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    ended_at: datetime | None = None
+    target_ssid: str = ""
+    target_bssid: str | None = None
+    interface: str = ""
+    channel: int = 6
+    portal_template: PortalTemplateType = PortalTemplateType.GENERIC
+    clients_connected: int = 0
+    credentials_captured: int = 0
+    latitude: float | None = None
+    longitude: float | None = None
+
+    @property
+    def is_active(self) -> bool:
+        return self.ended_at is None
+
+    @property
+    def duration_seconds(self) -> float:
+        end = self.ended_at or datetime.now(UTC)
+        return (end - self.started_at).total_seconds()
+
+
+class EvilTwinStats(BaseModel):
+    """Evil Twin runtime statistics."""
+
+    sessions_total: int = 0
+    active_sessions: int = 0
+    clients_total: int = 0
+    credentials_total: int = 0
+    errors: int = 0

@@ -45,6 +45,9 @@ wardriving = [
 ble = [
   "bleak>=0.22.0",       # BLE scanner library
 ]
+eviltwin = [
+  "aiohttp>=3.9.0",      # Captive portal server
+]
 dev = [
   "ruff>=0.5.0",
   "mypy>=1.10.0",

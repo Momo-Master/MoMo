@@ -181,6 +181,20 @@ ble:
   detect_beacons: true        # Parse iBeacon/Eddystone frames
   passive_scan: false         # Passive = less detectable
 
+# ==============================================================================
+# Evil Twin - Rogue AP & Credential Harvesting
+# ==============================================================================
+eviltwin:
+  enabled: false              # Enable Evil Twin attacks
+  interface: wlan1            # Dedicated interface for AP (needs AP mode)
+  default_ssid: FreeWiFi      # Default SSID for attacks
+  channel: 6                  # WiFi channel
+  portal_template: generic    # generic, hotel, corporate, facebook, google, router
+  portal_title: WiFi Login    # Captive portal title
+  portal_port: 80             # Portal HTTP port
+  redirect_url: https://www.google.com
+  log_dir: logs/eviltwin      # Credential log directory
+
 server:
   # Aggressive mode: No restrictions
   health:

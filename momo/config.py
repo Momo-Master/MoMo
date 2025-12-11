@@ -160,6 +160,19 @@ class BLEConfig(BaseModel):
     passive_scan: bool = Field(False)  # Passive = less detectable
 
 
+class EvilTwinConfig(BaseModel):
+    """Evil Twin attack configuration."""
+    enabled: bool = Field(False)  # Disabled by default
+    interface: str = Field("wlan1")  # Dedicated AP interface
+    default_ssid: str = Field("FreeWiFi")
+    channel: int = Field(6, ge=1, le=14)
+    portal_template: str = Field("generic")  # generic, hotel, corporate, etc
+    portal_title: str = Field("WiFi Login")
+    portal_port: int = Field(80)
+    redirect_url: str = Field("https://www.google.com")
+    log_dir: str = Field("logs/eviltwin")
+
+
 class AggressiveConfig(BaseModel):
     """Aggressive mode config - NO RESTRICTIONS by default."""
     enabled: bool = Field(True)                                    # Aggressive ON by default
@@ -275,6 +288,7 @@ class MomoConfig(BaseModel):
     gps: GPSConfig = Field(default_factory=GPSConfig)
     wardriving: WardrivingConfig = Field(default_factory=WardrivingConfig)
     ble: BLEConfig = Field(default_factory=BLEConfig)
+    eviltwin: EvilTwinConfig = Field(default_factory=EvilTwinConfig)
 
     class ServerEndpoint(BaseModel):
         enabled: bool = Field(True)
