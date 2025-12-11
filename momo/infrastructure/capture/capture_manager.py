@@ -371,28 +371,24 @@ class CaptureManager:
         cmd = [
             self.config.hcxdumptool_path,
             "-i", interface,
-            "-o", str(output_path),
-            "--enable_status=1",
+            "-w", str(output_path),  # -w for write (not -o)
         ]
 
-        # Active attack options (PMKID retrieval)
-        if self.config.enable_active_attack:
-            cmd.append("--active_beacon")
-            cmd.append("--flood_probe_request=1")
+        # Channel or all channels
+        if channel > 0:
+            cmd.extend(["-c", str(channel)])
+        else:
+            cmd.append("-F")  # All available channels
 
-        if self.config.attack_ap:
-            cmd.append("--give_up_deauthentications=1")
+        # Real-time display sorted by status
+        cmd.append("--rds=1")
 
-        # Filter by BSSID
-        if bssid:
+        # Filter by BSSID (if not broadcast)
+        if bssid and bssid.upper() != "FF:FF:FF:FF:FF:FF":
             # Create filterlist file for single BSSID
             filter_file = output_path.parent / f".filter_{output_path.stem}.txt"
             filter_file.write_text(bssid.lower().replace(":", ""), encoding="utf-8")
-            cmd.extend(["--filtermode=2", f"--filterlist_ap={filter_file}"])
-
-        # Channel
-        if channel > 0:
-            cmd.extend(["-c", str(channel)])
+            cmd.extend(["--filterlist_ap", str(filter_file)])
 
         logger.debug("Running hcxdumptool: %s", " ".join(cmd))
 
