@@ -600,9 +600,19 @@ class MockCaptureManager(CaptureManager):
             longitude=longitude,
         )
 
-    async def _run_hcxdumptool(self, **kwargs) -> bool:
-        """Mock capture - just wait briefly."""
+    async def _run_hcxdumptool(
+        self,
+        interface: str,
+        output_path: Path,
+        bssid: str | None = None,
+        channel: int = 0,
+        timeout: int = 60,
+    ) -> bool:
+        """Mock capture - create fake pcapng file."""
         await asyncio.sleep(0.1)
+        if self._mock_success:
+            # Create mock pcapng file so base class check passes
+            output_path.write_bytes(b"MOCK_PCAPNG_DATA")
         return self._mock_success
 
     async def _convert_to_hashcat(
