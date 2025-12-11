@@ -31,7 +31,7 @@ class GPSPosition(BaseModel):
     hdop: float | None = None  # horizontal dilution of precision
     satellites: int = 0
     fix_quality: int = 0  # 0=invalid, 1=GPS, 2=DGPS, 3=RTK
-    timestamp: datetime = Field(default_factory=datetime.now(UTC))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     @property
     def has_fix(self) -> bool:
@@ -74,8 +74,8 @@ class AccessPoint(BaseModel):
     wps_enabled: bool = False
     vendor: str | None = None  # OUI-based vendor lookup
     clients_count: int = 0
-    first_seen: datetime = Field(default_factory=datetime.now(UTC))
-    last_seen: datetime = Field(default_factory=datetime.now(UTC))
+    first_seen: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_seen: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # GPS at discovery
     latitude: float | None = None
@@ -111,7 +111,7 @@ class WardriveScan(BaseModel):
     """Single wardriving session."""
 
     scan_id: str
-    started_at: datetime = Field(default_factory=datetime.now(UTC))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     ended_at: datetime | None = None
     interface: str = "wlan1"
     channels_scanned: list[int] = Field(default_factory=lambda: [1, 6, 11])
@@ -125,7 +125,7 @@ class WardriveScan(BaseModel):
         """Get scan duration in seconds."""
         if self.ended_at:
             return (self.ended_at - self.started_at).total_seconds()
-        return (datetime.now(UTC)() - self.started_at).total_seconds()
+        return (datetime.now(UTC) - self.started_at).total_seconds()
 
     @property
     def is_active(self) -> bool:
@@ -138,7 +138,7 @@ class ProbeRequest(BaseModel):
 
     client_mac: str = Field(..., pattern=r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
     ssid_probed: str | None = None
-    timestamp: datetime = Field(default_factory=datetime.now(UTC))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     rssi: int = -100
     latitude: float | None = None
     longitude: float | None = None
@@ -203,7 +203,7 @@ class HandshakeCapture(BaseModel):
     pmkid_found: bool = False
 
     # Timestamps
-    started_at: datetime = Field(default_factory=datetime.now(UTC))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     completed_at: datetime | None = None
     duration_seconds: float = 0.0
 
@@ -235,7 +235,7 @@ class CaptureSession(BaseModel):
 
     session_id: str
     interface: str
-    started_at: datetime = Field(default_factory=datetime.now(UTC))
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     ended_at: datetime | None = None
 
     # Configuration
@@ -259,7 +259,7 @@ class CaptureSession(BaseModel):
     @property
     def duration_seconds(self) -> float:
         """Get session duration."""
-        end = self.ended_at or datetime.now(UTC)()
+        end = self.ended_at or datetime.now(UTC)
         return (end - self.started_at).total_seconds()
 
     @property
