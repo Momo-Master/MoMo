@@ -1,0 +1,8 @@
+{
+  "name": "momo-dev",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {},
+  "postCreateCommand": "pip install -e .[dev] && pre-commit install"
+}
+
+

@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install tox
+        run: |
+          python -m pip install --upgrade pip
+          pip install tox
+
+      - name: Run tox
+        run: tox -q
+
+      - name: Shellcheck
+        run: |
+          sudo apt-get update -y || true
+          sudo apt-get install -y shellcheck || true
+          shellcheck deploy/*.sh deploy/firstboot/*.sh deploy/image/*.sh || true
+
+      - name: Dry-run installer
+        run: |
+          sudo bash -c 'SKIP_DKMS=1 NO_START=1 NONINTERACTIVE=1 LOGFILE=/tmp/momo_install_ci.log REPO_DIR=/tmp/momo_ci BACKUP_DIR=/tmp/momo_backups bash deploy/install.sh'
+
+

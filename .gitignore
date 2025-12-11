@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Build
+build/
+dist/
+
+# Env
+.env
+.venv/
+venv/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Documentation (keep private)
+docs/
+
+# Tests (keep private)
+tests/
+
+# Logs and captures
+logs/
+*.pcapng
+*.pcap
+*.cap
+*.hccapx
+*.22000
+
+

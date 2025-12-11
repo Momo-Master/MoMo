@@ -1,0 +1,121 @@
+[build-system]
+requires = ["hatchling>=1.25.0", "hatch-vcs>=0.3"]
+build-backend = "hatchling.build"
+
+[project]
+name = "momo"
+dynamic = ["version"]
+description = "MoMo: Modular, Pi 5 optimized, secure fork of Pwnagotchi"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+  { name = "MoMo Maintainers" }
+]
+keywords = ["pwnagotchi", "raspberry-pi", "wifi", "security", "hcxdumptool"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Environment :: Console",
+  "Typing :: Typed",
+]
+dependencies = [
+  "typer>=0.12",
+  "pydantic>=2.7",
+  "PyYAML>=6.0",
+  "rich>=13.7",
+  "psutil>=5.9",
+  "Flask>=3.0.0",
+  "Flask-Limiter>=3.6.0",
+]
+
+[project.optional-dependencies]
+recommended = [
+  "luma.oled>=3.13",
+]
+wardriving = [
+  "aiosqlite>=0.19.0",   # Async SQLite (ZORUNLU)
+  "pynmea2>=1.19.0",     # NMEA parsing fallback
+  "aiofiles>=23.2.0",    # Async file I/O
+]
+dev = [
+  "ruff>=0.5.0",
+  "mypy>=1.10.0",
+  "pytest>=8.3.0",
+  "pytest-cov>=5.0.0",
+  "pytest-asyncio>=0.23.0",  # Async test desteği
+  "pre-commit>=3.7.0",
+  "types-PyYAML>=6.0.12",
+  "types-psutil>=5.9.5",
+  "toml>=0.10,<1.0",
+]
+
+[project.scripts]
+momo = "momo.cli:launch"
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "momo/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["momo"]
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "PL", "RUF"]
+ignore = ["E501", "PLR2004", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# Treat the drop-in plugin directory as vendor-like; ignore noisy rules there.
+"momo/apps/momo_plugins/*.py" = [
+  "E402", "F401", "F403", "F405", "F821", "E701", "E722",
+  "PLR0912", "PLR0915", "UP031", "RUF012", "B019", "E741",
+  "PLW0602", "PLW0603", "PLR0911", "PLC0206", "PLW2901", "B015"
+]
+# Allow a helper to accept many arguments for clarity
+"momo/tools/pcap_utils.py" = ["PLR0913"]
+# Tests: allow common test patterns
+"tests/**/*.py" = ["F401"]
+"momo/apps/momo_core/aggressive.py" = ["PLR0913", "PLR0911"]
+"momo/apps/momo_core/main.py" = ["PLR0912", "PLR0915"]
+"momo/cli.py" = ["PLR0915"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["momo"]
+combine-as-imports = true
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_any_generics = true
+no_implicit_optional = true
+show_error_codes = true
+pretty = true
+exclude = [
+  "^migrations/",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra -q --strict-markers"
+pythonpath = [
+  "."
+]
+testpaths = [
+  "tests"
+]
+markers = [
+  "e2e: end-to-end tests"
+]
+
+

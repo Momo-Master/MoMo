@@ -1,0 +1,24 @@
+[Unit]
+Description=MoMo core service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/momo
+ExecStartPre=/opt/momo/deploy/helpers/net_quiet.sh stop || true
+ExecStart=/opt/momo/.venv/bin/momo run -c /opt/momo/configs/momo.yml --health-port 8081 --prom-port 9091
+EnvironmentFile=-/etc/default/momo
+EnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf
+Restart=always
+RestartSec=2
+LimitNOFILE=65535
+NoNewPrivileges=yes
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
+
+

@@ -1,0 +1,194 @@
+mode: aggressive
+
+interface:
+  name: wlan1
+  mac_randomization: true
+  channel_hop: true
+  channels: [1, 6, 11]              # Default 2.4GHz
+  channels_5ghz: [36, 40, 44, 48, 149, 153, 157, 161, 165]  # Non-DFS 5GHz
+  regulatory_domain: "00"           # Global/unrestricted (use iw reg set 00)
+
+capture:
+  out_dir_name: handshakes
+  meta_dir_name: meta
+  rotate_on_size: true
+  rotate_on_time: true
+  tools:
+    hcxdumptool_path: /usr/bin/hcxdumptool
+    hcxpcapngtool_path: /usr/bin/hcxpcapngtool
+    tcpdump_path: /usr/sbin/tcpdump
+  adapters: []
+  enable_on_windows: false
+  simulate_bytes_per_file: 16384
+  simulate_dwell_secs: 2
+  naming:
+    by_ssid: true
+    template: "{ts}__{ssid}__{bssid}__ch{channel}"
+    max_name_len: 64
+    allow_unicode: false
+    whitespace: "_"
+
+web:
+  # First-boot default; resolver adapts per-platform (Windows binds 127.0.0.1)
+  enabled: true
+  bind_host: 0.0.0.0    # Pi profile; on Windows resolver sets 127.0.0.1
+  bind_port: 8082
+  token_env_var: MOMO_UI_TOKEN
+health:
+  bind_host: 0.0.0.0
+  port: 8081
+metrics:
+  bind_host: 0.0.0.0
+  port: 9091
+  auth:
+    token_env: MOMO_UI_TOKEN
+    password_env: MOMO_UI_PASSWORD
+  rate_limit: "60/minute"
+
+logging:
+  base_dir: logs
+  rotation:
+    size_mb: 50
+    time_minutes: 60
+    max_archives: 24
+  retention_days: 14
+
+bettercap:
+  enabled: true
+  allow_assoc: true
+  allow_deauth: true
+
+oled:
+  enabled: false
+  i2c_address: "0x3C"
+  width: 128
+  height: 64
+
+security:
+  # YOUR OWN NETWORKS - Add here to protect from self-attack
+  # Example: ["AA:BB:CC:DD:EE:FF", "11:22:33:44:55:66"]
+  whitelist_bssids: []
+  blacklist_bssids: []
+
+stats:
+  sample_interval_sec: 5
+
+plugins:
+  # ALL PLUGINS ENABLED - No restrictions
+  enabled: ["autobackup", "wpa-sec", "wardriver", "active_wifi", "cracker", "bettercap", "instattack", "webcfg"]
+  options:
+    autobackup: 
+      enabled: true
+    wpa-sec:
+      enabled: true
+      upload: true                     # Upload enabled
+      endpoint: "https://wpa-sec.stanev.org"
+      queue_dir: "/logs/handshakes"
+      retry_secs: 60                   # Faster retry
+      dry_run: false                   # Real upload
+    wardriver:
+      enabled: true
+      db_path: "logs/wardriving.db"
+      scan_interval: 1.0               # Fast scanning
+    cracker:
+      enabled: true
+    instattack:
+      enabled: true                    # Instant attack on new AP/client
+    webcfg:
+      enabled: true
+      port: 8088
+      allow_unauth: false              # Token authentication required
+      node_name: "momo"
+    bettercap:
+      enabled: true
+    active_wifi:
+      enabled: true
+      iface: null                        # Auto-detect
+      channels: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 36, 40, 44, 48]  # 2.4GHz + 5GHz
+      bssid_whitelist: []                # No restrictions
+      ssid_whitelist: []                 # No restrictions
+      deauth_clients: []                 # All clients
+      beacon_ssids: []                   # All SSIDs
+      pkts_per_second: 0                 # Unlimited (0 = max speed)
+      max_runtime_secs: 0                # Unlimited
+      cooldown_secs: 0                   # No cooldown
+      tool: auto
+      files:
+        - "/logs"
+        - "/etc/momo.yml"
+      backup_location: "/opt/momo_backups"
+      interval: "daily"
+      max_tries: 3
+      exclude:
+        - "*.hccapx"
+        - "*.tmp"
+
+storage:
+  enabled: true
+  max_days: 30
+  max_gb: 5
+  low_space_gb: 1
+  check_interval_secs: 600
+
+supervisor:
+  enabled: true
+  retries_before_passive: 99999        # Never go passive
+  backoff_initial_secs: 1
+  backoff_cap_secs: 60
+  jitter_frac: 0.2
+  health_check_interval_secs: 5
+  fault_injection: false
+
+aggressive:
+  enabled: true
+  require_ack: false          # No confirmation needed
+  deauth:
+    enabled: true
+    max_per_minute: 0         # Unlimited (0 = no limit)
+    burst_limit: 0            # Unlimited
+  injection:
+    enabled: true
+  evil_twin:
+    enabled: true
+  pmkid:
+    enabled: true
+  
+  # TARGET SELECTION (Operator Safety)
+  # Whitelist: If set, ONLY attack these targets (focus mode)
+  # Blacklist: NEVER attack these (protect your own networks)
+  ssid_whitelist: []          # Empty = attack all SSIDs
+  bssid_whitelist: []         # Empty = attack all BSSIDs
+  ssid_blacklist: []          # Add your own network SSIDs here
+  bssid_blacklist: []         # Add your own router MACs here
+  
+  # Operational settings (all disabled for full aggressive)
+  quiet_hours: null           # No quiet hours
+  panic_file: null            # No panic file
+
+server:
+  # Aggressive mode: No restrictions
+  health:
+    enabled: true
+    bind_host: 0.0.0.0
+    port: 8081
+  metrics:
+    enabled: true
+    bind_host: 0.0.0.0
+    port: 9091
+  web:
+    enabled: true
+    bind_host: 0.0.0.0
+    port: 8082
+  require_ack_env: null                  # No acknowledgment required
+  ssid_whitelist: []                     # No restrictions
+  bssid_whitelist: []                    # No restrictions
+  ssid_blacklist: []                     # No restrictions
+  bssid_blacklist: []                    # No restrictions
+  max_deauth_per_min: 0                  # Unlimited (0 = no limit)
+  max_assoc_per_min: 0                   # Unlimited
+  burst_len: 0                           # Unlimited
+  cooldown_secs: 0                       # No cooldown
+  quiet_hours: null                      # No quiet hours
+  panic_file: null                       # No panic file
+  rfkill_on_panic: false                 # No RF kill
+

@@ -1,0 +1,16 @@
+[Unit]
+Description=MoMo Web UI
+After=network-online.target
+Wants=network-online.target momo.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/momo
+Environment=MOMO_CONFIG=/opt/momo/configs/momo.yml
+ExecStart=/opt/momo/.venv/bin/python -m momo.apps.momo_web.server
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
+

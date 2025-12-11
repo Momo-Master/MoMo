@@ -1,0 +1,59 @@
+MIT License
+
+Copyright (c) 2025 MoMo Project Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+## Additional Terms
+
+### Responsible Use
+
+This software is intended for:
+- Authorized penetration testing
+- Security research and education
+- Network administration and auditing
+
+Users must:
+- Obtain written permission before testing any network
+- Comply with all applicable local, state, and federal laws
+- Use the software responsibly and ethically
+
+### Third-Party Components
+
+MoMo incorporates or interfaces with the following open-source projects:
+
+| Component | License | Purpose |
+|-----------|---------|---------|
+| Pwnagotchi | GPL-3.0 | Plugin architecture inspiration |
+| aircrack-ng | GPL-2.0 | Wireless tools |
+| bettercap | GPL-3.0 | MITM framework |
+| hashcat | MIT | Password recovery |
+| hcxdumptool | MIT | PMKID capture |
+
+### No Warranty
+
+THE SOFTWARE IS PROVIDED WITHOUT ANY WARRANTY. THE AUTHORS AND CONTRIBUTORS
+ARE NOT LIABLE FOR ANY DAMAGES OR LEGAL ISSUES ARISING FROM THE USE OR
+MISUSE OF THIS SOFTWARE.
+
+---
+
+For questions about licensing, contact: https://github.com/Momo-Master/MoMo

@@ -1,0 +1,17 @@
+[Unit]
+Description=MoMo OLED status service
+After=momo.service
+Requires=momo.service
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/momo
+# Placeholder service. OLED module is driven by the main MoMo service.
+# Replace ExecStart with a dedicated OLED runner if split becomes necessary.
+ExecStart=/usr/bin/true
+
+[Install]
+WantedBy=multi-user.target
+
+

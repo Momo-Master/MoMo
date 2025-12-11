@@ -1,0 +1,15 @@
+[Unit]
+Description=MoMo First Boot Finalization
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=!/opt/momo/.firstboot_done
+
+[Service]
+Type=oneshot
+ExecStart=/opt/momo/deploy/firstboot/firstboot.sh
+RemainAfterExit=no
+
+[Install]
+WantedBy=multi-user.target
+
+
