@@ -34,6 +34,11 @@ web:
   bind_host: 0.0.0.0    # Pi profile; on Windows resolver sets 127.0.0.1
   bind_port: 8082
   token_env_var: MOMO_UI_TOKEN
+  allow_query_token: true   # Allow ?token= in URL for browser access
+  require_token: true
+  title: "MoMo Dashboard"
+  footer: "MoMo v0.4.0"
+  allow_delete: false
 health:
   bind_host: 0.0.0.0
   port: 8081
