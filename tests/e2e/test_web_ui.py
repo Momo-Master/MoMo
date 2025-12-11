@@ -1,4 +1,5 @@
 import http.client
+import socket
 import threading
 import time
 
@@ -6,21 +7,32 @@ from momo.apps.momo_web import create_app
 from momo.config import load_config
 
 
-def _run_app(app):
-    app.run(host="127.0.0.1", port=8082)
+def _get_free_port() -> int:
+    """Get a free port by binding to port 0 and letting the OS assign one."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        s.listen(1)
+        return s.getsockname()[1]
+
+
+def _run_app(app, port):
+    app.run(host="127.0.0.1", port=port)
 
 
 def test_web_ui_auth_and_endpoints(tmp_path, monkeypatch):
+    # Get dynamic port to avoid CI conflicts
+    web_port = _get_free_port()
+    
     # prepare config
     cfg_path = tmp_path / "momo.yml"
     cfg_path.write_text(
-        """
+        f"""
 logging:
   base_dir: "logs"
 web:
   enabled: true
   bind_host: 127.0.0.1
-  bind_port: 8082
+  bind_port: {web_port}
   auth:
     token_env: MOMO_UI_TOKEN
     password_env: MOMO_UI_PASSWORD
@@ -34,11 +46,11 @@ web:
     cfg = load_config(cfg_path)
     app = create_app(cfg)
 
-    t = threading.Thread(target=_run_app, args=(app,), daemon=True)
+    t = threading.Thread(target=_run_app, args=(app, web_port), daemon=True)
     t.start()
-    time.sleep(1.0)
+    time.sleep(1.5)  # Give Flask time to start
 
-    conn = http.client.HTTPConnection("127.0.0.1", 8082, timeout=2)
+    conn = http.client.HTTPConnection("127.0.0.1", web_port, timeout=2)
     # no auth -> 401 on /api/status
     conn.request("GET", "/api/status")
     r = conn.getresponse()
