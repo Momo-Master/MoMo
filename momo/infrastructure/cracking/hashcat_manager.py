@@ -202,12 +202,12 @@ class HashcatManager:
         """Stop all running jobs."""
         self._running = False
         
-        for job_id, proc in list(self._processes.items()):
+        for _job_id, proc in list(self._processes.items()):
             if proc.returncode is None:
                 proc.terminate()
                 try:
                     await asyncio.wait_for(proc.wait(), timeout=5.0)
-                except asyncio.TimeoutError:
+                except TimeoutError:
                     proc.kill()
         
         self._processes.clear()
@@ -251,7 +251,7 @@ class HashcatManager:
         self._stats["jobs_total"] += 1
         
         # Start cracking in background
-        asyncio.create_task(self._run_hashcat(job))
+        _ = asyncio.create_task(self._run_hashcat(job))
         
         return job
     
@@ -340,7 +340,7 @@ class HashcatManager:
                 )
                 if line:
                     self._parse_status_line(job, line.decode())
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass
             
             # Check if still running

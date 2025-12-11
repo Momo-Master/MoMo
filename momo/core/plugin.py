@@ -20,11 +20,12 @@ import inspect
 import logging
 import sys
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 if TYPE_CHECKING:
     from ..config import MomoConfig
@@ -170,27 +171,21 @@ class BasePlugin(ABC):
     
     def on_load(self) -> None:
         """Called when plugin is loaded/registered. Do lightweight init here."""
-        pass
     
     async def on_start(self) -> None:
         """Called when plugin is started. Do async init here."""
-        pass
     
     def on_tick(self, ctx: dict[str, Any]) -> None:
         """Called periodically. For sync plugins only."""
-        pass
     
     async def on_stop(self) -> None:
         """Called when plugin is stopped. Cleanup here."""
-        pass
     
     def on_unload(self) -> None:
         """Called when plugin is unloaded. Final cleanup."""
-        pass
     
     def on_config_changed(self, new_config: dict[str, Any]) -> None:
         """Called when plugin configuration changes."""
-        pass
     
     # ==========================================================================
     # Event System
@@ -418,7 +413,7 @@ class PluginManager:
         
         # Stop if running
         if plugin.is_running:
-            asyncio.create_task(self.stop_plugin(name))
+            _ = asyncio.create_task(self.stop_plugin(name))
         
         # Call on_unload
         try:

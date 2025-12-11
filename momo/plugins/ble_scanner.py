@@ -7,7 +7,6 @@ Modern implementation using BasePlugin.
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 from typing import Any
 
 from momo.core.plugin import BasePlugin, PluginMetadata, PluginType

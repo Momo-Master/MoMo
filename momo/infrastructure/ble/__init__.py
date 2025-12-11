@@ -5,9 +5,9 @@ Provides async BLE device scanning and beacon detection using bleak library.
 """
 
 from .scanner import (
+    BeaconType,
     BLEDevice,
     BLEScanner,
-    BeaconType,
     MockBLEScanner,
     ScanConfig,
 )

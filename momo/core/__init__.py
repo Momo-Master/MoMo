@@ -11,12 +11,12 @@ from .plugin import (
 )
 
 __all__ = [
+    # Plugin System
+    "BasePlugin",
     # Events
     "Event",
     "EventBus",
     "EventType",
-    # Plugin System
-    "BasePlugin",
     "PluginManager",
     "PluginMetadata",
     "PluginState",

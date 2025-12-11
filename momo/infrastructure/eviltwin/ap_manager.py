@@ -267,7 +267,6 @@ class APManager:
         """Configure the interface for AP mode."""
         interface = self.config.interface
         ip = self.config.ip_address
-        netmask = self.config.netmask
         
         try:
             # Bring interface down
@@ -346,7 +345,7 @@ class APManager:
             self._hostapd_proc.terminate()
             try:
                 await asyncio.wait_for(self._hostapd_proc.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._hostapd_proc.kill()
             self._hostapd_proc = None
     
@@ -389,7 +388,7 @@ class APManager:
             self._dnsmasq_proc.terminate()
             try:
                 await asyncio.wait_for(self._dnsmasq_proc.wait(), timeout=5.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 self._dnsmasq_proc.kill()
             self._dnsmasq_proc = None
     

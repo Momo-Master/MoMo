@@ -92,11 +92,13 @@ ignore = ["E501", "PLR2004", "B008"]
   "F841"      # Unused variables (legacy plugins)
 ]
 # Infrastructure modules may use lazy imports and complex capture logic
-"momo/infrastructure/**/*.py" = ["PLC0415", "PLR0912", "PLR0913", "PLR0915"]
+"momo/infrastructure/**/*.py" = ["PLC0415", "PLR0912", "PLR0913", "PLR0915", "PLR0911", "RUF006"]
 # Domain models may have inline math import
 "momo/domain/models.py" = ["PLC0415"]
 # Config may use lazy imports for validators
 "momo/config.py" = ["PLC0415"]
+# Allow lazy imports in new plugin system
+"momo/plugins/*.py" = ["PLC0415"]
 # Allow a helper to accept many arguments for clarity
 "momo/tools/pcap_utils.py" = ["PLR0913"]
 # Web modules may use lazy imports for plugin access
@@ -112,6 +114,8 @@ ignore = ["E501", "PLR2004", "B008"]
 "momo/cli.py" = ["PLR0915", "PLC0415", "PLR0912"]
 "momo/core/events.py" = ["PLC0415", "PLW0603"]
 "momo/core/security.py" = ["B905"]
+# Plugin system: lifecycle hooks are optional (not abstract), RUF006 for fire-and-forget tasks
+"momo/core/plugin.py" = ["B027", "RUF006"]
 "momo/infrastructure/wifi/__init__.py" = ["RUF022"]
 "momo/infrastructure/wifi/radio_manager.py" = ["PLW2901", "F841"]
 "momo/infrastructure/wifi/scanner.py" = ["PLW2901"]
