@@ -212,7 +212,7 @@ Priority areas:
 - Real hardware testing
 - Plugin development
 - Documentation
-- Bug fixes
+- Bug fixess
 
 ---
 
