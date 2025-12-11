@@ -30,6 +30,7 @@ dependencies = [
   "psutil>=5.9",
   "Flask>=3.0.0",
   "Flask-Limiter>=3.6.0",
+  "aiosqlite>=0.19.0",
 ]
 
 [project.optional-dependencies]
@@ -109,7 +110,31 @@ show_error_codes = true
 pretty = true
 exclude = [
   "^migrations/",
+  # Static web UI (separate blueprint)
+  "momo/apps/web/",
+  # Legacy pwnagotchi plugins - not yet migrated
+  "momo/apps/momo_plugins/wittypi\\.py$",
+  "momo/apps/momo_plugins/wpa-sec-list\\.py$",
+  "momo/apps/momo_plugins/pisugarx\\.py$",
+  "momo/apps/momo_plugins/ups_lite\\.py$",
+  "momo/apps/momo_plugins/gpio_buttons\\.py$",
+  "momo/apps/momo_plugins/gps\\.py$",
+  "momo/apps/momo_plugins/display-password\\.py$",
+  "momo/apps/momo_plugins/bt-tether\\.py$",
+  "momo/apps/momo_plugins/memtemp-plus\\.py$",
+  "momo/apps/momo_plugins/memtemp\\.py$",
+  "momo/apps/momo_plugins/tweak_view\\.py$",
 ]
+
+[[tool.mypy.overrides]]
+module = [
+  "pwnagotchi.*",
+  "smbus",
+  "luma.*",
+  "gps",
+  "bleak",
+]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 addopts = "-ra -q --strict-markers"
