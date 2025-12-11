@@ -29,31 +29,382 @@ def _cfg() -> MomoConfig:
 
 _BASE = """
 <!doctype html>
-<html><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{ title }}</title>
-<style>
-body{font-family:ui-sans-serif,system-ui,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;background:#f7fafc;color:#111827;margin:0}
-header,footer{background:#fff;border-bottom:1px solid #e5e7eb;padding:10px 16px}
-main{padding:16px;max-width:1100px;margin:0 auto}
-h1,h2{font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
-.nav a{color:#2563eb;text-decoration:none;margin-right:12px}
-.card{background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:12px;margin-bottom:12px}
-.badge{display:inline-block;background:#e5e7eb;border-radius:999px;padding:2px 8px;font-size:12px;margin-right:6px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px;border-bottom:1px solid #e5e7eb;text-align:left}
-.warn{color:#b91c1c}
-</style>
-</head><body>
-<header><div class="nav"><strong>{{ title }}</strong> ·
-<a href="/">Dashboard</a><a href="/handshakes">Handshakes</a><a href="/map">Map</a><a href="/config">Config</a>
-<a href="{{ metrics_url }}">Metrics</a><a href="{{ health_url }}">Health</a>
-</div></header>
-<main>
-{% block content %}{% endblock %}
-</main>
-<footer><small>{{ footer }}</small></footer>
-</body></html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ title }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0e17;
+            --bg-secondary: #111827;
+            --bg-card: #1a1f2e;
+            --bg-card-hover: #242b3d;
+            --accent-cyan: #22d3ee;
+            --accent-green: #10b981;
+            --accent-purple: #a78bfa;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #2d3748;
+            --glow: rgba(34, 211, 238, 0.15);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Space Grotesk', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 72px;
+            height: 100vh;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-cyan);
+            margin-bottom: 40px;
+            text-shadow: 0 0 20px var(--glow);
+        }
+        
+        .nav-item {
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 20px;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background: var(--bg-card);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 20px var(--glow);
+        }
+        
+        .nav-item.active {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(16, 185, 129, 0.1));
+        }
+        
+        /* Main content */
+        .main {
+            margin-left: 72px;
+            padding: 24px 32px;
+            max-width: 1400px;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border-radius: 24px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--accent-green); }
+            50% { opacity: 0.6; box-shadow: none; }
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 32px;
+        }
+        
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--accent-cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            margin-bottom: 16px;
+        }
+        
+        .stat-icon.cyan { background: rgba(34, 211, 238, 0.15); }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.15); }
+        .stat-icon.purple { background: rgba(167, 139, 250, 0.15); }
+        .stat-icon.orange { background: rgba(249, 115, 22, 0.15); }
+        
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 32px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .stat-change {
+            font-size: 12px;
+            margin-top: 8px;
+        }
+        
+        .stat-change.positive { color: var(--accent-green); }
+        .stat-change.negative { color: var(--accent-red); }
+        
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .card-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        td {
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        
+        tr:hover td {
+            background: var(--bg-card-hover);
+        }
+        
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            color: var(--bg-primary);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 4px 20px var(--glow);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            border-color: var(--accent-cyan);
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); }
+        .badge-warning { background: rgba(249, 115, 22, 0.15); color: var(--accent-orange); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); }
+        .badge-info { background: rgba(34, 211, 238, 0.15); color: var(--accent-cyan); }
+        
+        /* Activity Feed */
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .activity-item:last-child { border-bottom: none; }
+        
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .activity-content {
+            flex: 1;
+        }
+        
+        .activity-title {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+        
+        .activity-time {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { width: 60px; }
+            .main { margin-left: 60px; padding: 16px; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">M</div>
+        <a href="/" class="nav-item {{ 'active' if active == 'dashboard' else '' }}" title="Dashboard">🏠</a>
+        <a href="/handshakes" class="nav-item {{ 'active' if active == 'handshakes' else '' }}" title="Handshakes">🔐</a>
+        <a href="/map" class="nav-item {{ 'active' if active == 'map' else '' }}" title="Map">🗺️</a>
+        <a href="/captures" class="nav-item {{ 'active' if active == 'captures' else '' }}" title="Captures">📡</a>
+        <a href="/config" class="nav-item {{ 'active' if active == 'config' else '' }}" title="Config">⚙️</a>
+    </nav>
+    
+    <main class="main">
+        {{ content | safe }}
+    </main>
+    
+    <script>
+        // SSE for real-time updates
+        function connectSSE() {
+            const evtSource = new EventSource('/sse/events');
+            evtSource.onmessage = (e) => {
+                try {
+                    const event = JSON.parse(e.data);
+                    console.log('SSE:', event);
+                    // Update UI based on event type
+                    if (event.type === 'HANDSHAKE_CAPTURED') {
+                        location.reload();
+                    }
+                } catch (err) {}
+            };
+            evtSource.onerror = () => {
+                evtSource.close();
+                setTimeout(connectSSE, 5000);
+            };
+        }
+        connectSSE();
+    </script>
+</body>
+</html>
 """
 
 
@@ -63,32 +414,133 @@ def dashboard():
     stats = {}
     meta = cfg.meta_dir / "stats.json"
     if meta.exists():
-        stats = json.loads(meta.read_text(encoding="utf-8"))
-    metrics_url = f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics" if cfg.server.metrics.enabled else "#"
-    health_url = f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz" if cfg.server.health.enabled else "#"
-    warn = []
-    if cfg.web.bind_host == "127.0.0.1":
-        warn.append("Local-only bind")
-    if cfg.web.allow_query_token:
-        warn.append("Query token enabled (unsafe)")
+        try:
+            stats = json.loads(meta.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    # Count handshakes
+    hs_count = 0
+    hs_dir = Path(cfg.handshakes_dir) if hasattr(cfg, "handshakes_dir") else cfg.logging.base_dir / "handshakes"
+    if hs_dir.exists():
+        hs_count = len(list(hs_dir.glob("*.pcapng"))) + len(list(hs_dir.glob("*.22000")))
+
+    # Mode badge color
+    mode_class = "badge-success" if cfg.mode.value == "aggressive" else "badge-warning"
+
     content = f"""
-    <div class='card'>
-      <h2>Runtime</h2>
-      <div class='badge'>mode: {cfg.mode.value}</div>
-      <div class='badge'>channel: {stats.get('channel','-')}</div>
-      <div class='badge'>files: {stats.get('files','-')}</div>
-      <div class='badge'>bytes: {stats.get('bytes','-')}</div>
-      <div class='badge'>last rotate: {stats.get('last_rotate','-')}</div>
+    <div class="header">
+        <h1>🔥 MoMo Dashboard</h1>
+        <div class="header-status">
+            <div class="status-badge">
+                <span class="status-dot"></span>
+                <span>System Online</span>
+            </div>
+            <span class="badge {mode_class}">{cfg.mode.value.upper()}</span>
+        </div>
     </div>
-    <div class='card'>
-      <h2>Web</h2>
-      <div>UI: http://{cfg.web.bind_host}:{cfg.web.bind_port}/</div>
-      <div>Metrics: {metrics_url}</div>
-      <div>Health: {health_url}</div>
-      {('<div class="warn">' + ', '.join(warn) + '</div>') if warn else ''}
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon cyan">📡</div>
+            <div class="stat-label">Access Points</div>
+            <div class="stat-value" id="stat-aps">{stats.get('aps_total', 0)}</div>
+            <div class="stat-change positive">↑ Live scanning</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon green">🔐</div>
+            <div class="stat-label">Handshakes</div>
+            <div class="stat-value" id="stat-hs">{hs_count}</div>
+            <div class="stat-change">Captured</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon purple">🗺️</div>
+            <div class="stat-label">Distance</div>
+            <div class="stat-value" id="stat-dist">{stats.get('distance_km', 0):.1f} km</div>
+            <div class="stat-change">Traveled</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon orange">🌡️</div>
+            <div class="stat-label">Temperature</div>
+            <div class="stat-value" id="stat-temp">{stats.get('temp', '--')}°C</div>
+            <div class="stat-change">CPU</div>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px;">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📊 System Info</span>
+                <a href="/config" class="btn btn-secondary">View Config</a>
+            </div>
+            <table>
+                <tr>
+                    <td style="color: var(--text-muted);">Mode</td>
+                    <td><span class="badge {mode_class}">{cfg.mode.value}</span></td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Interface</td>
+                    <td><code style="color: var(--accent-cyan);">{cfg.interface.name}</code></td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Channels (2.4GHz)</td>
+                    <td>{', '.join(map(str, cfg.interface.channels[:6]))}...</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Storage</td>
+                    <td>{stats.get('free_gb', '--')} GB free</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Last Rotate</td>
+                    <td>{stats.get('last_rotate', 'Never')}</td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">⚡ Quick Actions</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <a href="/map" class="btn btn-primary">🗺️ Open Map</a>
+                <a href="/handshakes" class="btn btn-secondary">🔐 View Handshakes</a>
+                <a href="/api/captures/stats" class="btn btn-secondary">📊 Capture Stats</a>
+                <a href="/api/wardriver/status" class="btn btn-secondary">📡 Wardriver Status</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📜 Recent Activity</span>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon" style="background: rgba(34, 211, 238, 0.15);">📡</div>
+            <div class="activity-content">
+                <div class="activity-title">System Started</div>
+                <div class="activity-time">Dashboard loaded • Mode: {cfg.mode.value}</div>
+            </div>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon" style="background: rgba(16, 185, 129, 0.15);">✅</div>
+            <div class="activity-content">
+                <div class="activity-title">Plugins Loaded</div>
+                <div class="activity-time">{len(cfg.plugins.enabled)} plugins active</div>
+            </div>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon" style="background: rgba(167, 139, 250, 0.15);">🔐</div>
+            <div class="activity-content">
+                <div class="activity-title">Handshake Storage</div>
+                <div class="activity-time">{hs_count} files in storage</div>
+            </div>
+        </div>
     </div>
     """
-    return render_template_string(_BASE, title=cfg.web.title, footer=cfg.web.footer, metrics_url=metrics_url, health_url=health_url, content=content)
+    return render_template_string(_BASE, title=cfg.web.title, active="dashboard", content=content)
 
 
 @ui_bp.get("/handshakes")
@@ -100,7 +552,7 @@ def handshakes():
         page = max(1, min(int(request.args.get("page", "1")), 1000))
     except (ValueError, TypeError):
         page = 1
-    per_page = 100
+    per_page = 50
     threshold = time.time() - parse_since(since).total_seconds() if since != "all" else 0
     files = []
     for day in sorted(cfg.logging.base_dir.glob("*/"), reverse=True):
@@ -117,24 +569,90 @@ def handshakes():
     total = len(files)
     start = (page - 1) * per_page
     page_items = files[start : start + per_page]
+
+    def format_size(size: int) -> str:
+        if size < 1024:
+            return f"{size} B"
+        elif size < 1024 * 1024:
+            return f"{size / 1024:.1f} KB"
+        return f"{size / (1024 * 1024):.1f} MB"
+
     rows = []
     for p, mtime, size in page_items:
-        rows.append(f"<tr><td><a href='/download/{p.relative_to(cfg.logging.base_dir)}'>{p.name}</a></td><td>{size}</td><td>{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mtime))}</td></tr>")
+        time_str = time.strftime("%Y-%m-%d %H:%M", time.localtime(mtime))
+        rows.append(f"""
+        <tr>
+            <td>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 20px;">📄</span>
+                    <div>
+                        <div style="font-weight: 500;">{p.stem[:40]}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">.pcapng</div>
+                    </div>
+                </div>
+            </td>
+            <td><span class="badge badge-info">{format_size(size)}</span></td>
+            <td style="color: var(--text-secondary);">{time_str}</td>
+            <td>
+                <a href='/download/{p.relative_to(cfg.logging.base_dir)}' class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;">
+                    ⬇️ Download
+                </a>
+            </td>
+        </tr>
+        """)
+
+    # Filter buttons
+    filter_btns = ""
+    for f in [("1h", "1 Hour"), ("24h", "24 Hours"), ("7d", "7 Days"), ("all", "All")]:
+        active = "btn-primary" if since == f[0] else "btn-secondary"
+        filter_btns += f'<a href="?since={f[0]}" class="btn {active}" style="padding: 8px 16px;">{f[1]}</a>'
+
+    # Pagination
     pager = ""
     if total > per_page:
-        pager = f"<div>Page {page} — <a href='?since={since}&page={page+1}'>Next</a></div>"
-    table = """
-    <div class='card'>
-      <h2>Handshakes</h2>
-      <div><a class='badge' href='?since=24h'>24h</a><a class='badge' href='?since=7d'>7d</a><a class='badge' href='?since=all'>all</a></div>
-      <table><thead><tr><th>File</th><th>Size</th><th>Mtime</th></tr></thead><tbody>{rows}</tbody></table>
-      <div style='margin-top:8px;'><a class='badge' href='/handshakes/export?since={since}'>Export ZIP</a></div>
-      {pager}
+        pages = (total + per_page - 1) // per_page
+        pager = f"""
+        <div style="display: flex; justify-content: center; gap: 8px; margin-top: 20px;">
+            {'<a href="?since=' + since + '&page=' + str(page-1) + '" class="btn btn-secondary">← Prev</a>' if page > 1 else ''}
+            <span class="badge badge-info">Page {page} of {pages}</span>
+            {'<a href="?since=' + since + '&page=' + str(page+1) + '" class="btn btn-secondary">Next →</a>' if page < pages else ''}
+        </div>
+        """
+
+    empty_state = """
+    <div style="text-align: center; padding: 60px 20px; color: var(--text-muted);">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+        <div style="font-size: 18px; margin-bottom: 8px;">No handshakes captured yet</div>
+        <div style="font-size: 14px;">Start scanning to capture WPA handshakes</div>
     </div>
-    """.replace("{rows}", "\n".join(rows)).replace("{since}", since).replace("{pager}", pager)
-    metrics_url = f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics" if cfg.server.metrics.enabled else "#"
-    health_url = f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz" if cfg.server.health.enabled else "#"
-    return render_template_string(_BASE, title=cfg.web.title, footer=cfg.web.footer, metrics_url=metrics_url, health_url=health_url, content=table)
+    """ if not rows else ""
+
+    content = f"""
+    <div class="header">
+        <h1>🔐 Handshakes</h1>
+        <div class="header-status">
+            <span class="badge badge-success">{total} files</span>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <div style="display: flex; gap: 8px;">
+                {filter_btns}
+            </div>
+            <a href="/handshakes/export?since={since}" class="btn btn-primary">
+                📦 Export ZIP
+            </a>
+        </div>
+        
+        {empty_state}
+        
+        {'<table><thead><tr><th>File</th><th>Size</th><th>Modified</th><th>Action</th></tr></thead><tbody>' + ''.join(rows) + '</tbody></table>' if rows else ''}
+        
+        {pager}
+    </div>
+    """
+    return render_template_string(_BASE, title=cfg.web.title, active="handshakes", content=content)
 
 
 @ui_bp.get("/download/<path:relpath>")
@@ -190,17 +708,99 @@ def export_zip():
 @ui_bp.get("/config")
 def config_page():
     cfg = _cfg()
-    Path.resolve(Path("/dev/null"))  # placeholder to avoid exposing envs; we show file text
     text = ""
     try:
         cfg_path = str(current_app.config.get("MOMO_CONFIG_PATH", ""))
         text = Path(cfg_path).read_text(encoding="utf-8") if cfg_path else ""
     except Exception:
         pass
-    code = f"<div class='card'><h2>Config</h2><pre>{(text or '').replace('<','&lt;')}</pre></div>"
-    metrics_url = f"http://{cfg.server.metrics.bind_host}:{cfg.server.metrics.port}/metrics" if cfg.server.metrics.enabled else "#"
-    health_url = f"http://{cfg.server.health.bind_host}:{cfg.server.health.port}/healthz" if cfg.server.health.enabled else "#"
-    return render_template_string(_BASE, title=cfg.web.title, footer=cfg.web.footer, metrics_url=metrics_url, health_url=health_url, content=code)
+
+    # Build config sections
+    plugins_list = "".join([f'<span class="badge badge-success" style="margin: 2px;">{p}</span>' for p in cfg.plugins.enabled])
+
+    content = f"""
+    <div class="header">
+        <h1>⚙️ Configuration</h1>
+        <div class="header-status">
+            <span class="badge badge-info">v0.4.0</span>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🎯 Mode & Interface</span>
+            </div>
+            <table>
+                <tr>
+                    <td style="color: var(--text-muted); width: 40%;">Mode</td>
+                    <td><span class="badge badge-success">{cfg.mode.value}</span></td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Interface</td>
+                    <td><code style="color: var(--accent-cyan);">{cfg.interface.name}</code></td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">MAC Randomization</td>
+                    <td>{'✅ Enabled' if cfg.interface.mac_randomization else '❌ Disabled'}</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Channel Hop</td>
+                    <td>{'✅ Enabled' if cfg.interface.channel_hop else '❌ Disabled'}</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Regulatory</td>
+                    <td><code>{cfg.interface.regulatory_domain}</code></td>
+                </tr>
+            </table>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">🔥 Aggressive Settings</span>
+            </div>
+            <table>
+                <tr>
+                    <td style="color: var(--text-muted); width: 40%;">Enabled</td>
+                    <td>{'✅ Yes' if cfg.aggressive.enabled else '❌ No'}</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Deauth</td>
+                    <td>{'✅ Enabled' if cfg.aggressive.deauth.enabled else '❌ Disabled'}</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Max Deauth/min</td>
+                    <td>{cfg.aggressive.deauth.max_per_minute or 'Unlimited'}</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">Evil Twin</td>
+                    <td>{'✅ Enabled' if cfg.aggressive.evil_twin.enabled else '❌ Disabled'}</td>
+                </tr>
+                <tr>
+                    <td style="color: var(--text-muted);">PMKID</td>
+                    <td>{'✅ Enabled' if cfg.aggressive.pmkid.enabled else '❌ Disabled'}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">🧩 Active Plugins</span>
+        </div>
+        <div style="padding: 8px 0;">
+            {plugins_list}
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">📄 Raw Config (YAML)</span>
+        </div>
+        <pre style="background: var(--bg-secondary); padding: 16px; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); max-height: 400px; overflow-y: auto;">{(text or 'Config file not found').replace('<','&lt;')}</pre>
+    </div>
+    """
+    return render_template_string(_BASE, title=cfg.web.title, active="config", content=content)
 
 
 _MAP_PAGE = """
@@ -441,5 +1041,178 @@ def map_page():
     """Wardriving map page with Leaflet.js."""
     cfg = _cfg()
     return render_template_string(_MAP_PAGE, title=cfg.web.title)
+
+
+@ui_bp.get("/captures")
+def captures_page():
+    """Captures management page."""
+    cfg = _cfg()
+
+    content = """
+    <div class="header">
+        <h1>📡 Capture Manager</h1>
+        <div class="header-status">
+            <span class="badge badge-info" id="capture-status">Loading...</span>
+        </div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon cyan">📡</div>
+            <div class="stat-label">Total Captures</div>
+            <div class="stat-value" id="stat-total">-</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div class="stat-label">Successful</div>
+            <div class="stat-value" id="stat-success">-</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon purple">🔑</div>
+            <div class="stat-label">PMKID Found</div>
+            <div class="stat-value" id="stat-pmkid">-</div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon orange">🤝</div>
+            <div class="stat-label">EAPOL</div>
+            <div class="stat-value" id="stat-eapol">-</div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">🔐 Crackable Handshakes</span>
+            <a href="/api/captures/crackable" class="btn btn-secondary">View JSON</a>
+        </div>
+        <div id="crackable-list">
+            <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                Loading...
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">🚀 Start New Capture</span>
+        </div>
+        <form id="capture-form" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: end;">
+            <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">BSSID *</label>
+                <input type="text" id="bssid" placeholder="AA:BB:CC:DD:EE:FF" required
+                    style="width: 100%; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary);">
+            </div>
+            <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">SSID</label>
+                <input type="text" id="ssid" placeholder="NetworkName"
+                    style="width: 100%; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary);">
+            </div>
+            <div>
+                <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px;">Channel</label>
+                <input type="number" id="channel" placeholder="6" min="1" max="200"
+                    style="width: 100%; padding: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: 8px; color: var(--text-primary);">
+            </div>
+            <button type="submit" class="btn btn-primary">🎯 Start Capture</button>
+        </form>
+        <div id="capture-result" style="margin-top: 16px;"></div>
+    </div>
+    
+    <script>
+        // Load stats
+        async function loadStats() {
+            try {
+                const resp = await fetch('/api/captures/stats');
+                const data = await resp.json();
+                document.getElementById('stat-total').textContent = data.total_captures || 0;
+                document.getElementById('stat-success').textContent = data.successful_captures || 0;
+                document.getElementById('stat-pmkid').textContent = data.pmkids_found || 0;
+                document.getElementById('stat-eapol').textContent = data.eapol_handshakes || 0;
+                document.getElementById('capture-status').textContent = 
+                    data.active_sessions > 0 ? `${data.active_sessions} Active` : 'Idle';
+            } catch (e) {
+                console.error('Failed to load stats:', e);
+            }
+        }
+        
+        // Load crackable
+        async function loadCrackable() {
+            try {
+                const resp = await fetch('/api/captures/crackable');
+                const data = await resp.json();
+                const list = document.getElementById('crackable-list');
+                
+                if (!data.items || data.items.length === 0) {
+                    list.innerHTML = `
+                        <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            <div style="font-size: 32px; margin-bottom: 12px;">🔓</div>
+                            <div>No crackable handshakes yet</div>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = '<table><thead><tr><th>BSSID</th><th>SSID</th><th>Type</th><th>Action</th></tr></thead><tbody>';
+                data.items.forEach(item => {
+                    const type = item.pmkid_found ? 'PMKID' : `EAPOL (${item.eapol_count})`;
+                    html += `
+                        <tr>
+                            <td><code style="color: var(--accent-cyan);">${item.bssid}</code></td>
+                            <td>${item.ssid || '<hidden>'}</td>
+                            <td><span class="badge badge-success">${type}</span></td>
+                            <td>
+                                ${item.hashcat_path ? 
+                                    `<a href="/api/captures/${item.id}/download?format=hashcat" class="btn btn-secondary" style="padding: 4px 10px; font-size: 12px;">⬇️ .22000</a>` : 
+                                    '-'
+                                }
+                            </td>
+                        </tr>
+                    `;
+                });
+                html += '</tbody></table>';
+                list.innerHTML = html;
+            } catch (e) {
+                console.error('Failed to load crackable:', e);
+            }
+        }
+        
+        // Start capture
+        document.getElementById('capture-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const result = document.getElementById('capture-result');
+            result.innerHTML = '<div class="badge badge-info">Starting capture...</div>';
+            
+            try {
+                const resp = await fetch('/api/captures', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        bssid: document.getElementById('bssid').value,
+                        ssid: document.getElementById('ssid').value || '<hidden>',
+                        channel: parseInt(document.getElementById('channel').value) || 0,
+                    })
+                });
+                const data = await resp.json();
+                
+                if (data.ok) {
+                    result.innerHTML = `<div class="badge badge-success">✅ Capture started: ${data.capture.status}</div>`;
+                    loadStats();
+                    loadCrackable();
+                } else {
+                    result.innerHTML = `<div class="badge badge-danger">❌ ${data.error}</div>`;
+                }
+            } catch (e) {
+                result.innerHTML = `<div class="badge badge-danger">❌ ${e.message}</div>`;
+            }
+        });
+        
+        // Initial load
+        loadStats();
+        loadCrackable();
+        setInterval(loadStats, 5000);
+    </script>
+    """
+    return render_template_string(_BASE, title=cfg.web.title, active="captures", content=content)
 
 
