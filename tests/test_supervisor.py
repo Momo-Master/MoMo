@@ -30,7 +30,6 @@ def test_backoff_progression_and_fallback(monkeypatch):
     
     # Check metrics - should have at least some activity
     # The exact counts depend on supervisor internals
-    failures = sup.child_failures_total.get("testproc", 0)
     restarts = sup.child_restarts_total.get("testproc", 0)
     
     # At minimum, we should have started and potentially restarted
