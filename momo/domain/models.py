@@ -158,3 +158,127 @@ class WardriverStats(BaseModel):
     gps_fix: bool = False
     distance_km: float = 0.0
 
+
+# =============================================================================
+# Handshake Capture Models (Phase 0.4.0)
+# =============================================================================
+
+
+class CaptureType(str, Enum):
+    """Type of WiFi handshake capture."""
+
+    PMKID = "pmkid"          # PMKID from first EAPOL frame (faster)
+    EAPOL = "eapol"          # Full 4-way handshake (M1-M4)
+    EAPOL_M2 = "eapol_m2"    # Partial handshake (M1+M2)
+    UNKNOWN = "unknown"
+
+
+class CaptureStatus(str, Enum):
+    """Status of a capture operation."""
+
+    PENDING = "pending"       # Waiting to start
+    RUNNING = "running"       # Capture in progress
+    SUCCESS = "success"       # Handshake captured
+    FAILED = "failed"         # No handshake captured
+    TIMEOUT = "timeout"       # Capture timed out
+    CANCELLED = "cancelled"   # Manually cancelled
+
+
+class HandshakeCapture(BaseModel):
+    """Captured WiFi handshake data."""
+
+    id: Optional[int] = None
+    bssid: str = Field(..., pattern=r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
+    ssid: str = Field(default="<hidden>", max_length=32)
+    capture_type: CaptureType = CaptureType.UNKNOWN
+    status: CaptureStatus = CaptureStatus.PENDING
+
+    # File paths
+    pcapng_path: Optional[str] = None      # Raw capture file
+    hashcat_path: Optional[str] = None     # Converted .22000 file
+
+    # Capture details
+    channel: int = Field(default=0, ge=0, le=165)
+    client_mac: Optional[str] = None       # Client involved in handshake
+    eapol_count: int = 0                   # Number of EAPOL frames captured
+    pmkid_found: bool = False
+
+    # Timestamps
+    started_at: datetime = Field(default_factory=datetime.utcnow)
+    completed_at: Optional[datetime] = None
+    duration_seconds: float = 0.0
+
+    # GPS at capture
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+    # Cracking status
+    cracked: bool = False
+    password: Optional[str] = None
+    cracked_at: Optional[datetime] = None
+
+    @property
+    def is_valid(self) -> bool:
+        """Check if capture contains valid handshake data."""
+        return (
+            self.status == CaptureStatus.SUCCESS
+            and (self.pmkid_found or self.eapol_count >= 2)
+        )
+
+    @property
+    def is_crackable(self) -> bool:
+        """Check if capture can be submitted for cracking."""
+        return self.is_valid and self.hashcat_path is not None and not self.cracked
+
+
+class CaptureSession(BaseModel):
+    """Active capture session managing multiple targets."""
+
+    session_id: str
+    interface: str
+    started_at: datetime = Field(default_factory=datetime.utcnow)
+    ended_at: Optional[datetime] = None
+
+    # Configuration
+    channels: list[int] = Field(default_factory=lambda: [1, 6, 11])
+    target_bssids: list[str] = Field(default_factory=list)  # Empty = all
+    capture_timeout_seconds: int = 60
+    use_deauth: bool = False
+    deauth_count: int = 5
+
+    # Statistics
+    targets_attempted: int = 0
+    handshakes_captured: int = 0
+    pmkids_captured: int = 0
+    failed_captures: int = 0
+
+    @property
+    def is_active(self) -> bool:
+        """Check if session is still running."""
+        return self.ended_at is None
+
+    @property
+    def duration_seconds(self) -> float:
+        """Get session duration."""
+        end = self.ended_at or datetime.utcnow()
+        return (end - self.started_at).total_seconds()
+
+    @property
+    def success_rate(self) -> float:
+        """Get capture success rate (0-1)."""
+        if self.targets_attempted == 0:
+            return 0.0
+        return self.handshakes_captured / self.targets_attempted
+
+
+class CaptureStats(BaseModel):
+    """Capture manager runtime statistics."""
+
+    total_captures: int = 0
+    successful_captures: int = 0
+    failed_captures: int = 0
+    pmkids_found: int = 0
+    eapol_handshakes: int = 0
+    active_sessions: int = 0
+    last_capture_at: Optional[datetime] = None
+    total_duration_seconds: float = 0.0

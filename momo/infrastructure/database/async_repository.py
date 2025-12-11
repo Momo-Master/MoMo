@@ -603,3 +603,354 @@ class AsyncWardrivingRepository:
         logger.info("Exported %d track points to GPX: %s", len(points), output_path)
         return len(points)
 
+    # =========================================================================
+    # Handshake Operations (Phase 0.4.0)
+    # =========================================================================
+
+    async def save_handshake(
+        self,
+        bssid: str,
+        ssid: str = "<hidden>",
+        capture_type: str = "unknown",
+        status: str = "pending",
+        pcapng_path: Optional[str] = None,
+        hashcat_path: Optional[str] = None,
+        channel: int = 0,
+        client_mac: Optional[str] = None,
+        eapol_count: int = 0,
+        pmkid_found: bool = False,
+        started_at: Optional[str] = None,
+        completed_at: Optional[str] = None,
+        duration_seconds: float = 0.0,
+        latitude: Optional[float] = None,
+        longitude: Optional[float] = None,
+        interface: Optional[str] = None,
+    ) -> int:
+        """
+        Save handshake capture record.
+
+        Returns:
+            Database ID of the handshake record
+        """
+        now = datetime.now(UTC).isoformat()
+        bssid_upper = bssid.upper()
+
+        async with self._get_connection() as conn:
+            # Get AP ID if exists
+            cursor = await conn.execute(
+                "SELECT id FROM access_points WHERE bssid = ?",
+                (bssid_upper,),
+            )
+            row = await cursor.fetchone()
+            ap_id = row[0] if row else None
+
+            cursor = await conn.execute(
+                """
+                INSERT INTO handshakes (
+                    bssid, ssid, capture_type, status,
+                    pcapng_path, hashcat_path, channel, client_mac,
+                    eapol_count, pmkid_found, started_at, completed_at,
+                    duration_seconds, latitude, longitude, interface, ap_id
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    bssid_upper,
+                    ssid,
+                    capture_type,
+                    status,
+                    pcapng_path,
+                    hashcat_path,
+                    channel,
+                    client_mac.upper() if client_mac else None,
+                    eapol_count,
+                    1 if pmkid_found else 0,
+                    started_at or now,
+                    completed_at,
+                    duration_seconds,
+                    latitude,
+                    longitude,
+                    interface,
+                    ap_id,
+                ),
+            )
+            await conn.commit()
+
+            # Also update AP if handshake was successful
+            if status == "success" and hashcat_path and ap_id:
+                await conn.execute(
+                    """
+                    UPDATE access_points 
+                    SET handshake_captured = 1, handshake_path = ?
+                    WHERE id = ?
+                    """,
+                    (hashcat_path, ap_id),
+                )
+                await conn.commit()
+
+            return cursor.lastrowid or 0
+
+    async def update_handshake_status(
+        self,
+        handshake_id: int,
+        status: str,
+        completed_at: Optional[str] = None,
+        hashcat_path: Optional[str] = None,
+        eapol_count: Optional[int] = None,
+        pmkid_found: Optional[bool] = None,
+        duration_seconds: Optional[float] = None,
+    ) -> None:
+        """Update handshake capture status."""
+        now = datetime.now(UTC).isoformat()
+
+        async with self._get_connection() as conn:
+            updates = ["status = ?"]
+            params: list = [status]
+
+            if completed_at or status in ("success", "failed", "timeout", "cancelled"):
+                updates.append("completed_at = ?")
+                params.append(completed_at or now)
+
+            if hashcat_path is not None:
+                updates.append("hashcat_path = ?")
+                params.append(hashcat_path)
+
+            if eapol_count is not None:
+                updates.append("eapol_count = ?")
+                params.append(eapol_count)
+
+            if pmkid_found is not None:
+                updates.append("pmkid_found = ?")
+                params.append(1 if pmkid_found else 0)
+
+            if duration_seconds is not None:
+                updates.append("duration_seconds = ?")
+                params.append(duration_seconds)
+
+            params.append(handshake_id)
+
+            await conn.execute(
+                f"UPDATE handshakes SET {', '.join(updates)} WHERE id = ?",
+                params,
+            )
+            await conn.commit()
+
+    async def mark_handshake_cracked(
+        self,
+        handshake_id: int,
+        password: str,
+    ) -> None:
+        """Mark handshake as cracked with password."""
+        now = datetime.now(UTC).isoformat()
+
+        async with self._get_connection() as conn:
+            # Update handshake
+            await conn.execute(
+                """
+                UPDATE handshakes 
+                SET cracked = 1, password = ?, cracked_at = ?
+                WHERE id = ?
+                """,
+                (password, now, handshake_id),
+            )
+
+            # Also update linked AP if exists
+            cursor = await conn.execute(
+                "SELECT bssid FROM handshakes WHERE id = ?",
+                (handshake_id,),
+            )
+            row = await cursor.fetchone()
+            if row:
+                await conn.execute(
+                    """
+                    UPDATE access_points 
+                    SET password_cracked = 1, cracked_password = ?, cracked_at = ?
+                    WHERE bssid = ?
+                    """,
+                    (password, now, row[0]),
+                )
+
+            await conn.commit()
+
+    async def get_handshake(self, handshake_id: int) -> Optional[dict]:
+        """Get handshake by ID."""
+        async with self._get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT * FROM handshakes WHERE id = ?",
+                (handshake_id,),
+            )
+            row = await cursor.fetchone()
+            return dict(row) if row else None
+
+    async def get_handshakes_by_bssid(self, bssid: str) -> list[dict]:
+        """Get all handshakes for a BSSID."""
+        async with self._get_connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT * FROM handshakes 
+                WHERE bssid = ?
+                ORDER BY started_at DESC
+                """,
+                (bssid.upper(),),
+            )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def get_all_handshakes(
+        self, 
+        limit: int = 100, 
+        offset: int = 0,
+        status: Optional[str] = None,
+    ) -> list[dict]:
+        """Get all handshakes with optional filtering."""
+        async with self._get_connection() as conn:
+            if status:
+                cursor = await conn.execute(
+                    """
+                    SELECT * FROM v_handshake_summary 
+                    WHERE status = ?
+                    LIMIT ? OFFSET ?
+                    """,
+                    (status, limit, offset),
+                )
+            else:
+                cursor = await conn.execute(
+                    """
+                    SELECT * FROM v_handshake_summary 
+                    LIMIT ? OFFSET ?
+                    """,
+                    (limit, offset),
+                )
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def get_crackable_handshakes(self) -> list[dict]:
+        """Get handshakes that are captured but not cracked."""
+        async with self._get_connection() as conn:
+            cursor = await conn.execute("SELECT * FROM v_crackable_handshakes")
+            rows = await cursor.fetchall()
+            return [dict(row) for row in rows]
+
+    async def has_valid_handshake(self, bssid: str) -> bool:
+        """Check if BSSID already has a valid handshake."""
+        async with self._get_connection() as conn:
+            cursor = await conn.execute(
+                """
+                SELECT 1 FROM handshakes 
+                WHERE bssid = ? AND status = 'success'
+                LIMIT 1
+                """,
+                (bssid.upper(),),
+            )
+            row = await cursor.fetchone()
+            return row is not None
+
+    async def get_handshake_stats(self) -> dict:
+        """Get handshake statistics."""
+        async with self._get_connection() as conn:
+            stats = {}
+
+            cursor = await conn.execute("SELECT COUNT(*) FROM handshakes")
+            row = await cursor.fetchone()
+            stats["total"] = row[0] if row else 0
+
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM handshakes WHERE status = 'success'"
+            )
+            row = await cursor.fetchone()
+            stats["successful"] = row[0] if row else 0
+
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM handshakes WHERE pmkid_found = 1"
+            )
+            row = await cursor.fetchone()
+            stats["pmkid_count"] = row[0] if row else 0
+
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM handshakes WHERE eapol_count >= 4"
+            )
+            row = await cursor.fetchone()
+            stats["eapol_count"] = row[0] if row else 0
+
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM handshakes WHERE cracked = 1"
+            )
+            row = await cursor.fetchone()
+            stats["cracked"] = row[0] if row else 0
+
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM handshakes WHERE status = 'success' AND cracked = 0"
+            )
+            row = await cursor.fetchone()
+            stats["pending_crack"] = row[0] if row else 0
+
+            return stats
+
+    # =========================================================================
+    # Capture Session Operations
+    # =========================================================================
+
+    async def start_capture_session(
+        self,
+        session_id: str,
+        interface: str,
+        channels: list[int],
+        target_bssids: Optional[list[str]] = None,
+        capture_timeout: int = 60,
+        use_deauth: bool = False,
+    ) -> int:
+        """Start new capture session. Returns database ID."""
+        now = datetime.now(UTC).isoformat()
+
+        async with self._get_connection() as conn:
+            cursor = await conn.execute(
+                """
+                INSERT INTO capture_sessions (
+                    session_id, interface, started_at, channels,
+                    target_bssids, capture_timeout_seconds, use_deauth
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    session_id,
+                    interface,
+                    now,
+                    json.dumps(channels),
+                    json.dumps(target_bssids or []),
+                    capture_timeout,
+                    1 if use_deauth else 0,
+                ),
+            )
+            await conn.commit()
+            return cursor.lastrowid or 0
+
+    async def end_capture_session(
+        self,
+        session_id: str,
+        targets_attempted: int = 0,
+        handshakes_captured: int = 0,
+        pmkids_captured: int = 0,
+        failed_captures: int = 0,
+    ) -> None:
+        """End capture session with stats."""
+        now = datetime.now(UTC).isoformat()
+
+        async with self._get_connection() as conn:
+            await conn.execute(
+                """
+                UPDATE capture_sessions 
+                SET ended_at = ?, targets_attempted = ?, handshakes_captured = ?,
+                    pmkids_captured = ?, failed_captures = ?
+                WHERE session_id = ?
+                """,
+                (
+                    now,
+                    targets_attempted,
+                    handshakes_captured,
+                    pmkids_captured,
+                    failed_captures,
+                    session_id,
+                ),
+            )
+            await conn.commit()
+
