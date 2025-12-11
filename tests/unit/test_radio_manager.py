@@ -436,12 +436,14 @@ async def test_get_best_channel_prefer_5ghz():
 @pytest.mark.asyncio
 async def test_get_best_channel_2ghz_fallback():
     """Should fall back to 2.4GHz if no 5GHz available."""
-    manager = MockRadioManager(["wlan1"])  # wlan1 is 2.4GHz only (odd index)
+    # Use two interfaces - first has 5GHz, second (odd index) is 2.4GHz only
+    manager = MockRadioManager(["wlan0", "wlan1"])
     await manager.discover_interfaces()
     
+    # wlan1 is at index 1 (odd), so it's 2.4GHz only
     best = await manager.get_best_channel("wlan1", prefer_5ghz=True)
     
-    # Should return non-overlapping 2.4GHz channel
+    # Should return non-overlapping 2.4GHz channel since 5GHz not available
     assert best in [1, 6, 11]
 
 
