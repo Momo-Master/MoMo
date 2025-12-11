@@ -52,16 +52,16 @@ logger = logging.getLogger(__name__)
 # Global State
 # ============================================
 
-_async_repository: Optional[Any] = None
-_sync_repository: Optional[Any] = None  # Fallback for sync operations
-_gps_client: Optional[Any] = None
-_event_bus: Optional[Any] = None
-_distance_tracker: Optional[Any] = None
+_async_repository: Any | None = None
+_sync_repository: Any | None = None  # Fallback for sync operations
+_gps_client: Any | None = None
+_event_bus: Any | None = None
+_distance_tracker: Any | None = None
 _running = False
 _initialized = False
-_current_session_id: Optional[str] = None
-_db_session_id: Optional[int] = None
-_last_position: Optional[Any] = None
+_current_session_id: str | None = None
+_db_session_id: int | None = None
+_last_position: Any | None = None
 _last_gps_fix: bool = False
 _stats = {
     "aps_total": 0,
@@ -83,7 +83,7 @@ class WardriverConfig:
     db_path: Path = field(default_factory=lambda: Path("logs/wardriving.db"))
     scan_interval: float = 2.0
     channels: list[int] = field(default_factory=lambda: [1, 6, 11])
-    interface: Optional[str] = None  # None = use global
+    interface: str | None = None  # None = use global
     min_rssi: int = -90
     save_probes: bool = True
     export_format: str = "wigle"  # wigle, kismet, kml
@@ -111,7 +111,7 @@ class WardriverConfig:
         )
 
 
-_config: Optional[WardriverConfig] = None
+_config: WardriverConfig | None = None
 
 
 # ============================================
@@ -609,7 +609,7 @@ async def scan_aps_async(
             else:
                 logger.debug("Scan failed on channel %d: %s", channel, stderr.decode())
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Scan timeout on channel %d", channel)
         except FileNotFoundError:
             logger.error("iw command not found - install wireless-tools")

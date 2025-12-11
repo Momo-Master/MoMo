@@ -5,15 +5,16 @@ from __future__ import annotations
 import csv
 import logging
 import sqlite3
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import TYPE_CHECKING
 
 from .schema import WARDRIVING_SCHEMA
 
 if TYPE_CHECKING:
-    from ...domain.models import AccessPoint, GPSPosition, WardriveScan
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -58,10 +59,10 @@ class WardrivingRepository:
         encryption: str = "open",
         frequency: int = 0,
         wps_enabled: bool = False,
-        vendor: Optional[str] = None,
-        latitude: Optional[float] = None,
-        longitude: Optional[float] = None,
-        altitude: Optional[float] = None,
+        vendor: str | None = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        altitude: float | None = None,
     ) -> int:
         """
         Insert or update access point and add observation.
@@ -145,7 +146,7 @@ class WardrivingRepository:
             conn.commit()
             return ap_id
 
-    def get_ap_by_bssid(self, bssid: str) -> Optional[dict]:
+    def get_ap_by_bssid(self, bssid: str) -> dict | None:
         """Get AP by BSSID."""
         with self._get_connection() as conn:
             row = conn.execute(
@@ -215,11 +216,11 @@ class WardrivingRepository:
     def add_probe_request(
         self,
         client_mac: str,
-        ssid_probed: Optional[str],
+        ssid_probed: str | None,
         rssi: int = -100,
-        latitude: Optional[float] = None,
-        longitude: Optional[float] = None,
-        vendor: Optional[str] = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        vendor: str | None = None,
     ) -> None:
         """Add probe request observation."""
         now = datetime.utcnow().isoformat()
@@ -301,9 +302,9 @@ class WardrivingRepository:
         session_id: int,
         latitude: float,
         longitude: float,
-        altitude: Optional[float] = None,
-        speed: Optional[float] = None,
-        heading: Optional[float] = None,
+        altitude: float | None = None,
+        speed: float | None = None,
+        heading: float | None = None,
     ) -> None:
         """Add GPS track point for GPX export."""
         now = datetime.utcnow().isoformat()
@@ -441,7 +442,7 @@ class WardrivingRepository:
         if not points:
             return 0
 
-        gpx_content = f"""<?xml version="1.0" encoding="UTF-8"?>
+        gpx_content = """<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="MoMo Wardriver">
   <trk>
     <name>MoMo Wardriving Session</name>

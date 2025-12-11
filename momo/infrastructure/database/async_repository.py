@@ -20,10 +20,11 @@ from __future__ import annotations
 import csv
 import json
 import logging
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterator, Optional
+from typing import TYPE_CHECKING
 
 try:
     import aiosqlite
@@ -54,7 +55,7 @@ class AsyncWardrivingRepository:
             )
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self._connection: Optional[aiosqlite.Connection] = None
+        self._connection: aiosqlite.Connection | None = None
         self._initialized = False
 
     async def init_schema(self) -> None:
@@ -97,10 +98,10 @@ class AsyncWardrivingRepository:
         encryption: str = "open",
         frequency: int = 0,
         wps_enabled: bool = False,
-        vendor: Optional[str] = None,
-        latitude: Optional[float] = None,
-        longitude: Optional[float] = None,
-        altitude: Optional[float] = None,
+        vendor: str | None = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        altitude: float | None = None,
     ) -> bool:
         """
         Insert or update access point and add observation.
@@ -230,7 +231,7 @@ class AsyncWardrivingRepository:
             row = await cursor.fetchone()
             return row is None
 
-    async def get_ap_by_bssid(self, bssid: str) -> Optional[dict]:
+    async def get_ap_by_bssid(self, bssid: str) -> dict | None:
         """Get AP by BSSID."""
         async with self._get_connection() as conn:
             cursor = await conn.execute(
@@ -328,11 +329,11 @@ class AsyncWardrivingRepository:
     async def add_probe_request(
         self,
         client_mac: str,
-        ssid_probed: Optional[str] = None,
+        ssid_probed: str | None = None,
         rssi: int = -100,
-        latitude: Optional[float] = None,
-        longitude: Optional[float] = None,
-        vendor: Optional[str] = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        vendor: str | None = None,
     ) -> None:
         """Add probe request observation."""
         now = datetime.now(UTC).isoformat()
@@ -422,9 +423,9 @@ class AsyncWardrivingRepository:
         session_id: int,
         latitude: float,
         longitude: float,
-        altitude: Optional[float] = None,
-        speed: Optional[float] = None,
-        heading: Optional[float] = None,
+        altitude: float | None = None,
+        speed: float | None = None,
+        heading: float | None = None,
     ) -> None:
         """Add GPS track point for GPX export."""
         now = datetime.now(UTC).isoformat()
@@ -613,18 +614,18 @@ class AsyncWardrivingRepository:
         ssid: str = "<hidden>",
         capture_type: str = "unknown",
         status: str = "pending",
-        pcapng_path: Optional[str] = None,
-        hashcat_path: Optional[str] = None,
+        pcapng_path: str | None = None,
+        hashcat_path: str | None = None,
         channel: int = 0,
-        client_mac: Optional[str] = None,
+        client_mac: str | None = None,
         eapol_count: int = 0,
         pmkid_found: bool = False,
-        started_at: Optional[str] = None,
-        completed_at: Optional[str] = None,
+        started_at: str | None = None,
+        completed_at: str | None = None,
         duration_seconds: float = 0.0,
-        latitude: Optional[float] = None,
-        longitude: Optional[float] = None,
-        interface: Optional[str] = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
+        interface: str | None = None,
     ) -> int:
         """
         Save handshake capture record.
@@ -694,11 +695,11 @@ class AsyncWardrivingRepository:
         self,
         handshake_id: int,
         status: str,
-        completed_at: Optional[str] = None,
-        hashcat_path: Optional[str] = None,
-        eapol_count: Optional[int] = None,
-        pmkid_found: Optional[bool] = None,
-        duration_seconds: Optional[float] = None,
+        completed_at: str | None = None,
+        hashcat_path: str | None = None,
+        eapol_count: int | None = None,
+        pmkid_found: bool | None = None,
+        duration_seconds: float | None = None,
     ) -> None:
         """Update handshake capture status."""
         now = datetime.now(UTC).isoformat()
@@ -772,7 +773,7 @@ class AsyncWardrivingRepository:
 
             await conn.commit()
 
-    async def get_handshake(self, handshake_id: int) -> Optional[dict]:
+    async def get_handshake(self, handshake_id: int) -> dict | None:
         """Get handshake by ID."""
         async with self._get_connection() as conn:
             cursor = await conn.execute(
@@ -800,7 +801,7 @@ class AsyncWardrivingRepository:
         self, 
         limit: int = 100, 
         offset: int = 0,
-        status: Optional[str] = None,
+        status: str | None = None,
     ) -> list[dict]:
         """Get all handshakes with optional filtering."""
         async with self._get_connection() as conn:
@@ -895,7 +896,7 @@ class AsyncWardrivingRepository:
         session_id: str,
         interface: str,
         channels: list[int],
-        target_bssids: Optional[list[str]] = None,
+        target_bssids: list[str] | None = None,
         capture_timeout: int = 60,
         use_deauth: bool = False,
     ) -> int:

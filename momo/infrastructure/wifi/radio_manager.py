@@ -29,9 +29,8 @@ import asyncio
 import logging
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from enum import Enum, auto
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -196,7 +195,7 @@ class RadioManager:
                 
                 return list(self._interfaces.values())
                 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.error("Interface discovery timeout")
                 return []
             except FileNotFoundError:

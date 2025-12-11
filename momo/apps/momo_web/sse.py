@@ -22,18 +22,18 @@ Usage:
 
 from __future__ import annotations
 
-import asyncio
 import json
 import logging
 import queue
 import threading
 import time
-from typing import TYPE_CHECKING, Generator
+from collections.abc import Generator
+from typing import TYPE_CHECKING
 
-from flask import Blueprint, Response, current_app
+from flask import Blueprint, Response
 
 if TYPE_CHECKING:
-    from ...core.events import Event, EventType
+    from ...core.events import Event
 
 logger = logging.getLogger(__name__)
 

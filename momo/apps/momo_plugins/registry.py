@@ -93,7 +93,7 @@ def load_enabled_plugins(
             # Determine plugin object
             plugin_obj: Any
             if hasattr(module, "plugin"):
-                plugin_obj = getattr(module, "plugin")
+                plugin_obj = module.plugin
             else:
                 plugin_obj = _AdapterPlugin(_normalize_name(name), module)
             # attempt start in non-invasive way (dry-run env)

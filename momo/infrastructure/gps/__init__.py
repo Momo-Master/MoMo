@@ -5,9 +5,9 @@ from .gpsd_client import AsyncGPSClient, GPSConfig
 
 __all__ = [
     "AsyncGPSClient",
-    "GPSConfig",
     "DistanceTracker",
-    "calculate_distance",
+    "GPSConfig",
     "calculate_bearing",
+    "calculate_distance",
 ]
 

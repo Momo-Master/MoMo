@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -29,8 +28,8 @@ class DistanceTracker:
     """
 
     total_meters: float = 0.0
-    last_lat: Optional[float] = None
-    last_lon: Optional[float] = None
+    last_lat: float | None = None
+    last_lon: float | None = None
     min_movement_meters: float = 5.0  # Ignore GPS jitter below this threshold
     points_count: int = 0
     _distances: list[float] = field(default_factory=list)

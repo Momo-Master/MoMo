@@ -3,7 +3,6 @@ from __future__ import annotations
 import shutil
 from pathlib import Path
 
-
 SKIP = {"__init__.py", "base.py", "registry.py", "autobackup.py", "wpa_sec.py"}
 
 

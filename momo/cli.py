@@ -329,9 +329,9 @@ def doctor(
 
     def _bind_port(obj, default=None):
         if hasattr(obj, "bind_port"):
-            return getattr(obj, "bind_port")
+            return obj.bind_port
         if hasattr(obj, "port"):
-            return getattr(obj, "port")
+            return obj.port
         return default
 
     web_enabled = bool(getattr(cfg, "web", None) and getattr(cfg.web, "enabled", False))
@@ -578,7 +578,7 @@ def wizard(
         if can_root:
             # ensure user/group momo
             try:
-                r = subprocess.run(["id", "-u", "momo"], capture_output=True, text=True)
+                r = subprocess.run(["id", "-u", "momo"], check=False, capture_output=True, text=True)
                 if r.returncode != 0:
                     subprocess.run(["useradd", "-r", "-s", "/usr/sbin/nologin", "-M", "momo"], check=False)
             except Exception:
@@ -609,7 +609,7 @@ def wizard(
             try:
                 ufw = _sh.which("ufw")
                 if ufw:
-                    st = subprocess.run([ufw, "status"], capture_output=True, text=True)
+                    st = subprocess.run([ufw, "status"], check=False, capture_output=True, text=True)
                     if "Status: active" in st.stdout:
                         for p in (hp, mp, wp):
                             subprocess.run([ufw, "allow", f"{p}/tcp"], check=False)
@@ -650,7 +650,7 @@ def wizard(
         if not can_root:
             console.print("[yellow]You can apply now with sudo:[/yellow]")
             block = (
-                "sudo install -d /etc/momo && sudo cp {cfg} /etc/momo/momo.yml\n"
+                f"sudo install -d /etc/momo && sudo cp {out!s} /etc/momo/momo.yml\n"
                 "sudo bash -c 'cat > /etc/systemd/system/momo.service <<\"EOF\"\n"
                 "[Unit]\\nDescription=MoMo core service\\nAfter=network-online.target\\nWants=network-online.target\\n\\n"
                 "[Service]\\nType=simple\\nWorkingDirectory=/etc/momo\\n"
@@ -660,13 +660,13 @@ def wizard(
                 "Restart=always\\nRestartSec=2\\nLimitNOFILE=65535\\nNoNewPrivileges=yes\\nProtectSystem=full\\nProtectHome=true\\nPrivateTmp=yes\\n\\n"
                 "[Install]\\nWantedBy=multi-user.target\\n"
                 "EOF'\n"
-            ).format(cfg=str(out))
+            )
             if token:
                 block += (
                     "sudo install -d /etc/systemd/system/momo.service.d && "
-                    "printf \"[Service]\\nEnvironment=MOMO_UI_TOKEN={tok}\\n\" | "
+                    f"printf \"[Service]\\nEnvironment=MOMO_UI_TOKEN={token}\\n\" | "
                     "sudo tee /etc/systemd/system/momo.service.d/env.conf >/dev/null\n"
-                ).format(tok=token)
+                )
             block += "sudo systemctl daemon-reload && sudo systemctl enable --now momo\n"
             console.print(f"[cyan]{block}[/cyan]")
     except KeyboardInterrupt:

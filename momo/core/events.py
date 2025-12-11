@@ -26,9 +26,10 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Any, Callable, Coroutine, TypeAlias
+from typing import Any, TypeAlias
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +266,7 @@ class EventBus:
             # Wait for queue to drain
             try:
                 await asyncio.wait_for(self._queue.join(), timeout=timeout)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning("Event queue drain timeout, forcing stop")
 
             self._task.cancel()
@@ -284,7 +285,7 @@ class EventBus:
                     self._queue.get(),
                     timeout=1.0,
                 )
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 continue
 
             try:

@@ -24,12 +24,13 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, AsyncIterator
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...domain.models import AccessPoint
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +147,7 @@ class WiFiScanner:
 
             return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error("Interface check timeout")
             return False
         except FileNotFoundError:
@@ -204,7 +205,7 @@ class WiFiScanner:
             self._current_channel = channel
             return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Channel set timeout for channel %d", channel)
             return False
         except Exception as e:
@@ -270,7 +271,7 @@ class WiFiScanner:
             logger.debug("Scan complete: %d APs found", len(unique_results))
             return unique_results
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("Scan timeout after %.1fs", self.config.scan_timeout)
             self._stats["scan_errors"] += 1
             return []

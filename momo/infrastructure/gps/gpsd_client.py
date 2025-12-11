@@ -5,9 +5,10 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from dataclasses import dataclass, field
+from collections.abc import AsyncIterator, Callable
+from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, AsyncIterator, Callable, Optional
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ...domain.models import GPSPosition
@@ -33,7 +34,7 @@ class GPSState:
     connected: bool = False
     fix_count: int = 0
     error_count: int = 0
-    last_fix: Optional[datetime] = None
+    last_fix: datetime | None = None
     satellites: int = 0
 
 
@@ -56,16 +57,16 @@ class AsyncGPSClient:
 
     def __init__(self, config: GPSConfig | None = None) -> None:
         self.config = config or GPSConfig()
-        self._reader: Optional[asyncio.StreamReader] = None
-        self._writer: Optional[asyncio.StreamWriter] = None
+        self._reader: asyncio.StreamReader | None = None
+        self._writer: asyncio.StreamWriter | None = None
         self._running = False
-        self._position: Optional[GPSPosition] = None
+        self._position: GPSPosition | None = None
         self._callbacks: list[Callable[[GPSPosition], None]] = []
         self._state = GPSState()
         self._reconnect_attempts = 0
 
     @property
-    def position(self) -> Optional[GPSPosition]:
+    def position(self) -> GPSPosition | None:
         """Get last known GPS position."""
         return self._position
 
@@ -115,7 +116,7 @@ class AsyncGPSClient:
             logger.info("Connected to gpsd at %s:%d", self.config.host, self.config.port)
             return True
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("GPS connection timeout to %s:%d", self.config.host, self.config.port)
             self._state.error_count += 1
             return False
@@ -155,7 +156,6 @@ class AsyncGPSClient:
         Yields:
             GPSPosition objects with latitude, longitude, etc.
         """
-        from ...domain.models import GPSPosition
 
         self._running = True
 
@@ -209,7 +209,7 @@ class AsyncGPSClient:
                 elif data.get("class") == "SKY":
                     self._state.satellites = len(data.get("satellites", []))
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Timeout is OK - just means no new data
                 logger.debug("GPS read timeout, connection still alive")
 
@@ -222,7 +222,7 @@ class AsyncGPSClient:
                 await self.disconnect()
                 await asyncio.sleep(self.config.reconnect_delay)
 
-    def _parse_tpv(self, data: dict) -> Optional[GPSPosition]:
+    def _parse_tpv(self, data: dict) -> GPSPosition | None:
         """
         Parse TPV (Time-Position-Velocity) message from gpsd.
 
@@ -258,7 +258,7 @@ class AsyncGPSClient:
             logger.error("TPV parse error: %s - data: %s", e, data)
             return None
 
-    async def get_position_once(self, timeout: float = 30.0) -> Optional[GPSPosition]:
+    async def get_position_once(self, timeout: float = 30.0) -> GPSPosition | None:
         """
         Get a single GPS position and disconnect.
 
@@ -276,7 +276,7 @@ class AsyncGPSClient:
                     if pos.has_fix:
                         await self.stop()
                         return pos
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("GPS single position timeout after %.1fs", timeout)
             await self.stop()
             return None
@@ -316,9 +316,9 @@ class MockGPSClient(AsyncGPSClient):
 
     async def stream_positions(self) -> AsyncIterator[GPSPosition]:
         """Generate fake positions in a walking pattern."""
-        from ...domain.models import GPSPosition
-
         import math
+
+        from ...domain.models import GPSPosition
 
         self._running = True
 

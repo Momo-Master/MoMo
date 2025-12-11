@@ -87,8 +87,8 @@ ignore = ["E501", "PLR2004", "B008"]
 "momo/domain/models.py" = ["PLC0415"]
 # Allow a helper to accept many arguments for clarity
 "momo/tools/pcap_utils.py" = ["PLR0913"]
-# Tests: allow common test patterns, local imports, and mock data with tabs
-"tests/**/*.py" = ["F401", "PLC0415", "E101", "W191"]
+# Tests: allow common test patterns, local imports, mock data with tabs, and import order
+"tests/**/*.py" = ["F401", "PLC0415", "E101", "W191", "I001"]
 "momo/apps/momo_core/aggressive.py" = ["PLR0913", "PLR0911"]
 "momo/apps/momo_core/main.py" = ["PLR0912", "PLR0915"]
 "momo/cli.py" = ["PLR0915"]
@@ -102,21 +102,25 @@ python_version = "3.11"
 strict = true
 warn_unused_configs = true
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 disallow_untyped_defs = true
 disallow_any_generics = true
 no_implicit_optional = true
 show_error_codes = true
 pretty = true
+explicit_package_bases = true
 exclude = [
-  "^migrations/",
-  # Static web UI (separate blueprint) - causes duplicate module error
-  "momo/apps/web/",
-  "momo/apps/momo_web/",
+  "migrations",
+  # Web modules - duplicate module resolution issue
+  "momo/apps/web",
+  "momo/apps/momo_web",
   # ALL legacy plugins - will be rewritten in MoMo style
-  "momo/apps/momo_plugins/",
+  "momo/apps/momo_plugins",
   # OLED module - requires PIL/luma hardware libs
-  "momo/apps/momo_oled/",
+  "momo/apps/momo_oled",
+  # Build artifacts
+  "build",
+  "dist",
 ]
 
 [[tool.mypy.overrides]]
