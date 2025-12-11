@@ -170,6 +170,17 @@ aggressive:
   quiet_hours: null           # No quiet hours
   panic_file: null            # No panic file
 
+# ==============================================================================
+# BLE (Bluetooth Low Energy) Scanner
+# ==============================================================================
+ble:
+  enabled: false              # Enable BLE scanning (requires bleak)
+  scan_duration: 5.0          # Seconds per scan
+  scan_interval: 10.0         # Seconds between scans
+  min_rssi: -85               # Filter weak signals
+  detect_beacons: true        # Parse iBeacon/Eddystone frames
+  passive_scan: false         # Passive = less detectable
+
 server:
   # Aggressive mode: No restrictions
   health:

@@ -7,6 +7,7 @@ from flask import Flask, Response, request, session
 
 from ...config import MomoConfig
 from .api import api_bp
+from .ble_api import ble_bp
 from .capture_api import capture_bp
 from .routes import ui_bp
 from .sse import sse_bp
@@ -104,6 +105,7 @@ def create_app(cfg: MomoConfig) -> Flask:
         return None
 
     app.register_blueprint(api_bp)
+    app.register_blueprint(ble_bp)
     app.register_blueprint(capture_bp)
     app.register_blueprint(ui_bp)
     app.register_blueprint(sse_bp)

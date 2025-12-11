@@ -281,3 +281,97 @@ class CaptureStats(BaseModel):
     active_sessions: int = 0
     last_capture_at: datetime | None = None
     total_duration_seconds: float = 0.0
+
+
+# =============================================================================
+# BLE / Bluetooth Models (Phase 0.5.0)
+# =============================================================================
+
+
+class BLEBeaconType(str, Enum):
+    """Type of BLE beacon."""
+
+    UNKNOWN = "unknown"
+    IBEACON = "ibeacon"
+    EDDYSTONE_UID = "eddystone_uid"
+    EDDYSTONE_URL = "eddystone_url"
+    EDDYSTONE_TLM = "eddystone_tlm"
+    ALTBEACON = "altbeacon"
+
+
+class BLEDeviceRecord(BaseModel):
+    """BLE device record for database persistence."""
+
+    id: int | None = None
+    address: str = Field(..., description="MAC address")
+    name: str | None = None
+    rssi: int = -100
+    tx_power: int | None = None
+
+    # Beacon info
+    beacon_type: BLEBeaconType = BLEBeaconType.UNKNOWN
+    uuid: str | None = None  # iBeacon UUID
+    major: int | None = None
+    minor: int | None = None
+    namespace: str | None = None  # Eddystone
+    instance: str | None = None
+    url: str | None = None  # Eddystone URL
+
+    # Location
+    latitude: float | None = None
+    longitude: float | None = None
+
+    # Tracking
+    first_seen: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_seen: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    seen_count: int = 1
+    session_id: int | None = None
+
+    @property
+    def is_beacon(self) -> bool:
+        """Check if device is a beacon."""
+        return self.beacon_type != BLEBeaconType.UNKNOWN
+
+    @property
+    def distance_estimate(self) -> float | None:
+        """Estimate distance in meters."""
+        if self.tx_power is None:
+            return None
+        try:
+            return 10 ** ((self.tx_power - self.rssi) / 20.0)
+        except (ValueError, ZeroDivisionError):
+            return None
+
+
+class BLEScanSession(BaseModel):
+    """BLE scanning session for grouping discoveries."""
+
+    id: int | None = None
+    started_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    ended_at: datetime | None = None
+    devices_found: int = 0
+    beacons_found: int = 0
+    scan_count: int = 0
+
+    @property
+    def is_active(self) -> bool:
+        """Check if session is still active."""
+        return self.ended_at is None
+
+    @property
+    def duration_seconds(self) -> float:
+        """Session duration in seconds."""
+        end = self.ended_at or datetime.now(UTC)
+        return (end - self.started_at).total_seconds()
+
+
+class BLEStats(BaseModel):
+    """BLE scanner runtime statistics."""
+
+    devices_total: int = 0
+    beacons_total: int = 0
+    ibeacons: int = 0
+    eddystones: int = 0
+    scans_completed: int = 0
+    errors: int = 0
+    last_scan_at: datetime | None = None

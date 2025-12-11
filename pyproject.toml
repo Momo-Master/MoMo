@@ -42,6 +42,9 @@ wardriving = [
   "pynmea2>=1.19.0",     # NMEA parsing fallback
   "aiofiles>=23.2.0",    # Async file I/O
 ]
+ble = [
+  "bleak>=0.22.0",       # BLE scanner library
+]
 dev = [
   "ruff>=0.5.0",
   "mypy>=1.10.0",

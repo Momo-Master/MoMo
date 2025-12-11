@@ -375,6 +375,7 @@ _BASE = """
         <a href="/handshakes" class="nav-item {{ 'active' if active == 'handshakes' else '' }}" title="Handshakes">🔐</a>
         <a href="/map" class="nav-item {{ 'active' if active == 'map' else '' }}" title="Map">🗺️</a>
         <a href="/captures" class="nav-item {{ 'active' if active == 'captures' else '' }}" title="Captures">📡</a>
+        <a href="/bluetooth" class="nav-item {{ 'active' if active == 'bluetooth' else '' }}" title="Bluetooth">📶</a>
         <a href="/config" class="nav-item {{ 'active' if active == 'config' else '' }}" title="Config">⚙️</a>
     </nav>
     
@@ -1216,3 +1217,172 @@ def captures_page():
     return render_template_string(_BASE, title=cfg.web.title, active="captures", content=content)
 
 
+@ui_bp.route("/bluetooth")
+def bluetooth_page():
+    """BLE Scanner page."""
+    cfg = _cfg()
+    content = """
+    <h1 class="page-title">📶 Bluetooth Scanner</h1>
+    
+    <div class="stat-grid">
+        <div class="stat-card">
+            <span class="stat-value" id="total-devices">0</span>
+            <span class="stat-label">Total Devices</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="total-beacons">0</span>
+            <span class="stat-label">Beacons</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="ibeacons">0</span>
+            <span class="stat-label">iBeacons</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-value" id="scans">0</span>
+            <span class="stat-label">Scans</span>
+        </div>
+    </div>
+    
+    <div class="card-grid">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📱 Recent Devices</span>
+                <button class="btn btn-primary" id="refresh-btn">Refresh</button>
+            </div>
+            <div class="card-body">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>MAC</th>
+                            <th>RSSI</th>
+                            <th>Type</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="devices-list">
+                        <tr><td colspan="5">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">📍 Beacons</span>
+            </div>
+            <div class="card-body">
+                <div id="beacons-list">
+                    <p>No beacons detected yet.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card" style="margin-top: 20px;">
+        <div class="card-header">
+            <span class="card-title">🔧 Controls</span>
+        </div>
+        <div class="card-body">
+            <button class="btn btn-danger" id="clear-btn">Clear Cache</button>
+            <span id="status-msg" style="margin-left: 20px;"></span>
+        </div>
+    </div>
+    
+    <script>
+        async function loadStats() {
+            try {
+                const resp = await fetch('/api/ble/stats');
+                if (!resp.ok) {
+                    document.getElementById('status-msg').textContent = 'Scanner not available';
+                    return;
+                }
+                const data = await resp.json();
+                document.getElementById('total-devices').textContent = data.momo_ble_devices_total || 0;
+                document.getElementById('total-beacons').textContent = data.momo_ble_beacons_total || 0;
+                document.getElementById('ibeacons').textContent = data.momo_ble_ibeacons || 0;
+                document.getElementById('scans').textContent = data.momo_ble_scans_total || 0;
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadDevices() {
+            try {
+                const resp = await fetch('/api/ble/devices?limit=50');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const tbody = document.getElementById('devices-list');
+                
+                if (!data.devices || data.devices.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5">No devices found. Enable BLE scanning in config.</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.devices.map(d => `
+                    <tr>
+                        <td>${d.name || '<unknown>'}</td>
+                        <td><code>${d.address}</code></td>
+                        <td>${d.rssi} dBm</td>
+                        <td><span class="badge ${d.beacon_type !== 'unknown' ? 'badge-success' : 'badge-secondary'}">${d.beacon_type}</span></td>
+                        <td>${d.last_seen ? new Date(d.last_seen).toLocaleTimeString() : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        async function loadBeacons() {
+            try {
+                const resp = await fetch('/api/ble/beacons?limit=20');
+                if (!resp.ok) return;
+                const data = await resp.json();
+                const container = document.getElementById('beacons-list');
+                
+                if (!data.beacons || data.beacons.length === 0) {
+                    container.innerHTML = '<p>No beacons detected yet.</p>';
+                    return;
+                }
+                
+                container.innerHTML = data.beacons.map(b => `
+                    <div style="background: var(--bg-card-hover); padding: 12px; border-radius: 8px; margin-bottom: 8px;">
+                        <strong>${b.name || b.address}</strong>
+                        <span class="badge badge-info" style="margin-left: 8px;">${b.beacon_type}</span>
+                        <br>
+                        ${b.uuid ? `<small>UUID: ${b.uuid}</small><br>` : ''}
+                        ${b.major !== null ? `<small>Major: ${b.major}, Minor: ${b.minor}</small>` : ''}
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+        
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            loadStats();
+            loadDevices();
+            loadBeacons();
+        });
+        
+        document.getElementById('clear-btn').addEventListener('click', async () => {
+            try {
+                await fetch('/api/ble/clear', {method: 'POST'});
+                document.getElementById('status-msg').textContent = 'Cache cleared!';
+                loadStats();
+                loadDevices();
+                loadBeacons();
+            } catch (e) {
+                document.getElementById('status-msg').textContent = 'Error: ' + e.message;
+            }
+        });
+        
+        // Initial load
+        loadStats();
+        loadDevices();
+        loadBeacons();
+        setInterval(loadStats, 5000);
+        setInterval(loadDevices, 10000);
+    </script>
+    """
+    return render_template_string(_BASE, title=cfg.web.title, active="bluetooth", content=content)

@@ -150,6 +150,16 @@ class AggressiveQuietHours(BaseModel):
         return value
 
 
+class BLEConfig(BaseModel):
+    """Bluetooth Low Energy scanner configuration."""
+    enabled: bool = Field(False)  # Disabled by default
+    scan_duration: float = Field(5.0, ge=1.0, le=60.0)  # Seconds per scan
+    scan_interval: float = Field(10.0, ge=1.0, le=300.0)  # Seconds between scans
+    min_rssi: int = Field(-85, ge=-100, le=0)  # Filter weak signals
+    detect_beacons: bool = Field(True)  # Parse iBeacon/Eddystone
+    passive_scan: bool = Field(False)  # Passive = less detectable
+
+
 class AggressiveConfig(BaseModel):
     """Aggressive mode config - NO RESTRICTIONS by default."""
     enabled: bool = Field(True)                                    # Aggressive ON by default
@@ -264,6 +274,7 @@ class MomoConfig(BaseModel):
     web: WebConfig = Field(default_factory=WebConfig)
     gps: GPSConfig = Field(default_factory=GPSConfig)
     wardriving: WardrivingConfig = Field(default_factory=WardrivingConfig)
+    ble: BLEConfig = Field(default_factory=BLEConfig)
 
     class ServerEndpoint(BaseModel):
         enabled: bool = Field(True)
