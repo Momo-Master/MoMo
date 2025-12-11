@@ -25,6 +25,7 @@ Thumbs.db
 docs/ONERILER.md
 docs/DEVLOG.md
 docs/SYSTEM_PROMPT.md
+docs/ROADMAP.md
 
 # Test artifacts (not source files)
 .pytest_cache/
