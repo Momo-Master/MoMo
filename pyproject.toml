@@ -112,18 +112,8 @@ exclude = [
   "^migrations/",
   # Static web UI (separate blueprint)
   "momo/apps/web/",
-  # Legacy pwnagotchi plugins - not yet migrated
-  "momo/apps/momo_plugins/wittypi\\.py$",
-  "momo/apps/momo_plugins/wpa-sec-list\\.py$",
-  "momo/apps/momo_plugins/pisugarx\\.py$",
-  "momo/apps/momo_plugins/ups_lite\\.py$",
-  "momo/apps/momo_plugins/gpio_buttons\\.py$",
-  "momo/apps/momo_plugins/gps\\.py$",
-  "momo/apps/momo_plugins/display-password\\.py$",
-  "momo/apps/momo_plugins/bt-tether\\.py$",
-  "momo/apps/momo_plugins/memtemp-plus\\.py$",
-  "momo/apps/momo_plugins/memtemp\\.py$",
-  "momo/apps/momo_plugins/tweak_view\\.py$",
+  # ALL legacy plugins - will be rewritten in MoMo style
+  "momo/apps/momo_plugins/",
 ]
 
 [[tool.mypy.overrides]]
@@ -133,6 +123,12 @@ module = [
   "luma.*",
   "gps",
   "bleak",
+  "pydrive2.*",
+  "requests",
+  "dateutil.*",
+  "scapy.*",
+  "aiohttp",
+  "httpx",
 ]
 ignore_missing_imports = true
 
