@@ -565,6 +565,7 @@ class MockCaptureManager(CaptureManager):
         super().__init__(**kwargs)
         self._mock_success = True
         self._mock_pmkid = True
+        self._mock_interface = "wlan0mock"
 
     def set_mock_success(self, success: bool, pmkid: bool = True) -> None:
         """Configure mock behavior."""
@@ -574,6 +575,30 @@ class MockCaptureManager(CaptureManager):
     def _check_tools(self) -> bool:
         """Always return True for mock."""
         return True
+
+    async def capture_target(
+        self,
+        bssid: str,
+        ssid: str = "<hidden>",
+        channel: int = 0,
+        interface: str | None = None,
+        timeout_seconds: int | None = None,
+        use_deauth: bool = False,
+        latitude: float | None = None,
+        longitude: float | None = None,
+    ) -> HandshakeCapture:
+        """Mock capture - always uses mock interface."""
+        # Use mock interface if none provided
+        return await super().capture_target(
+            bssid=bssid,
+            ssid=ssid,
+            channel=channel,
+            interface=interface or self._mock_interface,
+            timeout_seconds=timeout_seconds,
+            use_deauth=use_deauth,
+            latitude=latitude,
+            longitude=longitude,
+        )
 
     async def _run_hcxdumptool(self, **kwargs) -> bool:
         """Mock capture - just wait briefly."""

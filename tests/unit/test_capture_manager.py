@@ -346,7 +346,7 @@ class TestCaptureSessionModel:
         session = CaptureSession(
             session_id="test-123",
             interface="wlan0",
-            ended_at=datetime.utcnow(),
+            ended_at=datetime.now(),
         )
         assert session.is_active is False
 
