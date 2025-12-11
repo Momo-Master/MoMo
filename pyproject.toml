@@ -77,12 +77,17 @@ ignore = ["E501", "PLR2004", "B008"]
 "momo/apps/momo_plugins/*.py" = [
   "E402", "F401", "F403", "F405", "F821", "E701", "E722",
   "PLR0912", "PLR0915", "UP031", "RUF012", "B019", "E741",
-  "PLW0602", "PLW0603", "PLR0911", "PLC0206", "PLW2901", "B015"
+  "PLW0602", "PLW0603", "PLR0911", "PLC0206", "PLW2901", "B015",
+  "PLC0415"  # Allow lazy imports in plugins (circular import avoidance)
 ]
+# Infrastructure modules may use lazy imports and complex capture logic
+"momo/infrastructure/**/*.py" = ["PLC0415", "PLR0912", "PLR0913", "PLR0915"]
+# Domain models may have inline math import
+"momo/domain/models.py" = ["PLC0415"]
 # Allow a helper to accept many arguments for clarity
 "momo/tools/pcap_utils.py" = ["PLR0913"]
-# Tests: allow common test patterns
-"tests/**/*.py" = ["F401"]
+# Tests: allow common test patterns and local imports
+"tests/**/*.py" = ["F401", "PLC0415"]
 "momo/apps/momo_core/aggressive.py" = ["PLR0913", "PLR0911"]
 "momo/apps/momo_core/main.py" = ["PLR0912", "PLR0915"]
 "momo/cli.py" = ["PLR0915"]

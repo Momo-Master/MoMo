@@ -8,7 +8,7 @@ Tests the async repository methods for handshake persistence.
 from __future__ import annotations
 
 import tempfile
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -363,7 +363,7 @@ class TestHandshakeWithAPLink:
             )
 
             # Save handshake
-            hs_id = await repo.save_handshake(
+            await repo.save_handshake(
                 bssid=bssid,
                 status="success",
                 hashcat_path="/path/to/file.22000",

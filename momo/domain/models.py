@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,10 +25,10 @@ class GPSPosition(BaseModel):
 
     latitude: float = Field(..., ge=-90, le=90)
     longitude: float = Field(..., ge=-180, le=180)
-    altitude: Optional[float] = None  # metres above sea level
-    speed: Optional[float] = None  # m/s
-    heading: Optional[float] = None  # degrees from true north
-    hdop: Optional[float] = None  # horizontal dilution of precision
+    altitude: float | None = None  # metres above sea level
+    speed: float | None = None  # m/s
+    heading: float | None = None  # degrees from true north
+    hdop: float | None = None  # horizontal dilution of precision
     satellites: int = 0
     fix_quality: int = 0  # 0=invalid, 1=GPS, 2=DGPS, 3=RTK
     timestamp: datetime = Field(default_factory=datetime.utcnow)
@@ -73,19 +72,19 @@ class AccessPoint(BaseModel):
     rssi: int = Field(..., ge=-100, le=0)  # dBm
     encryption: EncryptionType = EncryptionType.OPEN
     wps_enabled: bool = False
-    vendor: Optional[str] = None  # OUI-based vendor lookup
+    vendor: str | None = None  # OUI-based vendor lookup
     clients_count: int = 0
     first_seen: datetime = Field(default_factory=datetime.utcnow)
     last_seen: datetime = Field(default_factory=datetime.utcnow)
 
     # GPS at discovery
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: float | None = None
+    longitude: float | None = None
 
     # Best signal location
     best_rssi: int = -100
-    best_lat: Optional[float] = None
-    best_lon: Optional[float] = None
+    best_lat: float | None = None
+    best_lon: float | None = None
 
     @property
     def is_hidden(self) -> bool:
@@ -113,13 +112,13 @@ class WardriveScan(BaseModel):
 
     scan_id: str
     started_at: datetime = Field(default_factory=datetime.utcnow)
-    ended_at: Optional[datetime] = None
+    ended_at: datetime | None = None
     interface: str = "wlan1"
     channels_scanned: list[int] = Field(default_factory=lambda: [1, 6, 11])
     aps_found: int = 0
     observations_count: int = 0
     distance_km: float = 0.0
-    gpx_track: Optional[str] = None  # GPX file path
+    gpx_track: str | None = None  # GPX file path
 
     @property
     def duration_seconds(self) -> float:
@@ -138,12 +137,12 @@ class ProbeRequest(BaseModel):
     """WiFi probe request from client device."""
 
     client_mac: str = Field(..., pattern=r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
-    ssid_probed: Optional[str] = None
+    ssid_probed: str | None = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     rssi: int = -100
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
-    vendor: Optional[str] = None  # OUI-based vendor
+    latitude: float | None = None
+    longitude: float | None = None
+    vendor: str | None = None  # OUI-based vendor
 
 
 class WardriverStats(BaseModel):
@@ -154,7 +153,7 @@ class WardriverStats(BaseModel):
     observations_total: int = 0
     probes_total: int = 0
     scan_errors: int = 0
-    last_scan_at: Optional[datetime] = None
+    last_scan_at: datetime | None = None
     gps_fix: bool = False
     distance_km: float = 0.0
 
@@ -187,35 +186,35 @@ class CaptureStatus(str, Enum):
 class HandshakeCapture(BaseModel):
     """Captured WiFi handshake data."""
 
-    id: Optional[int] = None
+    id: int | None = None
     bssid: str = Field(..., pattern=r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
     ssid: str = Field(default="<hidden>", max_length=32)
     capture_type: CaptureType = CaptureType.UNKNOWN
     status: CaptureStatus = CaptureStatus.PENDING
 
     # File paths
-    pcapng_path: Optional[str] = None      # Raw capture file
-    hashcat_path: Optional[str] = None     # Converted .22000 file
+    pcapng_path: str | None = None      # Raw capture file
+    hashcat_path: str | None = None     # Converted .22000 file
 
     # Capture details
     channel: int = Field(default=0, ge=0, le=165)
-    client_mac: Optional[str] = None       # Client involved in handshake
+    client_mac: str | None = None       # Client involved in handshake
     eapol_count: int = 0                   # Number of EAPOL frames captured
     pmkid_found: bool = False
 
     # Timestamps
     started_at: datetime = Field(default_factory=datetime.utcnow)
-    completed_at: Optional[datetime] = None
+    completed_at: datetime | None = None
     duration_seconds: float = 0.0
 
     # GPS at capture
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: float | None = None
+    longitude: float | None = None
 
     # Cracking status
     cracked: bool = False
-    password: Optional[str] = None
-    cracked_at: Optional[datetime] = None
+    password: str | None = None
+    cracked_at: datetime | None = None
 
     @property
     def is_valid(self) -> bool:
@@ -237,7 +236,7 @@ class CaptureSession(BaseModel):
     session_id: str
     interface: str
     started_at: datetime = Field(default_factory=datetime.utcnow)
-    ended_at: Optional[datetime] = None
+    ended_at: datetime | None = None
 
     # Configuration
     channels: list[int] = Field(default_factory=lambda: [1, 6, 11])
@@ -280,5 +279,5 @@ class CaptureStats(BaseModel):
     pmkids_found: int = 0
     eapol_handshakes: int = 0
     active_sessions: int = 0
-    last_capture_at: Optional[datetime] = None
+    last_capture_at: datetime | None = None
     total_duration_seconds: float = 0.0

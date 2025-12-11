@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import tempfile
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -54,8 +54,8 @@ class TestCaptureManager:
     async def test_manager_initialization(self):
         """Manager should initialize without errors."""
         from momo.infrastructure.capture.capture_manager import (
-            CaptureManager,
             CaptureConfig,
+            CaptureManager,
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -89,8 +89,8 @@ class TestCaptureManager:
 
     async def test_mock_capture_success(self):
         """Mock manager should return successful capture."""
-        from momo.infrastructure.capture.capture_manager import MockCaptureManager
         from momo.domain.models import CaptureStatus
+        from momo.infrastructure.capture.capture_manager import MockCaptureManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = MockCaptureManager()
@@ -118,8 +118,8 @@ class TestCaptureManager:
 
     async def test_mock_capture_failure(self):
         """Mock manager should return failed capture when configured."""
-        from momo.infrastructure.capture.capture_manager import MockCaptureManager
         from momo.domain.models import CaptureStatus
+        from momo.infrastructure.capture.capture_manager import MockCaptureManager
 
         with tempfile.TemporaryDirectory() as tmpdir:
             manager = MockCaptureManager()
@@ -206,7 +206,7 @@ class TestHandshakeCaptureModel:
 
     def test_handshake_capture_creation(self):
         """HandshakeCapture should be created with valid data."""
-        from momo.domain.models import HandshakeCapture, CaptureStatus, CaptureType
+        from momo.domain.models import CaptureStatus, CaptureType, HandshakeCapture
 
         capture = HandshakeCapture(
             bssid="AA:BB:CC:DD:EE:FF",
@@ -223,7 +223,7 @@ class TestHandshakeCaptureModel:
 
     def test_is_valid_property(self):
         """is_valid should check status and capture data."""
-        from momo.domain.models import HandshakeCapture, CaptureStatus
+        from momo.domain.models import CaptureStatus, HandshakeCapture
 
         # Invalid - not success
         capture = HandshakeCapture(
@@ -259,7 +259,7 @@ class TestHandshakeCaptureModel:
 
     def test_is_crackable_property(self):
         """is_crackable should require valid capture and hashcat path."""
-        from momo.domain.models import HandshakeCapture, CaptureStatus
+        from momo.domain.models import CaptureStatus, HandshakeCapture
 
         # Not crackable - no hashcat path
         capture = HandshakeCapture(
@@ -291,8 +291,9 @@ class TestHandshakeCaptureModel:
 
     def test_bssid_validation(self):
         """BSSID should match MAC address pattern."""
-        from momo.domain.models import HandshakeCapture
         from pydantic import ValidationError
+
+        from momo.domain.models import HandshakeCapture
 
         # Valid
         capture = HandshakeCapture(bssid="AA:BB:CC:DD:EE:FF")
@@ -336,7 +337,6 @@ class TestCaptureSessionModel:
     def test_is_active_property(self):
         """is_active should check ended_at."""
         from momo.domain.models import CaptureSession
-        from datetime import datetime
 
         # Active
         session = CaptureSession(session_id="test-123", interface="wlan0")

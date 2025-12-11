@@ -30,25 +30,24 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
 import shutil
-from dataclasses import dataclass, field
-from datetime import datetime, UTC
-from pathlib import Path
-from typing import TYPE_CHECKING, Optional
 import uuid
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from pathlib import Path
+from typing import TYPE_CHECKING
 
 from ...domain.models import (
+    CaptureStats,
     CaptureStatus,
     CaptureType,
-    CaptureStats,
     HandshakeCapture,
 )
 
 if TYPE_CHECKING:
-    from ..wifi.radio_manager import RadioManager, RadioInterface
     from ...core.events import EventBus
+    from ..wifi.radio_manager import RadioInterface, RadioManager
 
 logger = logging.getLogger(__name__)
 
@@ -73,8 +72,8 @@ class CaptureConfig:
     attack_ap: bool = True              # Attack AP directly for PMKID
 
     # Filter options
-    filter_essid: Optional[str] = None  # Target specific ESSID
-    filter_bssid: Optional[str] = None  # Target specific BSSID
+    filter_essid: str | None = None  # Target specific ESSID
+    filter_bssid: str | None = None  # Target specific BSSID
 
     # Performance
     max_concurrent_captures: int = 1    # Usually limited by interface
@@ -91,8 +90,8 @@ class CaptureManager:
     def __init__(
         self,
         config: CaptureConfig | None = None,
-        radio_manager: Optional[RadioManager] = None,
-        event_bus: Optional[EventBus] = None,
+        radio_manager: RadioManager | None = None,
+        event_bus: EventBus | None = None,
     ) -> None:
         self.config = config or CaptureConfig()
         self.radio_manager = radio_manager
@@ -180,11 +179,11 @@ class CaptureManager:
         bssid: str,
         ssid: str = "<hidden>",
         channel: int = 0,
-        interface: Optional[str] = None,
-        timeout_seconds: Optional[int] = None,
+        interface: str | None = None,
+        timeout_seconds: int | None = None,
         use_deauth: bool = False,
-        latitude: Optional[float] = None,
-        longitude: Optional[float] = None,
+        latitude: float | None = None,
+        longitude: float | None = None,
     ) -> HandshakeCapture:
         """
         Capture handshake from specific target.
@@ -239,7 +238,7 @@ class CaptureManager:
 
             # Get interface
             iface_name = interface
-            acquired_interface: Optional[RadioInterface] = None
+            acquired_interface: RadioInterface | None = None
 
             if not iface_name and self.radio_manager:
                 from ..wifi.radio_manager import TaskType
@@ -360,7 +359,7 @@ class CaptureManager:
         self,
         interface: str,
         output_path: Path,
-        bssid: Optional[str] = None,
+        bssid: str | None = None,
         channel: int = 0,
         timeout: int = 60,
     ) -> bool:
@@ -427,7 +426,7 @@ class CaptureManager:
 
                 return True
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.debug("hcxdumptool timeout after %d seconds", timeout)
                 await self._terminate_process(proc)
                 return output_path.exists() and output_path.stat().st_size > 0
@@ -506,7 +505,7 @@ class CaptureManager:
 
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning("hcxpcapngtool timeout")
             return result
         except Exception as e:
@@ -540,7 +539,7 @@ class CaptureManager:
             proc.terminate()
             try:
                 await asyncio.wait_for(proc.wait(), timeout=3.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 proc.kill()
                 await proc.wait()
         except Exception as e:

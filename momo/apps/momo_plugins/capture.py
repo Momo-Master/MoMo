@@ -40,23 +40,23 @@ import asyncio
 import logging
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
+from ...core.events import EventType, get_event_bus
 from ...domain.models import (
     CaptureStatus,
     CaptureType,
     HandshakeCapture,
 )
-from ...core.events import EventType, get_event_bus
 
 if TYPE_CHECKING:
     from ...core.events import Event, EventBus
     from ...infrastructure.capture.capture_manager import CaptureManager
-    from ...infrastructure.wifi.radio_manager import RadioManager
     from ...infrastructure.database.async_repository import AsyncWardrivingRepository
     from ...infrastructure.gps.gpsd_client import AsyncGPSClient
+    from ...infrastructure.wifi.radio_manager import RadioManager
 
 # Plugin metadata
 priority = 80  # Run after wardriver (5) but before cracker (150)
@@ -66,15 +66,15 @@ __version__ = "0.4.0"
 logger = logging.getLogger(__name__)
 
 # Global state
-_config: Optional[CapturePluginConfig] = None
-_capture_manager: Optional[CaptureManager] = None
-_radio_manager: Optional[RadioManager] = None
-_repository: Optional[AsyncWardrivingRepository] = None
-_gps_client: Optional[AsyncGPSClient] = None
-_event_bus: Optional[EventBus] = None
+_config: CapturePluginConfig | None = None
+_capture_manager: CaptureManager | None = None
+_radio_manager: RadioManager | None = None
+_repository: AsyncWardrivingRepository | None = None
+_gps_client: AsyncGPSClient | None = None
+_event_bus: EventBus | None = None
 _running = False
 _capture_queue: deque[dict] = deque()
-_capture_task: Optional[asyncio.Task] = None
+_capture_task: asyncio.Task | None = None
 
 _stats = {
     "captures_attempted": 0,
@@ -103,7 +103,7 @@ class CapturePluginConfig:
     max_queue_size: int = 50            # Max pending captures
     channels: list[int] = field(default_factory=list)  # Empty = auto
     output_dir: Path = field(default_factory=lambda: Path("logs/handshakes"))
-    interface: Optional[str] = None     # Specific interface or None for auto
+    interface: str | None = None     # Specific interface or None for auto
 
     # Filtering
     ssid_whitelist: list[str] = field(default_factory=list)
@@ -163,7 +163,7 @@ async def async_init() -> None:
 
     try:
         # Import infrastructure components
-        from ...infrastructure.capture.capture_manager import CaptureManager, CaptureConfig
+        from ...infrastructure.capture.capture_manager import CaptureConfig, CaptureManager
         from ...infrastructure.wifi.radio_manager import RadioManager
 
         # Get or create RadioManager
@@ -381,8 +381,8 @@ async def capture_ap(
     bssid: str,
     ssid: str = "<hidden>",
     channel: int = 0,
-    timeout: Optional[int] = None,
-) -> Optional[HandshakeCapture]:
+    timeout: int | None = None,
+) -> HandshakeCapture | None:
     """
     Capture handshake from specific AP.
 

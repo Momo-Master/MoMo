@@ -9,7 +9,7 @@ Supports:
 - hcxpcapngtool (pcapng → hashcat format conversion)
 """
 
-from .capture_manager import CaptureManager, CaptureConfig
+from .capture_manager import CaptureConfig, CaptureManager
 
-__all__ = ["CaptureManager", "CaptureConfig"]
+__all__ = ["CaptureConfig", "CaptureManager"]
 
