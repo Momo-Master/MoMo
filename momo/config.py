@@ -162,8 +162,8 @@ class AggressiveConfig(BaseModel):
     max_assoc_per_min: int = Field(0, ge=0)                        # 0 = unlimited
     burst_len: int = Field(0, ge=0)                                # 0 = unlimited
     cooldown_secs: int = Field(0, ge=0)                            # 0 = no cooldown
-    quiet_hours: AggressiveQuietHours = Field(default_factory=AggressiveQuietHours)  # Disabled
-    panic_file: str = Field("")                                    # Empty = disabled
+    quiet_hours: AggressiveQuietHours | None = Field(default=None)  # None = disabled
+    panic_file: str | None = Field(default=None)                   # None = disabled
     rfkill_on_panic: bool = Field(False)                           # No RF kill
 
     @field_validator("bssid_whitelist", "bssid_blacklist")

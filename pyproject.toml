@@ -85,6 +85,8 @@ ignore = ["E501", "PLR2004", "B008"]
 "momo/infrastructure/**/*.py" = ["PLC0415", "PLR0912", "PLR0913", "PLR0915"]
 # Domain models may have inline math import
 "momo/domain/models.py" = ["PLC0415"]
+# Config may use lazy imports for validators
+"momo/config.py" = ["PLC0415"]
 # Allow a helper to accept many arguments for clarity
 "momo/tools/pcap_utils.py" = ["PLR0913"]
 # Web modules may use lazy imports for plugin access
