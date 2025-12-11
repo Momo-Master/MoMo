@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from flask import Flask, Response, request
+from flask import Flask, Response, request, session
 
 from ...config import MomoConfig
 from .api import api_bp
@@ -49,7 +49,11 @@ def create_app(cfg: MomoConfig) -> Flask:
     app = Flask(__name__)
     app.config["MOMO_CONFIG"] = cfg
 
-    # Auth middleware: Bearer, X-Token, optional ?token=
+    # Secret key for sessions (generate if not set)
+    import secrets
+    app.secret_key = os.environ.get("MOMO_SECRET_KEY", secrets.token_hex(32))
+
+    # Auth middleware: Bearer, X-Token, optional ?token=, or session cookie
     @app.before_request
     def _auth_guard():  # type: ignore[override]
         # Allow unauth for certain endpoints
@@ -64,15 +68,22 @@ def create_app(cfg: MomoConfig) -> Flask:
         )
         if request.path in unauth_paths or request.path.startswith("/sse/"):
             return None
+
+        # Check if already authenticated via session
+        if session.get("authenticated"):
+            return None
+
         token_env = cfg.web.auth.token_env
         token_file = Path("/opt/momo/.momo_ui_token")
         expected = _read_token(token_env, token_file)
         require = getattr(cfg.web, "require_token", True)
+
         # /api/status requires auth unless require_token is False
         if request.path == "/api/status" and not require:
             return None
         if not expected:
             return Response('{"error":"unauthorized"}', status=401, mimetype="application/json")
+
         supplied = None
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
@@ -81,10 +92,15 @@ def create_app(cfg: MomoConfig) -> Flask:
             supplied = request.headers.get("X-Token")
         if not supplied and cfg.web.allow_query_token:
             supplied = request.args.get("token")
+
         # SECURITY: Use constant-time comparison to prevent timing attacks
         import hmac
         if not hmac.compare_digest(supplied or "", expected or ""):
             return Response('{"error":"unauthorized"}', status=401, mimetype="application/json")
+
+        # Token matched - set session cookie for future requests
+        session["authenticated"] = True
+        session.permanent = True  # Keep session across browser restarts
         return None
 
     app.register_blueprint(api_bp)
