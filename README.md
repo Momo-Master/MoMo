@@ -363,9 +363,9 @@ plugins:
 | [OPERATIONS.md](docs/OPERATIONS.md) | Operations guide |
 | [SECURITY.md](docs/SECURITY.md) | Security hardening |
 | [HARDWARE.md](docs/HARDWARE.md) | Hardware setup |
-| [ONERILER.md](docs/ONERILER.md) | Technical roadmap |
 | [ACTIVE_WIFI.md](docs/ACTIVE_WIFI.md) | Deauth/beacon attacks |
 | [CRACKING.md](docs/CRACKING.md) | Password cracking |
+| [PLUGINS.md](docs/PLUGINS.md) | Plugin documentation |
 | [Plugin Development](#-plugin-development) | Create custom plugins |
 
 ---
