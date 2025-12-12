@@ -769,19 +769,19 @@ def config_page():
                 </tr>
                 <tr>
                     <td style="color: var(--text-muted);">Deauth</td>
-                    <td>{'✅ Enabled' if cfg.aggressive.deauth.enabled else '❌ Disabled'}</td>
+                    <td>{'✅ Enabled' if cfg.aggressive.enabled else '❌ Disabled'}</td>
                 </tr>
                 <tr>
                     <td style="color: var(--text-muted);">Max Deauth/min</td>
-                    <td>{cfg.aggressive.deauth.max_per_minute or 'Unlimited'}</td>
+                    <td>{cfg.aggressive.max_deauth_per_min or 'Unlimited'}</td>
                 </tr>
                 <tr>
                     <td style="color: var(--text-muted);">Evil Twin</td>
-                    <td>{'✅ Enabled' if cfg.aggressive.evil_twin.enabled else '❌ Disabled'}</td>
+                    <td>{'✅ Enabled' if getattr(cfg, 'eviltwin', None) else '❌ Disabled'}</td>
                 </tr>
                 <tr>
-                    <td style="color: var(--text-muted);">PMKID</td>
-                    <td>{'✅ Enabled' if cfg.aggressive.pmkid.enabled else '❌ Disabled'}</td>
+                    <td style="color: var(--text-muted);">Capture</td>
+                    <td>{'✅ Enabled' if getattr(cfg, 'capture', None) else '❌ Disabled'}</td>
                 </tr>
             </table>
         </div>

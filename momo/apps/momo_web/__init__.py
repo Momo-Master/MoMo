@@ -79,14 +79,16 @@ def create_app(cfg: MomoConfig) -> Flask:
         if session.get("authenticated"):
             return None
 
+        require = getattr(cfg.web, "require_token", True)
+        
+        # If token not required, allow all requests
+        if not require:
+            return None
+
         token_env = cfg.web.auth.token_env
         token_file = Path("/opt/momo/.momo_ui_token")
         expected = _read_token(token_env, token_file)
-        require = getattr(cfg.web, "require_token", True)
 
-        # /api/status requires auth unless require_token is False
-        if request.path == "/api/status" and not require:
-            return None
         if not expected:
             return Response('{"error":"unauthorized"}', status=401, mimetype="application/json")
 

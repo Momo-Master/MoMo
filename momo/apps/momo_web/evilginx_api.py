@@ -167,7 +167,7 @@ async def disable_phishlet(name: str):
 
 
 @evilginx_bp.route("/lures", methods=["GET"])
-async def list_lures():
+def list_lures():
     """
     List active lures.
     
@@ -179,7 +179,15 @@ async def list_lures():
         return jsonify({"error": "Evilginx plugin not loaded"}), 503
     
     if plugin._manager:
-        lures = await plugin._manager.get_lures()
+        # Use sync wrapper for async method
+        import asyncio
+        try:
+            loop = asyncio.new_event_loop()
+            lures = loop.run_until_complete(plugin._manager.get_lures())
+            loop.close()
+        except Exception:
+            lures = []
+        
         return jsonify({
             "lures": [
                 {
@@ -253,7 +261,7 @@ async def delete_lure(lure_id: str):
 
 
 @evilginx_bp.route("/sessions", methods=["GET"])
-async def list_sessions():
+def list_sessions():
     """
     List captured sessions.
     
@@ -269,10 +277,17 @@ async def list_sessions():
     
     valid_only = request.args.get("valid_only", "false").lower() == "true"
     
-    if valid_only:
-        sessions = await plugin.get_valid_sessions()
-    else:
-        sessions = await plugin.get_sessions()
+    # Use sync wrapper for async methods
+    import asyncio
+    try:
+        loop = asyncio.new_event_loop()
+        if valid_only:
+            sessions = loop.run_until_complete(plugin.get_valid_sessions())
+        else:
+            sessions = loop.run_until_complete(plugin.get_sessions())
+        loop.close()
+    except Exception:
+        sessions = []
     
     return jsonify({"sessions": sessions})
 
