@@ -5,9 +5,8 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 class TestJohnManager:
     """Test John Manager functionality."""
 

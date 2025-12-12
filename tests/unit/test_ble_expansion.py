@@ -2,9 +2,8 @@
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
 
-
+@pytest.mark.asyncio
 class TestGATTExplorer:
     """Test GATT Explorer functionality."""
 
@@ -117,6 +116,7 @@ class TestGATTCharacteristic:
         assert d["is_writable"] is True
 
 
+@pytest.mark.asyncio
 class TestBeaconSpoofer:
     """Test Beacon Spoofer functionality."""
 
@@ -160,6 +160,7 @@ class TestBeaconSpoofer:
         assert metrics["momo_beacon_active"] == 1
 
 
+@pytest.mark.asyncio
 class TestHIDInjector:
     """Test HID Injector functionality."""
 
@@ -209,6 +210,10 @@ class TestHIDInjector:
         metrics = injector.get_metrics()
         assert metrics["momo_hid_active"] == 1
         assert metrics["momo_hid_keystrokes"] == 4
+
+
+class TestHIDConfig:
+    """Test HID configuration."""
 
     def test_config_defaults(self):
         from momo.infrastructure.ble import HIDConfig, HIDType

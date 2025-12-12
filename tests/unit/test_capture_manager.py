@@ -15,9 +15,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
-
-
 class TestCaptureConfig:
     """Tests for CaptureConfig dataclass."""
 
@@ -48,6 +45,7 @@ class TestCaptureConfig:
         assert config.filter_bssid == "AA:BB:CC:DD:EE:FF"
 
 
+@pytest.mark.asyncio
 class TestCaptureManager:
     """Tests for CaptureManager class."""
 
