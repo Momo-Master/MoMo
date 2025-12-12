@@ -12,6 +12,7 @@ from .capture_api import capture_bp
 from .cracking_api import cracking_bp
 from .evilginx_api import evilginx_bp
 from .eviltwin_api import eviltwin_bp
+from .karma_api import karma_bp
 from .routes import ui_bp
 from .sse import sse_bp
 from .wardriver_api import wardriver_bp
@@ -115,6 +116,7 @@ def create_app(cfg: MomoConfig) -> Flask:
     app.register_blueprint(evilginx_bp)
     app.register_blueprint(eviltwin_bp)
     app.register_blueprint(ui_bp)
+    app.register_blueprint(karma_bp)
     app.register_blueprint(sse_bp)
     app.register_blueprint(wardriver_bp)
     app.register_blueprint(wpa3_bp)

@@ -210,6 +210,39 @@ cracking:
 # ==============================================================================
 # WPA3/SAE Attack Configuration
 # ==============================================================================
+# ==============================================================================
+# Karma/MANA Attack Configuration
+# ==============================================================================
+karma:
+  enabled: true               # Enable Karma/MANA attacks
+  mock: false                 # Use mock for testing
+  interface: wlan0            # Interface for attacks
+  channel: 6                  # Channel to operate on
+  
+  # Probe monitoring
+  probe_timeout: 60           # Probe capture duration (seconds)
+  
+  # Karma settings
+  enable_portal: true         # Enable captive portal
+  portal_template: generic    # Portal template
+  
+  # MANA settings
+  loud_enabled: true          # Broadcast SSIDs without probes
+  eap_enabled: true           # Capture EAP credentials
+  loud_ssids:                 # SSIDs to broadcast
+    - eduroam
+    - Corporate
+    - CORP-WiFi
+    - Starbucks
+    - attwifi
+    - xfinitywifi
+  
+  # Logging
+  log_dir: logs/karma
+
+# ==============================================================================
+# WPA3/SAE Attack Configuration
+# ==============================================================================
 wpa3:
   enabled: true               # Enable WPA3 detection and attacks
   mock: false                 # Use mock for testing (no real hardware)
