@@ -50,6 +50,7 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 | **Deauth Attacks** | Targeted client disconnection | ✅ |
 | **Evil Twin** | Rogue AP with captive portal (6 templates) | ✅ |
 | **Evilginx AiTM** | MFA bypass via session cookie capture | ✅ |
+| **WPA3 Attacks** | SAE detection, downgrade attacks, PMF handling | ✅ |
 | **Handshake Capture** | EAPOL 4-way handshake collection | ✅ |
 | **Auto Cracking** | hashcat integration with wordlist management | ✅ |
 | **BLE Scanner** | Bluetooth device & beacon detection | ✅ |
@@ -311,6 +312,7 @@ curl -H "Authorization: Bearer <token>" http://<ip>:8082/api/status
 | `/api/ble/*` | BLE scanner API |
 | `/api/eviltwin/*` | Evil Twin API |
 | `/api/evilginx/*` | Evilginx AiTM API |
+| `/api/wpa3/*` | WPA3/SAE Attack API |
 | `/api/cracking/*` | Cracking API |
 | `/sse/events` | Real-time event stream |
 | `/metrics` | Prometheus metrics |
@@ -430,6 +432,7 @@ pytest tests/ -v --cov=momo
 | Cracking Integration | v0.7.0 | ✅ Complete |
 | Plugin Architecture | v0.8.0 | ✅ Complete |
 | Evilginx AiTM | v0.9.0 | ✅ Complete |
+| WPA3/SAE Attacks | v0.10.0 | ✅ Complete |
 
 ---
 

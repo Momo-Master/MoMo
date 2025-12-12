@@ -93,30 +93,31 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 
 ---
 
-## 🚧 In Progress
-
-### Phase 0.10.0 - Real Hardware Testing
-- [ ] Raspberry Pi 5 deployment
-- [ ] Multi-adapter stress testing
-- [ ] GPS accuracy validation
-- [ ] Thermal management tuning
-- [ ] Battery/UPS integration
-- [ ] Field testing
+### Phase 0.10.0 - WPA3/SAE Attack Support ✅
+- [x] WPA3 detection (SAE, Transition Mode, OWE)
+- [x] PMF (Protected Management Frames) status detection
+- [x] Transition mode downgrade attack (WPA3 → WPA2)
+- [x] SAE flood attack (DoS)
+- [x] Attack recommendation engine
+- [x] WPA3 plugin and REST API
+- [x] Unit tests (18 tests)
+- [x] Documentation
 
 ---
 
 ## 📅 Planned Phases
 
-### Phase 1.0.0 - Production Release
+### Phase 1.0.0 - Real Hardware & Production
+- [ ] Raspberry Pi 5 deployment
+- [ ] Multi-adapter stress testing
+- [ ] GPS accuracy validation
+- [ ] Thermal management tuning
 - [ ] Stability testing (72h+ continuous)
 - [ ] Performance optimization
-- [ ] Memory leak fixes
-- [ ] Error recovery improvements
-- [ ] Installation script polish
 - [ ] Full documentation review
 
 ### Phase 1.1.0 - Advanced Attacks
-- [ ] WPA3 support (SAE)
+- [x] WPA3 support (SAE) ← Moved to 0.10.0
 - [ ] Enterprise attack (EAP)
 - [ ] Karma attack
 - [ ] MANA attack

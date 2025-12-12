@@ -207,6 +207,43 @@ cracking:
   handshakes_dir: logs/handshakes
   potfile: logs/hashcat.potfile
 
+# ==============================================================================
+# WPA3/SAE Attack Configuration
+# ==============================================================================
+wpa3:
+  enabled: true               # Enable WPA3 detection and attacks
+  mock: false                 # Use mock for testing (no real hardware)
+  interface: wlan0            # Interface for WPA3 operations
+  auto_scan: true             # Auto-scan for WPA3 networks
+  scan_interval: 60           # Seconds between scans
+  auto_attack: false          # Auto-attack downgradable networks
+  attack_duration: 60         # Default attack duration (seconds)
+  output_dir: captures/wpa3   # Capture output directory
+  
+  # Attack preferences
+  prefer_downgrade: true      # Prefer downgrade over DoS
+  deauth_interval: 5          # Seconds between deauth bursts
+  
+  # Logging
+  log_attacks: true           # Log all attack attempts
+  log_dir: logs/wpa3
+
+# ==============================================================================
+# Evilginx AiTM (Adversary-in-the-Middle)
+# ==============================================================================
+evilginx:
+  enabled: false              # Enable Evilginx integration
+  binary_path: /usr/local/bin/evilginx
+  external_ip: 0.0.0.0        # Public IP or interface IP
+  https_port: 443
+  dns_port: 53
+  phishlets_dir: /opt/momo/phishlets
+  data_dir: /opt/momo/evilginx_data
+  log_dir: logs/evilginx
+  autocert: true              # Use Let's Encrypt
+  api_enabled: true
+  api_port: 8443
+
 server:
   # Aggressive mode: No restrictions
   health:

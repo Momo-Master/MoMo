@@ -15,6 +15,7 @@ from .eviltwin_api import eviltwin_bp
 from .routes import ui_bp
 from .sse import sse_bp
 from .wardriver_api import wardriver_bp
+from .wpa3_api import wpa3_bp
 
 try:
     from ...apps.web import webui_bp  # minimal static web ui
@@ -116,6 +117,7 @@ def create_app(cfg: MomoConfig) -> Flask:
     app.register_blueprint(ui_bp)
     app.register_blueprint(sse_bp)
     app.register_blueprint(wardriver_bp)
+    app.register_blueprint(wpa3_bp)
     if webui_bp is not None:
         try:
             app.register_blueprint(webui_bp)
