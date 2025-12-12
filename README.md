@@ -436,8 +436,9 @@ pytest tests/ -v --cov=momo
 | Karma/MANA Attacks | v1.1.0 | ✅ Complete |
 | Bluetooth Expansion | v1.2.0 | ✅ Complete |
 | Advanced Cracking | v1.3.0 | ✅ Complete |
+| SDR Integration | v1.5.0 | ✅ Complete |
 
-**Total Tests: 277** ✅
+**Total Tests: 395** ✅
 
 ---
 

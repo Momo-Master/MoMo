@@ -149,7 +149,14 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [ ] Touch button support
 - [ ] e-Paper display option
 
-### Phase 1.5.0 - Mobile App
+### Phase 1.5.0 - SDR Integration ✅
+- [x] RTL-SDR and HackRF device management
+- [x] Spectrum analyzer (frequency scanning)
+- [x] Signal decoder (433/868 MHz IoT)
+- [x] REST API endpoints
+- [x] 22 unit tests
+
+### Phase 1.6.0 - Mobile App
 - [ ] React Native app
 - [ ] Real-time sync
 - [ ] Push notifications
