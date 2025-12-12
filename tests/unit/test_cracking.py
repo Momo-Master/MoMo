@@ -45,10 +45,15 @@ class TestHashcatManager:
 
         job = await manager.crack_file(hash_file=hash_file)
 
-        # Wait for completion
+        # Wait for completion (background task needs time)
         import asyncio
 
-        await asyncio.sleep(0.1)
+        # Yield to let the task start, then poll for completion
+        await asyncio.sleep(0)  # Yield to event loop
+        for _ in range(100):  # Max 1 second
+            if job.status in (CrackStatus.CRACKED, CrackStatus.EXHAUSTED, CrackStatus.ERROR):
+                break
+            await asyncio.sleep(0.01)
 
         assert job.status == CrackStatus.CRACKED
         assert len(job.results) == 1
@@ -98,11 +103,16 @@ class TestHashcatManager:
         manager.set_mock_result("pass123", duration=0.01)
         await manager.start()
 
-        await manager.crack_file(hash_file=hash_file)
+        job = await manager.crack_file(hash_file=hash_file)
 
         import asyncio
 
-        await asyncio.sleep(0.05)
+        # Yield to let the task start, then poll for completion
+        await asyncio.sleep(0)
+        for _ in range(100):
+            if job.status.value in ("cracked", "exhausted", "error"):
+                break
+            await asyncio.sleep(0.01)
 
         assert manager.stats["jobs_total"] == 1
         assert manager.stats["jobs_cracked"] == 1
