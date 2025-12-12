@@ -433,6 +433,11 @@ pytest tests/ -v --cov=momo
 | Plugin Architecture | v0.8.0 | ✅ Complete |
 | Evilginx AiTM | v0.9.0 | ✅ Complete |
 | WPA3/SAE Attacks | v0.10.0 | ✅ Complete |
+| Karma/MANA Attacks | v1.1.0 | ✅ Complete |
+| Bluetooth Expansion | v1.2.0 | ✅ Complete |
+| Advanced Cracking | v1.3.0 | ✅ Complete |
+
+**Total Tests: 277** ✅
 
 ---
 

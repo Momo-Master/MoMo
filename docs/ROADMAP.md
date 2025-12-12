@@ -1,6 +1,6 @@
 # MoMo Development Roadmap
 
-> **Version:** 0.9.0 | **Last Updated:** 2025-12-12
+> **Version:** 1.3.0 | **Last Updated:** 2025-12-12
 
 ## 🎯 Vision
 
@@ -116,26 +116,31 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [ ] Performance optimization
 - [ ] Full documentation review
 
-### Phase 1.1.0 - Advanced Attacks
+### Phase 1.1.0 - Advanced Attacks ✅
 - [x] WPA3 support (SAE) ← Moved to 0.10.0
-- [ ] Enterprise attack (EAP)
-- [ ] Karma attack
-- [ ] MANA attack
-- [ ] Client probing analysis
+- [x] Enterprise attack (EAP) - MANA PEAP/TTLS/TLS capture
+- [x] Karma attack - Auto respond to probe requests
+- [x] MANA attack - Enhanced with EAP support
+- [x] Client probing analysis - PNL extraction
+- [x] Certificate generation for EAP
+- [x] 24 unit tests
 
-### Phase 1.2.0 - Bluetooth Expansion
-- [ ] BLE GATT exploration
-- [ ] Bluetooth Classic scanning
-- [ ] HID injection
-- [ ] BLE replay attacks
-- [ ] Beacon spoofing
+### Phase 1.2.0 - Bluetooth Expansion ✅
+- [x] BLE GATT exploration - Service/Characteristic discovery
+- [x] GATT Read/Write support
+- [x] HID injection - Bluetooth keyboard emulation
+- [x] BLE replay attacks - Characteristic writing
+- [x] Beacon spoofing - iBeacon/Eddystone
+- [x] 26 unit tests
 
-### Phase 1.3.0 - Advanced Cracking
-- [ ] John the Ripper integration
-- [ ] Cloud cracking (AWS/GCP)
-- [ ] Distributed cracking
-- [ ] Custom rule generation
-- [ ] Password analysis
+### Phase 1.3.0 - Advanced Cracking ✅
+- [x] John the Ripper integration
+- [x] hccapx to John format converter
+- [x] Multiple attack modes (wordlist, incremental, mask, rules)
+- [x] Show cracked passwords from potfile
+- [x] 15 unit tests
+- [ ] Cloud cracking (AWS/GCP) - Future
+- [ ] Distributed cracking - Future
 
 ### Phase 1.4.0 - OLED & Display
 - [ ] SSD1306/SH1106 support

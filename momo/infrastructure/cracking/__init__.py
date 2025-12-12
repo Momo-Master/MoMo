@@ -14,12 +14,22 @@ from .hashcat_manager import (
     HashcatManager,
     MockHashcatManager,
 )
+from .john_manager import (
+    JohnJob,
+    JohnManager,
+    JohnMode,
+    JohnResult,
+    JohnStats,
+    JohnStatus,
+    MockJohnManager,
+)
 from .wordlist_manager import (
     Wordlist,
     WordlistManager,
 )
 
 __all__ = [
+    # Hashcat
     "AttackMode",
     "CrackJob",
     "CrackResult",
@@ -27,7 +37,15 @@ __all__ = [
     "HashcatConfig",
     "HashcatManager",
     "MockHashcatManager",
+    # John
+    "JohnJob",
+    "JohnManager",
+    "JohnMode",
+    "JohnResult",
+    "JohnStats",
+    "JohnStatus",
+    "MockJohnManager",
+    # Wordlist
     "Wordlist",
     "WordlistManager",
 ]
-

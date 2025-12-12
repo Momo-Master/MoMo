@@ -1,22 +1,44 @@
 """
 BLE (Bluetooth Low Energy) Infrastructure Module.
 
-Provides async BLE device scanning and beacon detection using bleak library.
+Provides:
+- Device scanning and beacon detection
+- GATT service/characteristic exploration
+- Beacon spoofing (iBeacon/Eddystone)
+- HID injection (keyboard/mouse emulation)
 """
 
-from .scanner import (
-    BeaconType,
-    BLEDevice,
-    BLEScanner,
-    MockBLEScanner,
-    ScanConfig,
+from .beacon_spoofer import BeaconConfig, BeaconSpoofer, BeaconType, MockBeaconSpoofer
+from .gatt_explorer import (
+    DeviceProfile,
+    GATTCharacteristic,
+    GATTExplorer,
+    GATTService,
+    MockGATTExplorer,
 )
+from .hid_injector import HIDConfig, HIDInjector, HIDType, MockHIDInjector
+from .scanner import BLEDevice, BLEScanner, MockBLEScanner, ScanConfig
 
 __all__ = [
+    # Scanner
     "BLEDevice",
     "BLEScanner",
-    "BeaconType",
     "MockBLEScanner",
     "ScanConfig",
+    # GATT
+    "DeviceProfile",
+    "GATTCharacteristic",
+    "GATTExplorer",
+    "GATTService",
+    "MockGATTExplorer",
+    # Beacon
+    "BeaconConfig",
+    "BeaconSpoofer",
+    "BeaconType",
+    "MockBeaconSpoofer",
+    # HID
+    "HIDConfig",
+    "HIDInjector",
+    "HIDType",
+    "MockHIDInjector",
 ]
-
