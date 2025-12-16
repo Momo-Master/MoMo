@@ -12,6 +12,7 @@ from .capture_api import capture_bp
 from .cracking_api import cracking_bp
 from .evilginx_api import evilginx_bp
 from .eviltwin_api import eviltwin_bp
+from .hardware_api import hardware_bp
 from .karma_api import karma_bp
 from .routes import ui_bp
 from .sdr_api import sdr_bp
@@ -124,6 +125,7 @@ def create_app(cfg: MomoConfig) -> Flask:
     app.register_blueprint(wardriver_bp)
     app.register_blueprint(wpa3_bp)
     app.register_blueprint(sdr_bp)
+    app.register_blueprint(hardware_bp)
     if webui_bp is not None:
         try:
             app.register_blueprint(webui_bp)

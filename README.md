@@ -437,8 +437,9 @@ pytest tests/ -v --cov=momo
 | Bluetooth Expansion | v1.2.0 | ✅ Complete |
 | Advanced Cracking | v1.3.0 | ✅ Complete |
 | SDR Integration | v1.5.0 | ✅ Complete |
+| Hardware Auto-Detection | v1.5.1 | ✅ Complete |
 
-**Total Tests: 398** ✅
+**Total Tests: 419** ✅
 
 ---
 
