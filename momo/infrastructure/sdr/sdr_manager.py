@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 class SDRType(str, Enum):
     """Supported SDR device types."""
     RTL_SDR = "rtl_sdr"      # RTL2832U - receive only, 24-1766 MHz
+    RTL_SDR_V4 = "rtl_sdr_v4" # RTL-SDR V4 (R828D) - RX, 500 kHz-1766 MHz, HF direct sampling
     HACKRF = "hackrf"        # HackRF One - TX/RX, 1-6000 MHz
     YARD_STICK = "yardstick" # YARD Stick One - sub-GHz, 300-928 MHz
     LIMESDR = "limesdr"      # LimeSDR - TX/RX, 100 kHz-3.8 GHz
@@ -35,16 +36,19 @@ class SDRDevice:
     name: str = ""
     
     # Capabilities
-    min_freq_hz: int = 24_000_000      # 24 MHz
+    min_freq_hz: int = 24_000_000      # 24 MHz (V4: 500 kHz with direct sampling)
     max_freq_hz: int = 1_766_000_000   # 1766 MHz
     can_transmit: bool = False
     max_sample_rate: int = 3_200_000   # 3.2 MSPS
+    has_hf_mode: bool = False          # RTL-SDR V4 direct sampling for HF
+    has_bias_tee: bool = False         # V4 has built-in bias tee
     
     # Status
     is_open: bool = False
     current_freq_hz: int = 0
     current_sample_rate: int = 0
     current_gain: float = 0.0
+    direct_sampling: int = 0           # 0=off, 1=I-ADC, 2=Q-ADC
     
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -55,7 +59,10 @@ class SDRDevice:
             "min_freq_mhz": self.min_freq_hz / 1_000_000,
             "max_freq_mhz": self.max_freq_hz / 1_000_000,
             "can_transmit": self.can_transmit,
+            "has_hf_mode": self.has_hf_mode,
+            "has_bias_tee": self.has_bias_tee,
             "is_open": self.is_open,
+            "direct_sampling": self.direct_sampling,
         }
 
 
@@ -159,15 +166,20 @@ class SDRManager:
                 serial = RtlSdr.get_device_serial(i)
                 name = RtlSdr.get_device_name(i)
                 
+                # Detect RTL-SDR V4 (R828D tuner)
+                is_v4 = "R828D" in name or "V4" in name or "Blog V4" in name
+                
                 device = SDRDevice(
-                    device_type=SDRType.RTL_SDR,
+                    device_type=SDRType.RTL_SDR_V4 if is_v4 else SDRType.RTL_SDR,
                     device_index=i,
                     serial=serial,
                     name=name,
-                    min_freq_hz=24_000_000,
+                    min_freq_hz=500_000 if is_v4 else 24_000_000,  # V4: 500 kHz with direct sampling
                     max_freq_hz=1_766_000_000,
                     can_transmit=False,
                     max_sample_rate=3_200_000,
+                    has_hf_mode=is_v4,      # V4 supports HF via direct sampling
+                    has_bias_tee=is_v4,     # V4 has built-in bias tee
                 )
                 self._devices.append(device)
                 
@@ -272,6 +284,52 @@ class SDRManager:
         except Exception:
             return False
     
+    async def set_direct_sampling(self, mode: int) -> bool:
+        """
+        Set direct sampling mode (RTL-SDR V4 HF support).
+        
+        Args:
+            mode: 0=off, 1=I-ADC input, 2=Q-ADC input
+            
+        For RTL-SDR V4: Use mode=2 for HF reception (500 kHz - 28 MHz)
+        """
+        if not self._sdr or not self._active_device:
+            return False
+        
+        if not self._active_device.has_hf_mode and mode > 0:
+            logger.warning("Device does not support direct sampling (HF mode)")
+            return False
+        
+        try:
+            self._sdr.set_direct_sampling(mode)
+            self._active_device.direct_sampling = mode
+            logger.info("Direct sampling mode set to %d", mode)
+            return True
+        except Exception as e:
+            logger.error("Failed to set direct sampling: %s", e)
+            return False
+    
+    async def set_bias_tee(self, enabled: bool) -> bool:
+        """
+        Enable/disable bias tee (RTL-SDR V4).
+        
+        Provides 4.5V DC on antenna input for powered antennas/LNAs.
+        """
+        if not self._sdr or not self._active_device:
+            return False
+        
+        if not self._active_device.has_bias_tee:
+            logger.warning("Device does not have bias tee")
+            return False
+        
+        try:
+            self._sdr.set_bias_tee(enabled)
+            logger.info("Bias tee %s", "enabled" if enabled else "disabled")
+            return True
+        except Exception as e:
+            logger.error("Failed to set bias tee: %s", e)
+            return False
+    
     async def capture_samples(self, num_samples: int = 262144) -> list[complex]:
         """Capture IQ samples."""
         if not self._sdr:
@@ -310,12 +368,22 @@ class MockSDRManager(SDRManager):
                 device_type=SDRType.RTL_SDR,
                 device_index=0,
                 serial="00000001",
-                name="Generic RTL2832U",
+                name="Generic RTL2832U (R820T2)",
+                is_open=False,
+            ),
+            SDRDevice(
+                device_type=SDRType.RTL_SDR_V4,
+                device_index=1,
+                serial="00000002",
+                name="RTL-SDR Blog V4 (R828D)",
+                min_freq_hz=500_000,  # 500 kHz with direct sampling
+                has_hf_mode=True,
+                has_bias_tee=True,
                 is_open=False,
             ),
             SDRDevice(
                 device_type=SDRType.HACKRF,
-                device_index=1,
+                device_index=2,
                 serial="hackrf_mock",
                 name="HackRF One (Mock)",
                 can_transmit=True,
@@ -323,7 +391,7 @@ class MockSDRManager(SDRManager):
                 is_open=False,
             ),
         ]
-        self.stats.devices_found = 2
+        self.stats.devices_found = 3
         return True
     
     async def discover_devices(self) -> list[SDRDevice]:
@@ -344,6 +412,17 @@ class MockSDRManager(SDRManager):
     async def set_frequency(self, freq_hz: int) -> bool:
         if self._active_device:
             self._active_device.current_freq_hz = freq_hz
+            return True
+        return False
+    
+    async def set_direct_sampling(self, mode: int) -> bool:
+        if self._active_device and self._active_device.has_hf_mode:
+            self._active_device.direct_sampling = mode
+            return True
+        return False
+    
+    async def set_bias_tee(self, enabled: bool) -> bool:
+        if self._active_device and self._active_device.has_bias_tee:
             return True
         return False
     

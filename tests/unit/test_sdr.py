@@ -15,7 +15,7 @@ class TestSDRManager:
         
         assert success is True
         assert manager._running is True
-        assert len(manager._devices) == 2
+        assert len(manager._devices) == 3  # RTL-SDR, RTL-SDR V4, HackRF
 
     async def test_mock_discover_devices(self):
         from momo.infrastructure.sdr import MockSDRManager, SDRType
@@ -25,10 +25,12 @@ class TestSDRManager:
         
         devices = await manager.discover_devices()
         
-        assert len(devices) == 2
+        assert len(devices) == 3
         assert devices[0].device_type == SDRType.RTL_SDR
-        assert devices[1].device_type == SDRType.HACKRF
-        assert devices[1].can_transmit is True
+        assert devices[1].device_type == SDRType.RTL_SDR_V4
+        assert devices[1].has_hf_mode is True
+        assert devices[2].device_type == SDRType.HACKRF
+        assert devices[2].can_transmit is True
 
     async def test_mock_open_device(self):
         from momo.infrastructure.sdr import MockSDRManager
@@ -85,7 +87,51 @@ class TestSDRManager:
         metrics = manager.get_metrics()
         
         assert "momo_sdr_devices" in metrics
-        assert metrics["momo_sdr_devices"] == 2
+        assert metrics["momo_sdr_devices"] == 3
+
+    async def test_rtl_sdr_v4_direct_sampling(self):
+        """Test RTL-SDR V4 HF mode via direct sampling."""
+        from momo.infrastructure.sdr import MockSDRManager
+        
+        manager = MockSDRManager()
+        await manager.start()
+        
+        # Open V4 device (index 1)
+        await manager.open_device(1)
+        
+        # Enable direct sampling for HF
+        success = await manager.set_direct_sampling(2)  # Q-ADC for HF
+        
+        assert success is True
+        assert manager._active_device.direct_sampling == 2
+
+    async def test_rtl_sdr_v4_bias_tee(self):
+        """Test RTL-SDR V4 bias tee support."""
+        from momo.infrastructure.sdr import MockSDRManager
+        
+        manager = MockSDRManager()
+        await manager.start()
+        
+        # Open V4 device (index 1)
+        await manager.open_device(1)
+        
+        # Enable bias tee
+        success = await manager.set_bias_tee(True)
+        
+        assert success is True
+
+    async def test_rtl_sdr_v4_hf_frequency_range(self):
+        """Test RTL-SDR V4 can tune to HF frequencies."""
+        from momo.infrastructure.sdr import MockSDRManager
+        
+        manager = MockSDRManager()
+        await manager.start()
+        
+        # V4 device should support 500 kHz minimum
+        v4_device = manager._devices[1]
+        
+        assert v4_device.min_freq_hz == 500_000  # 500 kHz
+        assert v4_device.has_hf_mode is True
 
 
 class TestSDRDevice:
