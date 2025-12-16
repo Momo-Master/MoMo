@@ -1,6 +1,6 @@
 # MoMo Development Roadmap
 
-> **Version:** 1.3.0 | **Last Updated:** 2025-12-12
+> **Version:** 1.5.1 | **Last Updated:** 2025-12-16
 
 ## 🎯 Vision
 
@@ -91,8 +91,6 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] Evilginx API & Web integration
 - [x] 22 unit tests
 
----
-
 ### Phase 0.10.0 - WPA3/SAE Attack Support ✅
 - [x] WPA3 detection (SAE, Transition Mode, OWE)
 - [x] PMF (Protected Management Frames) status detection
@@ -102,6 +100,51 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] WPA3 plugin and REST API
 - [x] Unit tests (18 tests)
 - [x] Documentation
+
+### Phase 1.1.0 - Advanced Attacks (Karma/MANA) ✅
+- [x] ProbeMonitor - Client probe request capture
+- [x] PNL (Preferred Network List) extraction
+- [x] KarmaAttack - Auto respond to probe requests
+- [x] MANAAttack - Enhanced with EAP support
+- [x] EAP credential capture (PEAP, TTLS, TLS)
+- [x] Certificate generation for EAP
+- [x] Client behavior profiling
+- [x] REST API endpoints
+- [x] 24 unit tests
+
+### Phase 1.2.0 - Bluetooth Expansion ✅
+- [x] BLE GATT Explorer - Service/Characteristic discovery
+- [x] GATT Read/Write support
+- [x] Beacon Spoofing - iBeacon/Eddystone frame injection
+- [x] HID Injection - Bluetooth keyboard emulation
+- [x] Keystroke injection attacks
+- [x] Device profiling & vulnerability assessment
+- [x] REST API endpoints
+- [x] 26 unit tests
+
+### Phase 1.3.0 - Advanced Cracking ✅
+- [x] John the Ripper integration
+- [x] hccapx to John format converter
+- [x] Multiple attack modes (wordlist, incremental, mask, rules)
+- [x] Show cracked passwords from potfile
+- [x] REST API endpoints
+- [x] 15 unit tests
+
+### Phase 1.5.0 - SDR Integration ✅
+- [x] SDRManager - RTL-SDR and HackRF device management
+- [x] RTL-SDR V4 support (HF direct sampling, bias tee)
+- [x] Spectrum analyzer (frequency scanning, peak detection)
+- [x] Signal decoder (433/868 MHz IoT)
+- [x] REST API endpoints
+- [x] 25 unit tests
+
+### Phase 1.5.1 - Hardware Auto-Detection ✅
+- [x] DeviceRegistry - 30+ known USB devices
+- [x] HardwareDetector - USB scanning (lsusb, /sys/bus/usb)
+- [x] Auto-configuration for WiFi, SDR, Bluetooth, GPS
+- [x] Hotplug event system
+- [x] REST API endpoints
+- [x] 21 unit tests
 
 ---
 
@@ -116,54 +159,12 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [ ] Performance optimization
 - [ ] Full documentation review
 
-### Phase 1.1.0 - Advanced Attacks ✅
-- [x] WPA3 support (SAE) ← Moved to 0.10.0
-- [x] Enterprise attack (EAP) - MANA PEAP/TTLS/TLS capture
-- [x] Karma attack - Auto respond to probe requests
-- [x] MANA attack - Enhanced with EAP support
-- [x] Client probing analysis - PNL extraction
-- [x] Certificate generation for EAP
-- [x] 24 unit tests
-
-### Phase 1.2.0 - Bluetooth Expansion ✅
-- [x] BLE GATT exploration - Service/Characteristic discovery
-- [x] GATT Read/Write support
-- [x] HID injection - Bluetooth keyboard emulation
-- [x] BLE replay attacks - Characteristic writing
-- [x] Beacon spoofing - iBeacon/Eddystone
-- [x] 26 unit tests
-
-### Phase 1.3.0 - Advanced Cracking ✅
-- [x] John the Ripper integration
-- [x] hccapx to John format converter
-- [x] Multiple attack modes (wordlist, incremental, mask, rules)
-- [x] Show cracked passwords from potfile
-- [x] 15 unit tests
-- [ ] Cloud cracking (AWS/GCP) - Future
-- [ ] Distributed cracking - Future
-
 ### Phase 1.4.0 - OLED & Display
-- [ ] SSD1306/SH1106 support
+- [ ] SSD1306/SH1106 OLED support
 - [ ] Custom faces/animations
 - [ ] Status display modes
 - [ ] Touch button support
 - [ ] e-Paper display option
-
-### Phase 1.5.0 - SDR Integration ✅
-- [x] RTL-SDR and HackRF device management
-- [x] RTL-SDR V4 support (HF, direct sampling, bias tee)
-- [x] Spectrum analyzer (frequency scanning)
-- [x] Signal decoder (433/868 MHz IoT)
-- [x] REST API endpoints
-- [x] 25 unit tests
-
-### Phase 1.5.1 - Hardware Auto-Detection ✅
-- [x] USB device scanning (lsusb, /sys/bus/usb)
-- [x] Device registry (30+ known devices)
-- [x] Auto-configuration for WiFi, SDR, BT, GPS
-- [x] Hotplug event system
-- [x] REST API endpoints
-- [x] 21 unit tests
 
 ### Phase 1.6.0 - Mobile App
 - [ ] React Native app
@@ -185,7 +186,6 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 
 ### Hardware Support
 - [ ] ESP32 co-processor
-- [ ] SDR integration (HackRF)
 - [ ] LoRa communication
 - [ ] Cellular modem (4G/5G)
 - [ ] Custom PCB design
@@ -206,7 +206,7 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 
 ### Security Research
 - [ ] 802.11ax (WiFi 6) attacks
-- [ ] WPA3 research
+- [ ] WiFi 6E support
 - [ ] IoT protocol analysis
 - [ ] Zigbee/Z-Wave scanning
 - [ ] RFID/NFC support
@@ -214,6 +214,14 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 ---
 
 ## 📊 Metrics & Goals
+
+### Test Coverage
+| Component | Current | Target |
+|-----------|---------|--------|
+| Unit tests | 419 | 500+ |
+| Integration | 20+ | 50+ |
+| E2E tests | 5+ | 20+ |
+| Coverage | ~70% | 85%+ |
 
 ### Performance Targets
 | Metric | Current | Target |
@@ -223,14 +231,6 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 | CPU idle | ~5% | <3% |
 | Scan interval | 5s | 2s |
 | Handshake capture | 90% | 99% |
-
-### Test Coverage
-| Component | Current | Target |
-|-----------|---------|--------|
-| Unit tests | 65+ | 100+ |
-| Integration | 10+ | 30+ |
-| E2E tests | 0 | 10+ |
-| Coverage | ~60% | 80%+ |
 
 ---
 
@@ -253,7 +253,14 @@ Priority areas:
 
 | Version | Date | Highlights |
 |---------|------|------------|
-| 0.8.0 | 2025-12-12 | Plugin architecture, docs update |
+| 1.5.1 | 2025-12-16 | Hardware auto-detection, device registry |
+| 1.5.0 | 2025-12-15 | SDR integration (RTL-SDR, HackRF) |
+| 1.3.0 | 2025-12-14 | John the Ripper integration |
+| 1.2.0 | 2025-12-14 | BLE expansion (GATT, HID, Beacon) |
+| 1.1.0 | 2025-12-13 | Karma/MANA attacks |
+| 0.10.0 | 2025-12-12 | WPA3/SAE attack support |
+| 0.9.0 | 2025-12-12 | Evilginx AiTM integration |
+| 0.8.0 | 2025-12-12 | Plugin architecture |
 | 0.7.0 | 2025-12-12 | Hashcat cracking integration |
 | 0.6.0 | 2025-12-12 | Evil Twin with captive portal |
 | 0.5.0 | 2025-12-12 | BLE scanner with beacon detection |

@@ -5,78 +5,231 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.3.0] - 2025-12-11 (Multi-Radio) ✅
+## [1.5.1] - 2025-12-16 (Hardware Auto-Detection) ✅
 
 ### Added
-- **RadioManager** - Multi-interface WiFi management with task-based allocation
-- **InterfacePool** - Integrated into RadioManager with acquire/release pattern
-- **5GHz/DFS channel support** - Full 5GHz band (5170-5825 MHz) with DFS detection
-- **Adapter capability detection** via `iw phy info` parsing
-- **Task types** - SCAN, CAPTURE, DEAUTH, MONITOR, INJECT
-- **Auto mode switching** - Automatic managed ↔ monitor based on task type
-- **DFS channel helpers** - `is_dfs_channel()`, `get_non_dfs_5ghz_channels()`
-- **Best channel selection** - `get_best_channel()` with DFS avoidance
-- **MockRadioManager** - Full mock implementation for testing
-- **26 new unit tests** for RadioManager
+- **DeviceRegistry** - 30+ known USB device database
+- **HardwareDetector** - USB scanning via lsusb and /sys/bus/usb
+- **Auto-configuration** for WiFi, SDR, Bluetooth, GPS devices
+- **Hotplug event system** for device add/remove notifications
+- **REST API** - 8 endpoints for hardware management
+- **21 unit tests** for hardware detection
 
-### Fixed
-- **WiFiScanner channel hopping bug** - Now uses single `iw scan` call
-- **Freq parsing for Debian 12** - Handles float frequencies (`2447.0` → `2447`)
-- **Device busy handling** - Graceful retry on scan conflicts
-
-### Tested
-- **E2E Wardriving** - 31 APs scanned and saved to SQLite on Debian VM
-- **TP-Link Archer T2U Plus** - RTL8821AU driver working with 2.4GHz + 5GHz
-- **VirtualBox USB passthrough** - Verified working
+### Supported Devices
+- **WiFi**: Alfa AWUS036ACH/ACM/ACS/AXML, TP-Link, Panda
+- **SDR**: RTL-SDR V3/V4, HackRF One, YARD Stick One
+- **Bluetooth**: Sena UD100, ASUS USB-BT500, Plugable
+- **GPS**: u-blox NEO-6M/M8N/M9N, GlobalSat BU-353S4
 
 ---
 
-## [Unreleased] - v0.4.0 (Handshake Capture)
+## [1.5.0] - 2025-12-15 (SDR Integration) ✅
 
-### Planned
-- Automatic EAPOL/PMKID capture
-- hcxdumptool integration
-- Deauth attack module (optional)
-- RTL-SDR spectrum analysis
-- Automatic interface hot-plug detection
-- Priority-based task queuing
-- Radio plugin for full orchestration
+### Added
+- **SDRManager** - RTL-SDR and HackRF device management
+- **RTL-SDR V4 support** - HF direct sampling, bias tee
+- **SpectrumAnalyzer** - Frequency scanning, peak detection
+- **SignalDecoder** - 433/868 MHz IoT signal capture
+- **REST API** - SDR control and spectrum endpoints
+- **25 unit tests** for SDR functionality
+
+### Features
+- RTL-SDR V3/V4 and HackRF One support
+- Direct sampling mode for HF reception (V4)
+- Bias tee control for active antennas
+- Frequency sweep and peak detection
+- OOK/FSK signal decoding
+
+---
+
+## [1.3.0] - 2025-12-14 (Advanced Cracking) ✅
+
+### Added
+- **JohnManager** - John the Ripper integration
+- **Format converter** - hccapx to John format
+- **Attack modes** - Wordlist, incremental, mask, rules
+- **Potfile management** - Cracked password retrieval
+- **REST API** - John the Ripper endpoints
+- **15 unit tests** for John manager
+
+---
+
+## [1.2.0] - 2025-12-14 (Bluetooth Expansion) ✅
+
+### Added
+- **GATTExplorer** - BLE service/characteristic discovery
+- **GATT read/write** - Characteristic value manipulation
+- **BeaconSpoofer** - iBeacon and Eddystone frame injection
+- **HIDInjector** - Bluetooth keyboard emulation
+- **Keystroke injection** - Automated typing attacks
+- **DeviceProfiler** - Vulnerability assessment
+- **REST API** - GATT, beacon, HID endpoints
+- **26 unit tests** for BLE expansion
+
+---
+
+## [1.1.0] - 2025-12-13 (Karma/MANA Attacks) ✅
+
+### Added
+- **ProbeMonitor** - Client probe request capture
+- **PNL extraction** - Preferred Network List analysis
+- **KarmaAttack** - Auto respond to probe requests
+- **MANAAttack** - Enhanced with EAP credential capture
+- **EAP capture** - PEAP, TTLS, TLS credential harvesting
+- **Certificate generation** - Self-signed certs for EAP
+- **ClientProfiler** - Device behavior analysis
+- **REST API** - Karma/MANA endpoints
+- **24 unit tests** for Karma/MANA
+
+---
+
+## [0.10.0] - 2025-12-12 (WPA3/SAE Attack Support) ✅
+
+### Added
+- **WPA3Detector** - SAE, Transition Mode, OWE detection
+- **PMF detection** - Protected Management Frames status
+- **DowngradeAttack** - WPA3 → WPA2 forced downgrade
+- **SAEFloodAttack** - DoS via commit frame flooding
+- **Attack Recommender** - Optimal attack suggestion
+- **REST API** - WPA3 attack endpoints
+- **18 unit tests** for WPA3 attacks
+- **docs/WPA3.md** - Full documentation
+
+---
+
+## [0.9.0] - 2025-12-12 (Evilginx AiTM) ✅
+
+### Added
+- **EvilginxManager** - Binary wrapper for evilginx3
+- **PhishletManager** - 5 built-in (M365, Google, Okta, LinkedIn, GitHub)
+- **SessionManager** - Cookie capture and multi-format export
+- **Lure generation** - Phishing URL creation with tracking
+- **Export formats** - JSON, curl, Netscape, raw cookies
+- **MockEvilginxManager** - Testing without binary
+- **REST API** - Evilginx control endpoints
+- **22 unit tests** for Evilginx
+- **docs/EVILGINX.md** - Full documentation
+
+---
+
+## [0.8.0] - 2025-12-12 (Plugin Architecture) ✅
+
+### Added
+- **BasePlugin** - Abstract plugin base class
+- **PluginMetadata** - Version, author, dependencies
+- **PluginManager** - Singleton plugin orchestrator
+- **Lifecycle hooks** - on_load, on_start, on_tick, on_stop
+- **Event-driven** - Inter-plugin communication
+- **Example plugins** - wifi_scanner, ble_scanner
+- **docs/PLUGINS.md** - Plugin development guide
+
+---
+
+## [0.7.0] - 2025-12-12 (Cracking Integration) ✅
+
+### Added
+- **HashcatManager** - GPU-accelerated cracking
+- **WordlistManager** - Auto-discovery wordlists
+- **Dictionary attack** - Mode 0 with wordlists
+- **Brute-force attack** - Mode 3 with masks
+- **Progress monitoring** - Real-time status
+- **Potfile management** - Cracked password storage
+- **REST API** - Cracking control endpoints
+- **docs/CRACKING.md** - Full documentation
+
+---
+
+## [0.6.0] - 2025-12-12 (Evil Twin) ✅
+
+### Added
+- **APManager** - Rogue AP with hostapd
+- **dnsmasq** - DHCP/DNS configuration
+- **Captive portal** - aiohttp-based portal
+- **6 templates** - generic, hotel, corporate, facebook, google, router
+- **Credential harvesting** - POST capture
+- **iptables redirect** - Traffic interception
+- **REST API** - Evil Twin control endpoints
+
+---
+
+## [0.5.0] - 2025-12-12 (Bluetooth Scanner) ✅
+
+### Added
+- **BLEScanner** - Async scanner with bleak
+- **iBeacon detection** - UUID, major, minor parsing
+- **Eddystone support** - UID, URL, TLM frames
+- **Distance estimation** - RSSI-based calculation
+- **GPS tagging** - Location correlation
+- **REST API** - BLE scanner endpoints
+- **Web UI** - Bluetooth device page
+
+---
+
+## [0.4.0] - 2025-12-11 (Handshake Capture) ✅
+
+### Added
+- **CaptureManager** - hcxdumptool wrapper
+- **PMKID capture** - Clientless WPA2 attack
+- **EAPOL capture** - 4-way handshake
+- **hcxpcapngtool** - .22000 format conversion
+- **CaptureRepository** - SQLite storage
+- **REST API** - Capture control endpoints
+
+---
+
+## [0.3.0] - 2025-12-11 (Multi-Radio) ✅
+
+### Added
+- **RadioManager** - Multi-interface WiFi management
+- **InterfacePool** - Task-based acquire/release
+- **5GHz/DFS support** - Full 5GHz band (5170-5825 MHz)
+- **Capability detection** - via `iw phy info`
+- **Task types** - SCAN, CAPTURE, DEAUTH, MONITOR, INJECT
+- **Auto mode switching** - managed ↔ monitor
+- **DFS helpers** - `is_dfs_channel()`, `get_non_dfs_5ghz_channels()`
+- **Best channel selection** - DFS avoidance algorithm
+- **MockRadioManager** - Full mock for testing
+- **26 unit tests** for RadioManager
+
+### Fixed
+- **WiFiScanner channel hopping** - Now single `iw scan` call
+- **Freq parsing** - Handles float frequencies (Debian 12)
+- **Device busy handling** - Graceful retry on conflicts
+
+### Tested
+- **E2E Wardriving** - 31 APs on Debian VM
+- **TP-Link Archer T2U Plus** - RTL8821AU working
+- **VirtualBox USB passthrough** - Verified
 
 ---
 
 ## [0.2.0] - 2025-12-11 (Wardriving & GPS) ✅
 
 ### Added
-- GPS daemon integration (`infrastructure/gps/gpsd_client.py`)
-- Async GPS position streaming with auto-reconnect
-- SQLite wardriving database (`infrastructure/database/`)
-- Domain models with Pydantic validation (`domain/models.py`)
-- Event Bus pub/sub system (`core/events.py`)
-- Async WiFi scanner (`infrastructure/wifi/scanner.py`)
-- Wardriver plugin with GPS correlation
-- Wigle.net CSV export
-- GPX track export
-- Mock GPS/WiFi clients for testing
-- **AsyncWardrivingRepository** using `aiosqlite` (non-blocking I/O)
-- **SSE real-time endpoint** (`/sse/events`)
-- **Web UI map view** with Leaflet.js (`/map`)
-- **GeoJSON API** (`/api/wardriver/aps.geojson`, `/api/wardriver/track.geojson`)
-- **DistanceTracker** for GPS distance calculation
-- Comprehensive async unit tests (86 tests passing)
+- **AsyncGPSClient** - gpsd integration with auto-reconnect
+- **AsyncWardrivingRepository** - aiosqlite non-blocking DB
+- **Domain models** - Pydantic validation
+- **Event Bus** - Pub/Sub system
+- **WiFiScanner** - Async scanning
+- **Wardriver plugin** - GPS correlation
+- **Wigle.net export** - CSV format
+- **GPX export** - Track format
+- **SSE endpoint** - `/sse/events` real-time
+- **Web UI map** - Leaflet.js `/map`
+- **GeoJSON API** - AP and track endpoints
+- **DistanceTracker** - Haversine calculation
+- **86 async unit tests**
 
 ### Changed
-- Repository pattern → async-first with `aiosqlite`
-- `datetime.utcnow()` → `datetime.now(UTC)` (Python 3.12+ compat)
-- Updated `pyproject.toml` with `aiosqlite`, `pytest-asyncio`
-- Fixture decorator: `@pytest.fixture` → `@pytest_asyncio.fixture`
+- Repository pattern → async-first (aiosqlite)
+- `datetime.utcnow()` → `datetime.now(UTC)` (Python 3.12+)
 
-### Fixed
-- Deprecation warnings for datetime in async repository
+---
 
-## [0.1.0] - 2025-09-07
+## [0.1.0] - 2025-09-07 (Initial Release)
 
 ### Added
-- Initial scaffold with CLI, config schema, core loop, utils
+- Initial scaffold with CLI, config schema, core loop
 - Plugin system with priority-based loading
 - Pydantic configuration validation
 - Flask Web API with token auth and rate limiting
@@ -88,7 +241,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installers, systemd units, docs, CI, tests
 
 ### Security
-- Passive mode by default
-- Aggressive features require explicit acknowledgment
+- Passive mode by default (changed to aggressive in later versions)
 - Token-based Web UI authentication
 - Rate limiting on all endpoints
