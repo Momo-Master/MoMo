@@ -262,6 +262,36 @@ wpa3:
   log_dir: logs/wpa3
 
 # ==============================================================================
+# Management Network - Headless Operation
+# ==============================================================================
+management:
+  enabled: true                 # Enable management network
+  interface: wlan0              # Pi5 internal WiFi (reserved for management)
+  mode: ap                      # "ap" = create hotspot, "client" = connect to network
+  
+  # AP Mode settings (when Pi creates hotspot)
+  ap_ssid: MoMo-Management      # Management network SSID
+  ap_password: MoMoAdmin2024!   # Change this! (min 8 chars)
+  ap_channel: 6                 # WiFi channel
+  ap_hidden: false              # Hide SSID broadcast
+  ap_max_clients: 5             # Max connected devices
+  
+  # Client Mode settings (when Pi connects to existing network)
+  client_ssid: ""               # Network to connect to
+  client_password: ""           # Network password
+  client_priority_list: []      # Fallback networks
+  
+  # Security
+  auto_whitelist: true          # Auto-protect management network from attacks
+  bind_web_to_management: true  # Bind web UI to management interface only
+  
+  # DHCP for AP mode
+  dhcp_start: 192.168.4.2       # DHCP range start
+  dhcp_end: 192.168.4.20        # DHCP range end
+  dhcp_gateway: 192.168.4.1     # Gateway (Pi's IP)
+  dhcp_netmask: 255.255.255.0   # Subnet mask
+
+# ==============================================================================
 # Evilginx AiTM (Adversary-in-the-Middle)
 # ==============================================================================
 evilginx:

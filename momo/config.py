@@ -184,6 +184,71 @@ class CrackingConfig(BaseModel):
     potfile: str = Field("logs/hashcat.potfile")
 
 
+class ManagementNetworkMode(str, Enum):
+    """Management network mode."""
+    AP = "ap"           # Create access point (Pi acts as AP)
+    CLIENT = "client"   # Connect to existing network
+
+
+class ManagementNetworkConfig(BaseModel):
+    """
+    Management Network Configuration.
+    
+    Allows Pi5 internal WiFi (wlan0) to be used ONLY for management,
+    while external USB adapters (wlan1+) are used for attacks.
+    
+    The management network is automatically whitelisted to prevent
+    self-attack.
+    """
+    enabled: bool = Field(True)
+    interface: str = Field("wlan0")  # Pi5 internal WiFi
+    mode: ManagementNetworkMode = Field(ManagementNetworkMode.AP)
+    
+    # AP Mode settings (when Pi creates hotspot)
+    ap_ssid: str = Field("MoMo-Management")
+    ap_password: str = Field("MoMoAdmin2024!")  # Should be changed!
+    ap_channel: int = Field(6, ge=1, le=14)
+    ap_hidden: bool = Field(False)  # Hide SSID broadcast
+    ap_max_clients: int = Field(5, ge=1, le=10)
+    
+    # Client Mode settings (when Pi connects to existing network)
+    client_ssid: str = Field("")
+    client_password: str = Field("")
+    client_priority_list: list[str] = Field(default_factory=list)  # Fallback SSIDs
+    
+    # Security
+    auto_whitelist: bool = Field(True)  # Auto-whitelist management network
+    bind_web_to_management: bool = Field(True)  # Bind web UI to management interface only
+    
+    # DHCP for AP mode
+    dhcp_start: str = Field("192.168.4.2")
+    dhcp_end: str = Field("192.168.4.20")
+    dhcp_gateway: str = Field("192.168.4.1")
+    dhcp_netmask: str = Field("255.255.255.0")
+    
+    @field_validator("ap_password")
+    @classmethod
+    def _validate_ap_password(cls, value: str) -> str:
+        if len(value) < 8:
+            raise ValueError("AP password must be at least 8 characters")
+        return value
+    
+    @field_validator("ap_channel")
+    @classmethod
+    def _validate_ap_channel(cls, value: int) -> int:
+        if value < 1 or value > 14:
+            raise ValueError("AP channel must be between 1 and 14")
+        return value
+
+
+class InterfaceRole(str, Enum):
+    """Role assignment for network interfaces."""
+    MANAGEMENT = "management"  # Reserved for web UI access
+    ATTACK = "attack"          # Available for offensive operations
+    MONITOR = "monitor"        # Currently in monitor mode
+    UNUSED = "unused"          # Not assigned
+
+
 class AggressiveConfig(BaseModel):
     """Aggressive mode config - NO RESTRICTIONS by default."""
     enabled: bool = Field(True)                                    # Aggressive ON by default
@@ -301,6 +366,7 @@ class MomoConfig(BaseModel):
     ble: BLEConfig = Field(default_factory=BLEConfig)
     eviltwin: EvilTwinConfig = Field(default_factory=EvilTwinConfig)
     cracking: CrackingConfig = Field(default_factory=CrackingConfig)
+    management: ManagementNetworkConfig = Field(default_factory=ManagementNetworkConfig)
 
     class ServerEndpoint(BaseModel):
         enabled: bool = Field(True)
