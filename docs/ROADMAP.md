@@ -1,6 +1,6 @@
 # MoMo Development Roadmap
 
-> **Version:** 1.5.1 | **Last Updated:** 2025-12-16
+> **Version:** 1.5.2 | **Last Updated:** 2025-12-17
 
 ## 🎯 Vision
 
@@ -146,6 +146,16 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] REST API endpoints
 - [x] 21 unit tests
 
+### Phase 1.5.2 - Management Network (Headless) ✅
+- [x] ManagementNetworkConfig - AP and Client mode support
+- [x] ManagementNetworkManager - wlan0 AP/client control
+- [x] Interface role separation (management vs attack)
+- [x] Auto-whitelist for management network protection
+- [x] DHCP server for AP mode (dnsmasq)
+- [x] Hostapd integration for AP creation
+- [x] REST API endpoints (8 endpoints)
+- [x] 26 unit tests
+
 ---
 
 ## 📅 Planned Phases
@@ -218,7 +228,7 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 ### Test Coverage
 | Component | Current | Target |
 |-----------|---------|--------|
-| Unit tests | 419 | 500+ |
+| Unit tests | 445 | 500+ |
 | Integration | 20+ | 50+ |
 | E2E tests | 5+ | 20+ |
 | Coverage | ~70% | 85%+ |
@@ -253,6 +263,7 @@ Priority areas:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.5.2 | 2025-12-17 | Management network, headless operation |
 | 1.5.1 | 2025-12-16 | Hardware auto-detection, device registry |
 | 1.5.0 | 2025-12-15 | SDR integration (RTL-SDR, HackRF) |
 | 1.3.0 | 2025-12-14 | John the Ripper integration |

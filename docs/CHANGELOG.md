@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2] - 2025-12-17 (Management Network) ✅
+
+### Added
+- **ManagementNetworkManager** - Headless operation support
+- **AP Mode** - Creates MoMo-Management hotspot via hostapd
+- **Client Mode** - Connects to known WiFi network via nmcli
+- **Auto-whitelist** - Management network protected from self-attack
+- **Interface isolation** - wlan0 for management, wlan1+ for attacks
+- **DHCP server** - dnsmasq integration for AP mode
+- **Web binding** - Optional bind to management interface only
+- **REST API** - 8 endpoints for management network control
+- **26 unit tests** for management network system
+
+### Configuration
+```yaml
+management:
+  enabled: true
+  interface: wlan0           # Pi5 internal WiFi
+  mode: ap                   # ap or client
+  ap_ssid: MoMo-Management
+  ap_password: MoMoAdmin2024!
+  auto_whitelist: true       # Protect from attacks
+  bind_web_to_management: true
+```
+
+### Use Case
+- Tablet/phone connects to MoMo-Management (192.168.4.x)
+- Web UI accessible at 192.168.4.1:8082
+- External USB adapters (wlan1+) available for attacks
+- Management network automatically whitelisted
+
+---
+
 ## [1.5.1] - 2025-12-16 (Hardware Auto-Detection) ✅
 
 ### Added

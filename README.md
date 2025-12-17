@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%205-c51a4a?style=for-the-badge&logo=raspberry-pi" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Tests-419%20Passing-success?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-445%20Passing-success?style=for-the-badge" alt="Tests">
 </p>
 
 <h1 align="center">🔥 MoMo</h1>
@@ -79,6 +79,16 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 | **Auto Cracking** | Automatic crack on handshake capture | ✅ |
 | **Wordlist Management** | Custom wordlist support | ✅ |
 
+### 📱 Headless Operation
+|| Feature | Description | Status |
+||---------|-------------|--------|
+|| **Management Network** | Dedicated wlan0 for tablet/phone control | ✅ |
+|| **AP Mode** | Creates MoMo-Management hotspot | ✅ |
+|| **Client Mode** | Connects to known WiFi network | ✅ |
+|| **Auto-Whitelist** | Management network protected from attacks | ✅ |
+|| **Interface Isolation** | wlan0=management, wlan1+=attack | ✅ |
+|| **Web UI Binding** | Bind to management IP only | ✅ |
+
 ### 🛠️ Technical Highlights
 - **Async-First Architecture** - Non-blocking I/O with `asyncio`
 - **Clean Architecture** - 4-layer separation (Presentation → Application → Domain → Infrastructure)
@@ -86,7 +96,8 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 - **Real-time Web UI** - Dark theme dashboard with SSE updates
 - **Event-Driven** - Pub/Sub event bus for decoupled components
 - **Hardware Auto-Detection** - Automatic USB device identification & configuration
-- **419 Unit Tests** - Comprehensive test coverage with pytest-asyncio
+- **Headless Ready** - Management network separation for screenless operation
+- **445 Unit Tests** - Comprehensive test coverage with pytest-asyncio
 
 ---
 
@@ -155,6 +166,7 @@ momo/
 │   ├── cracking/           # Hashcat & John integration
 │   ├── sdr/                # RTL-SDR, HackRF, spectrum
 │   ├── hardware/           # Device registry, auto-detection
+│   ├── management/         # Headless management network
 │   └── database/           # Async SQLite repository
 ├── plugins/                 # Modern plugins (new architecture)
 ├── apps/
@@ -254,6 +266,8 @@ curl -H "Authorization: Bearer <token>" http://<ip>:8082/api/status
 | `/api/sdr/spectrum/*` | Spectrum Analyzer API |
 | `/api/sdr/decoder/*` | Signal Decoder API |
 | `/api/hardware/*` | Hardware Detection API |
+| `/api/management/*` | Management Network API |
+| `/api/capability/*` | Capability Gate API |
 
 #### Cracking
 | Endpoint | Description |
@@ -370,6 +384,15 @@ hardware:
   auto_detect: true           # Auto-detect USB devices
   auto_configure: true        # Auto-configure detected devices
 
+management:
+  enabled: true
+  interface: wlan0            # Pi5 internal WiFi (management only)
+  mode: ap                    # ap = hotspot, client = join network
+  ap_ssid: MoMo-Management    # Management network SSID
+  ap_password: MoMoAdmin2024! # Change this!
+  auto_whitelist: true        # Protect from self-attack
+  bind_web_to_management: true
+
 cracking:
   enabled: true
   auto_crack: false           # Auto-crack new handshakes
@@ -435,8 +458,9 @@ momo web-url --show-token     # Show Web UI credentials
 | Advanced Cracking | v1.3.0 | ✅ Complete |
 | SDR Integration | v1.5.0 | ✅ Complete |
 | Hardware Auto-Detection | v1.5.1 | ✅ Complete |
+| Management Network | v1.5.2 | ✅ Complete |
 
-**Total: 419 Tests Passing** ✅
+**Total: 445 Tests Passing** ✅
 
 ---
 
