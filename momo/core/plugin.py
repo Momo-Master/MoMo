@@ -74,10 +74,16 @@ class PluginMetadata:
     optional: list[str] = field(default_factory=list)  # Optional plugins
     conflicts: list[str] = field(default_factory=list)  # Incompatible plugins
     
-    # Capabilities
+    # System Capabilities
     requires_root: bool = False
     requires_network: bool = False
     requires_gui: bool = False
+    
+    # Hardware Requirements (auto-disable if hardware missing)
+    # Use HardwareRequirement flags from capability.py
+    # e.g., HardwareRequirement.WIFI | HardwareRequirement.GPS
+    hardware_requirements: int = 0  # HardwareRequirement flags
+    fallback_mode: bool = False     # Allow mock/simulation when hardware missing
     
     # Config
     config_schema: dict[str, Any] | None = None
@@ -92,6 +98,8 @@ class PluginMetadata:
             "priority": self.priority,
             "requires": self.requires,
             "optional": self.optional,
+            "hardware_requirements": self.hardware_requirements,
+            "fallback_mode": self.fallback_mode,
         }
 
 
@@ -296,9 +304,19 @@ class PluginManager:
         self._load_order: list[str] = []
         self._global_config: MomoConfig | None = None
         self._event_handlers: dict[str, list[Callable]] = {}
+        self._capability_manager: Any = None  # CapabilityManager instance
+        self._disabled_plugins: dict[str, str] = {}  # name -> reason
         self._initialized = True
         
         logger.info("Plugin manager initialized")
+    
+    def set_capability_manager(self, manager: Any) -> None:
+        """Set the capability manager for hardware-aware plugin loading."""
+        self._capability_manager = manager
+    
+    def get_disabled_plugins(self) -> dict[str, str]:
+        """Get list of disabled plugins and reasons."""
+        return dict(self._disabled_plugins)
     
     @property
     def plugins(self) -> list[BasePlugin]:
@@ -456,6 +474,25 @@ class PluginManager:
             if dep not in self._plugins or not self._plugins[dep].is_running:
                 logger.error("Missing dependency for %s: %s", name, dep)
                 return False
+        
+        # Check hardware requirements
+        if meta.hardware_requirements and self._capability_manager:
+            from .capability import HardwareRequirement
+            
+            hw_req = HardwareRequirement(meta.hardware_requirements)
+            if not self._capability_manager.is_available(hw_req):
+                missing = self._capability_manager.get_missing(hw_req)
+                reason = f"Missing hardware: {', '.join(missing)}"
+                
+                if meta.fallback_mode:
+                    logger.warning("Plugin %s running in fallback mode: %s", name, reason)
+                    plugin._config = config or {}
+                    plugin._config["_fallback_mode"] = True
+                else:
+                    logger.warning("Plugin %s disabled: %s", name, reason)
+                    self._disabled_plugins[name] = reason
+                    plugin._state = PluginState.STOPPED
+                    return False
         
         # Inject config
         plugin._config = config or {}
