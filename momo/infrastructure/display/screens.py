@@ -4,12 +4,12 @@ MoMo OLED Display Screens.
 Provides various screen templates for status visualization.
 """
 
-import asyncio
+import logging
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional, Callable, Awaitable
-import logging
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class Screen(ABC):
     
     def __init__(self, name: str):
         self.name = name
-        self._last_update: Optional[datetime] = None
+        self._last_update: datetime | None = None
     
     @abstractmethod
     async def render(
@@ -46,7 +46,7 @@ class StatusData:
     cpu_percent: float = 0.0
     memory_percent: float = 0.0
     temperature: float = 0.0
-    battery_percent: Optional[int] = None
+    battery_percent: int | None = None
     wifi_connected: bool = False
     gps_fix: bool = False
 
@@ -56,7 +56,7 @@ class StatusScreen(Screen):
     
     def __init__(
         self,
-        data_provider: Optional[Callable[[], Awaitable[StatusData]]] = None,
+        data_provider: Callable[[], Awaitable[StatusData]] | None = None,
     ):
         super().__init__("Status")
         self._data = StatusData()
@@ -137,7 +137,7 @@ class WiFiScreen(Screen):
     
     def __init__(
         self,
-        data_provider: Optional[Callable[[], Awaitable[WiFiData]]] = None,
+        data_provider: Callable[[], Awaitable[WiFiData]] | None = None,
     ):
         super().__init__("WiFi")
         self._data = WiFiData()
@@ -197,7 +197,7 @@ class GPSScreen(Screen):
     
     def __init__(
         self,
-        data_provider: Optional[Callable[[], Awaitable[GPSData]]] = None,
+        data_provider: Callable[[], Awaitable[GPSData]] | None = None,
     ):
         super().__init__("GPS")
         self._data = GPSData()
@@ -248,7 +248,7 @@ class HandshakeEntry:
     bssid: str
     timestamp: datetime
     cracked: bool = False
-    password: Optional[str] = None
+    password: str | None = None
 
 
 @dataclass
@@ -264,7 +264,7 @@ class HandshakeScreen(Screen):
     
     def __init__(
         self,
-        data_provider: Optional[Callable[[], Awaitable[HandshakeData]]] = None,
+        data_provider: Callable[[], Awaitable[HandshakeData]] | None = None,
     ):
         super().__init__("Handshakes")
         self._data = HandshakeData()
@@ -431,7 +431,7 @@ class ScreenManager:
             return await self._data_sources["handshake"]()
         return HandshakeData()
     
-    def get_screen(self, name: str) -> Optional[Screen]:
+    def get_screen(self, name: str) -> Screen | None:
         """Get a screen by name."""
         return self._screens.get(name)
     

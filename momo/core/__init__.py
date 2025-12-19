@@ -20,24 +20,24 @@ from .plugin import (
 )
 
 __all__ = [
+    # Plugin System
+    "BasePlugin",
     # Capability System
     "CapabilityManager",
     "CapabilityStatus",
-    "FeatureGate",
-    "HardwareRequirement",
-    "MockCapabilityManager",
-    "get_capability_manager",
-    "register_standard_features",
-    # Plugin System
-    "BasePlugin",
     # Events
     "Event",
     "EventBus",
     "EventType",
+    "FeatureGate",
+    "HardwareRequirement",
+    "MockCapabilityManager",
     "PluginManager",
     "PluginMetadata",
     "PluginState",
     "PluginType",
+    "get_capability_manager",
     "get_plugin_manager",
+    "register_standard_features",
 ]
 

@@ -10,11 +10,12 @@ from __future__ import annotations
 import asyncio
 import logging
 import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .device_registry import DeviceCapability, DeviceInfo, DeviceRegistry, DeviceType
 
@@ -208,7 +209,7 @@ class HardwareDetector:
             # Try lsusb
             result = subprocess.run(
                 ["lsusb"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=10,
             )
@@ -256,7 +257,7 @@ class HardwareDetector:
             try:
                 result = subprocess.run(
                     ["ls", "/sys/class/net"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=5,
                 )
@@ -274,7 +275,7 @@ class HardwareDetector:
             try:
                 result = subprocess.run(
                     ["hciconfig"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=5,
                 )
@@ -358,7 +359,7 @@ class HardwareDetector:
             try:
                 subprocess.run(
                     ["hciconfig", iface, "up"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     timeout=5,
                 )
             except Exception:

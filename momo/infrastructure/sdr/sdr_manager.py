@@ -7,10 +7,8 @@ Supports RTL-SDR (receive only) and HackRF (transmit + receive).
 
 from __future__ import annotations
 
-import asyncio
 import logging
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
@@ -193,7 +191,7 @@ class SDRManager:
             import subprocess
             result = subprocess.run(
                 ["hackrf_info"],
-                capture_output=True,
+                check=False, capture_output=True,
                 text=True,
                 timeout=5,
             )
@@ -428,8 +426,8 @@ class MockSDRManager(SDRManager):
     
     async def capture_samples(self, num_samples: int = 262144) -> list[complex]:
         """Return mock IQ samples."""
-        import random
         import math
+        import random
         
         samples = []
         for i in range(min(num_samples, 1024)):

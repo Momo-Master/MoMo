@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from momo.infrastructure.nexus.client import NexusClient, NexusConfig
 

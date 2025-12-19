@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import subprocess
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
@@ -290,7 +289,7 @@ class ManagementNetworkManager:
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
-            stdout, stderr = await proc.communicate()
+            _stdout, stderr = await proc.communicate()
             
             if proc.returncode == 0:
                 self._status = ConnectionStatus.CONNECTED

@@ -114,9 +114,15 @@ ignore = ["E501", "PLR2004", "B008"]
 "momo/cli.py" = ["PLR0915", "PLC0415", "PLR0912"]
 "momo/core/events.py" = ["PLC0415", "PLW0603"]
 "momo/core/security.py" = ["B905"]
-# Plugin system: lifecycle hooks are optional (not abstract), RUF006 for fire-and-forget tasks
-"momo/core/plugin.py" = ["B027", "RUF006"]
+# Plugin system: lifecycle hooks are optional (not abstract), RUF006 for fire-and-forget tasks, lazy imports for circular avoidance
+"momo/core/plugin.py" = ["B027", "RUF006", "PLC0415"]
 "momo/infrastructure/wifi/__init__.py" = ["RUF022"]
+# Hardware registry uses class-level device lists (intentional mutable defaults)
+"momo/infrastructure/hardware/device_registry.py" = ["RUF012"]
+# Display screens use Unicode icons (intentional)
+"momo/infrastructure/display/screens.py" = ["RUF001"]
+# Management network has loop variable reassignment (safe pattern)
+"momo/infrastructure/management/network_manager.py" = ["PLW2901"]
 "momo/infrastructure/wifi/radio_manager.py" = ["PLW2901", "F841"]
 "momo/infrastructure/wifi/scanner.py" = ["PLW2901"]
 # WPA3 module: allow complexity for attack logic

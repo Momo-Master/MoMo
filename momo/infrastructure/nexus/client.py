@@ -10,9 +10,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
-from dataclasses import dataclass
 
 import aiohttp
 
@@ -170,7 +170,7 @@ class NexusClient:
                             text = await resp.text()
                             logger.warning(f"Nexus request failed: {resp.status} - {text}")
                 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 logger.warning(f"Nexus request timeout (attempt {attempt + 1})")
             except aiohttp.ClientError as e:
                 logger.warning(f"Nexus request error: {e} (attempt {attempt + 1})")

@@ -6,11 +6,11 @@ Supports I2C communication with automatic fallback to mock mode.
 """
 
 import asyncio
-from dataclasses import dataclass, field
-from enum import Enum, auto
-from typing import Optional, Callable, Any
-from datetime import datetime
 import logging
+from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum, auto
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,7 @@ class DisplayConfig:
 class DisplayStats:
     """Display statistics."""
     frames_rendered: int = 0
-    last_update: Optional[datetime] = None
+    last_update: datetime | None = None
     errors: int = 0
     mode: DisplayMode = DisplayMode.AUTO_ROTATE
     current_screen: str = ""
@@ -59,7 +59,7 @@ class OLEDDisplay:
     - Power management
     """
     
-    def __init__(self, config: Optional[DisplayConfig] = None):
+    def __init__(self, config: DisplayConfig | None = None):
         self.config = config or DisplayConfig()
         self._device: Any = None
         self._image: Any = None
@@ -73,7 +73,7 @@ class OLEDDisplay:
         self._current_screen_index = 0
         self._screens: list[Any] = []
         self._alert_queue: asyncio.Queue[tuple[str, str, int]] = asyncio.Queue()
-        self._update_task: Optional[asyncio.Task[None]] = None
+        self._update_task: asyncio.Task[None] | None = None
         
     async def connect(self) -> bool:
         """Initialize the OLED display."""

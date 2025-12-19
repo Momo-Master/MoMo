@@ -8,21 +8,22 @@ Integrates with MoMo's plugin system for event-driven updates.
 import asyncio
 import logging
 import os
-import psutil
 from datetime import datetime
-from typing import Optional, Any
+from typing import Any, Optional
+
+import psutil
 
 from momo.core.plugin_system import Plugin, PluginPriority
 from momo.infrastructure.display import (
-    OLEDDisplay,
     DisplayConfig,
     DisplayMode,
-    ScreenManager,
-    StatusData,
-    WiFiData,
     GPSData,
     HandshakeData,
     HandshakeEntry,
+    OLEDDisplay,
+    ScreenManager,
+    StatusData,
+    WiFiData,
 )
 
 logger = logging.getLogger(__name__)
@@ -44,7 +45,7 @@ class OLEDStatusPlugin(Plugin):
     version = "1.0.0"
     priority = PluginPriority.NORMAL
     
-    def __init__(self, config: Optional[dict[str, Any]] = None):
+    def __init__(self, config: dict[str, Any] | None = None):
         super().__init__(config)
         
         # Parse config
@@ -60,8 +61,8 @@ class OLEDStatusPlugin(Plugin):
             mock_mode=cfg.get("mock_mode", False),
         )
         
-        self._display: Optional[OLEDDisplay] = None
-        self._screen_manager: Optional[ScreenManager] = None
+        self._display: OLEDDisplay | None = None
+        self._screen_manager: ScreenManager | None = None
         self._running = False
         
         # Cached data for screens
@@ -69,7 +70,7 @@ class OLEDStatusPlugin(Plugin):
         self._networks_found = 0
         self._clients_found = 0
         self._deauths_sent = 0
-        self._gps_data: Optional[dict[str, Any]] = None
+        self._gps_data: dict[str, Any] | None = None
         self._wifi_interface = "wlan0"
         self._wifi_mode = "monitor"
         self._wifi_channel = 0
@@ -321,7 +322,7 @@ class OLEDStatusPlugin(Plugin):
 
 
 # Plugin factory
-def create_plugin(config: Optional[dict[str, Any]] = None) -> OLEDStatusPlugin:
+def create_plugin(config: dict[str, Any] | None = None) -> OLEDStatusPlugin:
     """Create an OLED status plugin instance."""
     return OLEDStatusPlugin(config)
 

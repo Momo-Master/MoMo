@@ -67,8 +67,7 @@ class BeaconSpoofer:
         try:
             await self._cmd(["hciconfig", self.interface, "up"])
             hex_data = " ".join(f"{b:02x}" for b in data)
-            await self._cmd(["hcitool", "-i", self.interface, "cmd", "0x08", "0x0008",
-                           f"{len(data):02x}"] + hex_data.split())
+            await self._cmd(["hcitool", "-i", self.interface, "cmd", "0x08", "0x0008", f"{len(data):02x}", *hex_data.split()])
             await self._cmd(["hcitool", "-i", self.interface, "cmd", "0x08", "0x000a", "01"])
             self._active, self._config = True, config
             self._start_time = datetime.now(UTC)

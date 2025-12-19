@@ -15,35 +15,35 @@ from .sdr_manager import (
     SDRManager,
     SDRType,
 )
-from .spectrum_analyzer import (
-    MockSpectrumAnalyzer,
-    SignalPeak,
-    SpectrumAnalyzer,
-    SpectrumData,
-)
 from .signal_decoder import (
     DecodedSignal,
     MockSignalDecoder,
     Protocol,
     SignalDecoder,
 )
+from .spectrum_analyzer import (
+    MockSpectrumAnalyzer,
+    SignalPeak,
+    SpectrumAnalyzer,
+    SpectrumData,
+)
 
 __all__ = [
+    # Decoder
+    "DecodedSignal",
     # Manager
     "MockSDRManager",
+    "MockSignalDecoder",
+    # Spectrum
+    "MockSpectrumAnalyzer",
+    "Protocol",
     "SDRConfig",
     "SDRDevice",
     "SDRManager",
     "SDRType",
-    # Spectrum
-    "MockSpectrumAnalyzer",
+    "SignalDecoder",
     "SignalPeak",
     "SpectrumAnalyzer",
     "SpectrumData",
-    # Decoder
-    "DecodedSignal",
-    "MockSignalDecoder",
-    "Protocol",
-    "SignalDecoder",
 ]
 

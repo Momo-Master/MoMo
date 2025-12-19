@@ -232,7 +232,7 @@ class SignalDecoder:
         bits = []
         prev_phase = 0
         
-        for i, s in enumerate(samples[::100]):
+        for _i, s in enumerate(samples[::100]):
             phase = math.atan2(s.imag, s.real)
             phase_diff = phase - prev_phase
             

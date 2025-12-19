@@ -23,22 +23,22 @@ __all__ = [
     # Scanner
     "BLEDevice",
     "BLEScanner",
-    "MockBLEScanner",
-    "ScanConfig",
+    # Beacon
+    "BeaconConfig",
+    "BeaconSpoofer",
+    "BeaconType",
     # GATT
     "DeviceProfile",
     "GATTCharacteristic",
     "GATTExplorer",
     "GATTService",
-    "MockGATTExplorer",
-    # Beacon
-    "BeaconConfig",
-    "BeaconSpoofer",
-    "BeaconType",
-    "MockBeaconSpoofer",
     # HID
     "HIDConfig",
     "HIDInjector",
     "HIDType",
+    "MockBLEScanner",
+    "MockBeaconSpoofer",
+    "MockGATTExplorer",
     "MockHIDInjector",
+    "ScanConfig",
 ]
