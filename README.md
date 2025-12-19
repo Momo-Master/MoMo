@@ -2,7 +2,7 @@
   <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%205-c51a4a?style=for-the-badge&logo=raspberry-pi" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Tests-445%20Passing-success?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-424%20Passing-success?style=for-the-badge" alt="Tests">
 </p>
 
 <h1 align="center">🔥 MoMo</h1>
