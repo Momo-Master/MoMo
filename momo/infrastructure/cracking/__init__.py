@@ -1,19 +1,13 @@
 """
 Cracking Infrastructure Module.
 
-Provides hashcat and john the ripper integration for password cracking.
-Supports WPA/WPA2 handshakes (.22000 format) and various attack modes.
+Provides John the Ripper integration for lightweight local password cracking.
+For heavy GPU-based cracking (Hashcat), use Cloud GPU VPS via Nexus.
+
+Note: Hashcat has been moved to Cloud infrastructure (GPU VPS).
+See: docs/CRACKING.md for cloud integration details.
 """
 
-from .hashcat_manager import (
-    AttackMode,
-    CrackJob,
-    CrackResult,
-    CrackStatus,
-    HashcatConfig,
-    HashcatManager,
-    MockHashcatManager,
-)
 from .john_manager import (
     JohnJob,
     JohnManager,
@@ -29,15 +23,7 @@ from .wordlist_manager import (
 )
 
 __all__ = [
-    # Hashcat
-    "AttackMode",
-    "CrackJob",
-    "CrackResult",
-    "CrackStatus",
-    "HashcatConfig",
-    "HashcatManager",
-    "MockHashcatManager",
-    # John
+    # John (lightweight local cracking)
     "JohnJob",
     "JohnManager",
     "JohnMode",

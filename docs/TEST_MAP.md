@@ -38,7 +38,7 @@ Her modülün izole test edilmesi.
 | Cracking | `test_cracking.py` | 18 | ✅ |
 | John Manager | `test_john_manager.py` | 15 | ✅ |
 | Plugin System | `test_plugin_system.py` | 20 | ✅ |
-| Evilginx | `test_evilginx.py` | 22 | ✅ |
+| ~~Evilginx~~ | ~~`test_evilginx.py`~~ | ~~22~~ | ❌ Removed v1.6.0 |
 | WPA3 | `test_wpa3.py` | 18 | ✅ |
 | Karma/MANA | `test_karma_mana.py` | 24 | ✅ |
 
@@ -182,13 +182,11 @@ momo/infrastructure/
 │   ├── ap_manager.py      [8 tests]  ✅
 │   └── captive_portal.py  [7 tests]  ✅
 ├── cracking/
-│   ├── hashcat_manager.py [18 tests] ✅
+│   ├── hashcat_manager.py [REMOVED - Cloud] ❌
 │   ├── john_manager.py    [15 tests] ✅
 │   └── wordlist_manager.py[5 tests]  ✅
-├── evilginx/
-│   ├── evilginx_manager.py[10 tests] ✅
-│   ├── phishlet_manager.py[6 tests]  ✅
-│   └── session_manager.py [6 tests]  ✅
+├── evilginx/                [REMOVED - VPS] ❌
+│   (Module moved to VPS infrastructure)
 ├── karma/
 │   ├── probe_monitor.py   [10 tests] ✅
 │   ├── karma_attack.py    [6 tests]  ✅
@@ -207,8 +205,8 @@ momo/apps/momo_web/
 ├── capture_api.py     [0 tests]  🔴 TODO: API tests
 ├── ble_api.py         [0 tests]  🔴 TODO: API tests
 ├── eviltwin_api.py    [0 tests]  🔴 TODO: API tests
-├── cracking_api.py    [0 tests]  🔴 TODO: API tests
-├── evilginx_api.py    [0 tests]  🔴 TODO: API tests
+├── cracking_api.py    [2 tests]  ✅ Cloud status + John
+├── evilginx_api.py    [REMOVED]  ❌ Moved to VPS
 ├── wpa3_api.py        [0 tests]  🔴 TODO: API tests
 ├── karma_api.py       [0 tests]  🔴 TODO: API tests
 └── wardriver_api.py   [0 tests]  🔴 TODO: API tests

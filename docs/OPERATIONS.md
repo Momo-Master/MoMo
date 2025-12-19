@@ -233,15 +233,14 @@ plugins:
   enabled:
     - wardriver
     - ble_scanner
-    - hashcat_cracker
+    - capture
   options:
     wardriver:
       enabled: true
       db_path: "logs/wardriving.db"
     ble_scanner:
       scan_duration: 5.0
-    hashcat_cracker:
-      auto_crack: false
+    # Note: hashcat_cracker removed in v1.6.0 - use Cloud via Nexus
 ```
 
 ### Available Plugins
@@ -251,10 +250,11 @@ plugins:
 | `wardriver` | Scanner | GPS-correlated AP scanning | - |
 | `wifi_scanner` | Scanner | WiFi AP/client discovery | - |
 | `ble_scanner` | Scanner | BLE device/beacon detection | - |
-| `hashcat_cracker` | Analysis | Password cracking | [CRACKING.md](CRACKING.md) |
 | `active_wifi` | Attack | Deauth/beacon attacks | [ACTIVE_WIFI.md](ACTIVE_WIFI.md) |
 | `evil_twin` | Attack | Rogue AP + captive portal | - |
 | `capture` | Capture | Handshake capture | - |
+
+> **Note:** `hashcat_cracker` and `evilginx_aitm` removed in v1.6.0. Use Cloud/VPS.
 
 ### Secrets Management
 

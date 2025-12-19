@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2025-12-19 (Cloud Migration) ✅
+
+### Changed - BREAKING
+- **Hashcat moved to Cloud** - GPU cracking now via Nexus → Cloud VPS
+- **Evilginx moved to VPS** - AiTM proxy requires dedicated VPS infrastructure
+- **Cracking config restructured** - New cloud_enabled, nexus_api_url options
+
+### Removed
+- `momo/infrastructure/cracking/hashcat_manager.py` - Moved to Cloud
+- `momo/infrastructure/evilginx/` - Entire module moved to VPS
+- `momo/apps/momo_plugins/hashcat_cracker.py` - Use Nexus API instead
+- `momo/apps/momo_plugins/evilginx_aitm.py` - Use VPS evilginx3
+- `momo/apps/momo_web/evilginx_api.py` - Endpoints removed
+- `tests/unit/test_evilginx.py` - Tests removed
+
+### Added
+- `/api/cracking/cloud/status` - Cloud cracking status endpoint
+- `/api/cracking/cloud/submit` - Submit jobs to Cloud (via Nexus)
+- Cloud migration notes in CRACKING.md and EVILGINX.md
+
+### Why This Change?
+1. **Pi 5 thermal limits** - Hashcat generates too much heat
+2. **Battery efficiency** - GPU cracking drains power banks
+3. **Performance** - Cloud GPU is 1000x faster than Pi 5
+4. **Evilginx requirements** - Needs public IP, ports 80/443, SSL
+
+### Migration Guide
+- For cracking: Configure Nexus API URL, submit via `/api/cracking/cloud/submit`
+- For Evilginx: Deploy evilginx3 on VPS, use Evil Twin to redirect victims
+
+---
+
 ## [1.5.2] - 2025-12-17 (Management Network) ✅
 
 ### Added

@@ -107,27 +107,22 @@ class TestEvilTwinAPI:
 
 
 class TestCrackingAPI:
-    """Test /api/cracking endpoints."""
+    """Test /api/cracking endpoints (John only - Hashcat moved to Cloud)."""
 
     def test_status_endpoint(self, client):
-        """GET /api/cracking/status should return status."""
+        """GET /api/cracking/status should return status with cloud note."""
         response = client.get("/api/cracking/status")
         assert response.status_code in [200, 503]
+        if response.status_code == 200:
+            data = json.loads(response.data)
+            assert "note" in data  # Cloud migration note
 
-    def test_jobs_endpoint(self, client):
-        """GET /api/cracking/jobs should return jobs."""
-        response = client.get("/api/cracking/jobs")
-        assert response.status_code in [200, 503]
-
-    def test_cracked_endpoint(self, client):
-        """GET /api/cracking/cracked should return passwords."""
-        response = client.get("/api/cracking/cracked")
-        assert response.status_code in [200, 503]
-
-    def test_wordlists_endpoint(self, client):
-        """GET /api/cracking/wordlists should return list."""
-        response = client.get("/api/cracking/wordlists")
-        assert response.status_code in [200, 503]
+    def test_cloud_status_endpoint(self, client):
+        """GET /api/cracking/cloud/status should return cloud info."""
+        response = client.get("/api/cracking/cloud/status")
+        assert response.status_code == 200
+        data = json.loads(response.data)
+        assert "status" in data
 
     def test_john_status(self, client):
         """GET /api/cracking/john/status should return status."""
@@ -142,30 +137,6 @@ class TestCrackingAPI:
         assert response.status_code == 200
         data = json.loads(response.data)
         assert "jobs" in data
-
-
-class TestEvilginxAPI:
-    """Test /api/evilginx endpoints."""
-
-    def test_status_endpoint(self, client):
-        """GET /api/evilginx/status should return status."""
-        response = client.get("/api/evilginx/status")
-        assert response.status_code in [200, 404, 500, 503]
-
-    def test_phishlets_endpoint(self, client):
-        """GET /api/evilginx/phishlets should return list."""
-        response = client.get("/api/evilginx/phishlets")
-        assert response.status_code in [200, 404, 500, 503]
-
-    def test_lures_endpoint(self, client):
-        """GET /api/evilginx/lures should return list."""
-        response = client.get("/api/evilginx/lures")
-        assert response.status_code in [200, 404, 500, 503]
-
-    def test_sessions_endpoint(self, client):
-        """GET /api/evilginx/sessions should return list."""
-        response = client.get("/api/evilginx/sessions")
-        assert response.status_code in [200, 404, 500, 503]
 
 
 class TestWPA3API:
@@ -244,11 +215,6 @@ class TestUIRoutes:
         """GET /cracking should work."""
         response = client.get("/cracking")
         assert response.status_code in [200, 302, 401]
-
-    def test_evilginx_route(self, client):
-        """GET /evilginx should work."""
-        response = client.get("/evilginx")
-        assert response.status_code in [200, 302, 401, 404, 500]
 
     def test_wpa3_route(self, client):
         """GET /wpa3 should work."""

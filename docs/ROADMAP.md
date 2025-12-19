@@ -1,6 +1,6 @@
 # MoMo Development Roadmap
 
-> **Version:** 1.5.2 | **Last Updated:** 2025-12-17
+> **Version:** 1.6.0 | **Last Updated:** 2025-12-19
 
 ## 🎯 Vision
 
@@ -61,13 +61,13 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] Evil Twin API & Web UI
 
 ### Phase 0.7.0 - Cracking Integration ✅
-- [x] HashcatManager
+- [x] HashcatManager *(moved to Cloud in v1.6.0)*
 - [x] WordlistManager with auto-discovery
 - [x] Dictionary attack (mode 0)
 - [x] Brute-force attack (mode 3)
 - [x] Progress monitoring
 - [x] Potfile management
-- [x] Cracker plugin with auto-crack
+- [x] Cracker plugin *(hashcat_cracker removed in v1.6.0)*
 - [x] Cracking API & Web UI
 
 ### Phase 0.8.0 - Plugin Architecture ✅
@@ -80,16 +80,17 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] Example plugins (wifi_scanner, ble_scanner)
 - [x] Comprehensive documentation
 
-### Phase 0.9.0 - Evilginx AiTM Integration ✅
-- [x] EvilginxManager (binary wrapper)
-- [x] PhishletManager (5 built-in: M365, Google, Okta, LinkedIn, GitHub)
-- [x] SessionManager (cookie storage & export)
-- [x] Lure generation (phishing URLs)
-- [x] Multiple export formats (JSON, curl, Netscape)
-- [x] MockEvilginxManager for testing
-- [x] Evilginx plugin
-- [x] Evilginx API & Web integration
-- [x] 22 unit tests
+### Phase 0.9.0 - Evilginx AiTM Integration ✅ → ☁️ VPS
+- [x] EvilginxManager *(moved to VPS in v1.6.0)*
+- [x] PhishletManager *(moved to VPS)*
+- [x] SessionManager *(moved to VPS)*
+- [x] Lure generation *(moved to VPS)*
+- [x] Multiple export formats *(moved to VPS)*
+- [x] MockEvilginxManager for testing *(removed)*
+- [x] Evilginx plugin *(removed in v1.6.0)*
+- [x] Evilginx API *(removed in v1.6.0)*
+
+> **Note:** Evilginx now runs on dedicated VPS. MoMo Evil Twin redirects to VPS.
 
 ### Phase 0.10.0 - WPA3/SAE Attack Support ✅
 - [x] WPA3 detection (SAE, Transition Mode, OWE)
@@ -123,12 +124,14 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] 26 unit tests
 
 ### Phase 1.3.0 - Advanced Cracking ✅
-- [x] John the Ripper integration
+- [x] John the Ripper integration (local, lightweight)
 - [x] hccapx to John format converter
 - [x] Multiple attack modes (wordlist, incremental, mask, rules)
 - [x] Show cracked passwords from potfile
 - [x] REST API endpoints
 - [x] 15 unit tests
+
+> **Note:** Hashcat moved to Cloud in v1.6.0. John remains for local use.
 
 ### Phase 1.5.0 - SDR Integration ✅
 - [x] SDRManager - RTL-SDR and HackRF device management
@@ -155,6 +158,18 @@ MoMo - The ultimate open-source wireless security audit platform combining the b
 - [x] Hostapd integration for AP creation
 - [x] REST API endpoints (8 endpoints)
 - [x] 26 unit tests
+
+### Phase 1.6.0 - Cloud Migration ✅
+- [x] **Hashcat moved to Cloud** - GPU cracking via Nexus → Cloud VPS
+- [x] **Evilginx moved to VPS** - AiTM requires dedicated infrastructure
+- [x] Removed hashcat_manager.py, hashcat_cracker.py
+- [x] Removed entire evilginx/ module
+- [x] Updated cracking_api.py - John only + cloud proxy stubs
+- [x] Updated config.py - cloud_enabled, nexus_api_url
+- [x] Updated documentation (CRACKING.md, EVILGINX.md)
+- [x] Updated tests
+
+> **Why:** Pi 5 thermal limits, battery efficiency, performance (Cloud 1000x faster)
 
 ---
 
@@ -263,6 +278,7 @@ Priority areas:
 
 | Version | Date | Highlights |
 |---------|------|------------|
+| 1.6.0 | 2025-12-19 | **Cloud Migration** - Hashcat → Cloud, Evilginx → VPS |
 | 1.5.2 | 2025-12-17 | Management network, headless operation |
 | 1.5.1 | 2025-12-16 | Hardware auto-detection, device registry |
 | 1.5.0 | 2025-12-15 | SDR integration (RTL-SDR, HackRF) |

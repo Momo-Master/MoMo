@@ -10,7 +10,7 @@
 
 <p align="center">
   <strong>Raspberry Pi 5 Wardriving & Wireless Pentest Platform</strong><br>
-  WiFi • BLE • SDR | WPA3 Downgrade • Karma/MANA • Evil Twin • Evilginx AiTM
+  WiFi • BLE • SDR | WPA3 Downgrade • Karma/MANA • Evil Twin | Part of MoMo Ecosystem
 </p>
 
 <p align="center">
@@ -32,8 +32,8 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 │                            MoMo Platform                                  │
 ├──────────────────────────────────────────────────────────────────────────┤
 │  📡 Multi-Radio      │  🗺️ GPS Wardriving    │  🔐 WPA2/WPA3 Attacks    │
-│  👿 Evil Twin        │  🎭 Karma/MANA        │  🔓 Evilginx AiTM        │
-│  📻 SDR Integration  │  🦷 BLE Attacks       │  💥 Hashcat + John       │
+│  👿 Evil Twin        │  🎭 Karma/MANA        │  🔗 Nexus Integration    │
+│  📻 SDR Integration  │  🦷 BLE Attacks       │  💥 John + Cloud Crack   │
 │  🔌 Plugin System    │  📊 Real-time UI      │  🔧 Hardware Auto-Detect │
 └──────────────────────────────────────────────────────────────────────────┘
 ```
@@ -53,7 +53,7 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 | **WPA3 Attacks** | SAE detection, downgrade attacks, PMF handling | ✅ |
 | **Evil Twin** | Rogue AP with captive portal (6 templates) | ✅ |
 | **Karma/MANA** | Auto-respond to probe requests, EAP credential capture | ✅ |
-| **Evilginx AiTM** | MFA bypass via session cookie capture | ✅ |
+| **Evilginx AiTM** | MFA bypass via session cookie capture | ☁️ VPS |
 
 ### 🦷 Bluetooth Attacks
 | Feature | Description | Status |
@@ -74,9 +74,9 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 ### 💥 Cracking & Analysis
 | Feature | Description | Status |
 |---------|-------------|--------|
-| **Hashcat Integration** | GPU-accelerated password cracking | ✅ |
-| **John the Ripper** | CPU-based cracking alternative | ✅ |
-| **Auto Cracking** | Automatic crack on handshake capture | ✅ |
+| **Hashcat (Cloud)** | GPU-accelerated via Nexus → VPS | ☁️ Cloud |
+| **John the Ripper** | CPU-based lightweight cracking | ✅ Local |
+| **Auto Sync** | Handshakes auto-sync to Nexus → Cloud | 🔗 Nexus |
 | **Wordlist Management** | Custom wordlist support | ✅ |
 
 ### 📱 Headless Operation
@@ -160,10 +160,10 @@ momo/
 │   ├── ble/                # BLE scanner, GATT, HID, Beacon
 │   ├── capture/            # Handshake capture
 │   ├── eviltwin/           # Rogue AP, captive portal
-│   ├── evilginx/           # AiTM proxy, phishlets
+│   ├── evilginx/           # [MOVED TO VPS] AiTM proxy
 │   ├── wpa3/               # WPA3 detection & attacks
 │   ├── karma/              # Karma/MANA attacks
-│   ├── cracking/           # Hashcat & John integration
+│   ├── cracking/           # John local + Cloud proxy
 │   ├── sdr/                # RTL-SDR, HackRF, spectrum
 │   ├── hardware/           # Device registry, auto-detection
 │   ├── management/         # Headless management network
@@ -246,7 +246,7 @@ curl -H "Authorization: Bearer <token>" http://<ip>:8082/api/status
 |----------|-------------|
 | `/api/wardriver/*` | Wardriving API |
 | `/api/eviltwin/*` | Evil Twin API |
-| `/api/evilginx/*` | Evilginx AiTM API |
+| `/api/evilginx/*` | Evilginx AiTM API *(moved to VPS)* |
 | `/api/wpa3/*` | WPA3/SAE Attack API |
 | `/api/karma/*` | Karma/MANA Attack API |
 
@@ -273,7 +273,7 @@ curl -H "Authorization: Bearer <token>" http://<ip>:8082/api/status
 | Endpoint | Description |
 |----------|-------------|
 | `/cracking` | Cracking jobs UI |
-| `/api/cracking/*` | Hashcat API |
+| `/api/cracking/*` | Local John + Cloud proxy |
 | `/api/cracking/john/*` | John the Ripper API |
 
 ---
@@ -395,16 +395,15 @@ management:
 
 cracking:
   enabled: true
-  auto_crack: false           # Auto-crack new handshakes
-  engine: hashcat             # hashcat, john
-  workload_profile: 3         # 1-4 (hashcat -w)
+  use_john: true              # Local cracking with John
+  cloud_enabled: false        # Enable when Nexus configured
+  nexus_api_url: ""           # Nexus API for cloud cracking
 
 plugins:
   enabled: 
     - wardriver
     - active_wifi
     - ble_scanner
-    - hashcat_cracker
 ```
 
 ---

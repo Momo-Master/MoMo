@@ -22,7 +22,7 @@ MoMo is configured for **full offensive capability** by default:
 | Evil Twin | ✅ Enabled | Rogue AP creation |
 | PMKID Capture | ✅ Enabled | Clientless attack |
 | Handshake Capture | ✅ Enabled | EAPOL capture |
-| Auto-Cracking | ✅ Enabled | hashcat/john |
+| Local Cracking | ✅ Enabled | John (local) / Cloud (Hashcat) |
 
 ### No Software Restrictions
 

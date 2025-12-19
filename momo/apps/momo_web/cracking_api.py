@@ -1,128 +1,20 @@
-"""Cracking REST API - Endpoints for hashcat job management."""
+"""
+Cracking REST API - Endpoints for John the Ripper job management.
+
+NOTE: GPU-based Hashcat cracking has been moved to Cloud infrastructure.
+For heavy cracking jobs, use Nexus → Cloud GPU VPS integration.
+See docs/CRACKING.md for details.
+"""
 
 from __future__ import annotations
 
-import asyncio
 import logging
 from pathlib import Path
-from typing import Any
 
 from flask import Blueprint, jsonify, request
 
 logger = logging.getLogger(__name__)
 cracking_bp = Blueprint("cracking", __name__, url_prefix="/api/cracking")
-
-
-def _get_plugin() -> Any:
-    """Get cracker plugin instance."""
-    try:
-        from momo.apps.momo_plugins import hashcat_cracker
-        return hashcat_cracker
-    except ImportError:
-        return None
-
-
-@cracking_bp.route("/status", methods=["GET"])
-def get_status():
-    """Get cracker plugin status."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-    return jsonify(plugin.get_status())
-
-
-@cracking_bp.route("/jobs", methods=["GET"])
-def list_jobs():
-    """List crack jobs."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-
-    limit = request.args.get("limit", 50, type=int)
-    jobs = plugin.get_jobs(limit=limit)
-    return jsonify({"jobs": jobs, "total": len(jobs)})
-
-
-@cracking_bp.route("/jobs", methods=["POST"])
-def start_job():
-    """Start a new crack job."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-
-    data = request.get_json() or {}
-    hash_file = data.get("hash_file")
-
-    if not hash_file:
-        return jsonify({"error": "hash_file required"}), 400
-
-    if not Path(hash_file).exists():
-        return jsonify({"error": "Hash file not found"}), 404
-
-    try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(
-            plugin.crack_file(
-                hash_file=Path(hash_file),
-                wordlist=data.get("wordlist"),
-                attack_mode=data.get("attack_mode", 0),
-                mask=data.get("mask"),
-            )
-        )
-        loop.close()
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-@cracking_bp.route("/jobs/<job_id>", methods=["DELETE"])
-def stop_job(job_id: str):
-    """Stop a running job."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-
-    try:
-        loop = asyncio.new_event_loop()
-        result = loop.run_until_complete(plugin.stop_job(job_id))
-        loop.close()
-        return jsonify(result)
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
-
-@cracking_bp.route("/cracked", methods=["GET"])
-def list_cracked():
-    """List cracked passwords."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-
-    limit = request.args.get("limit", 50, type=int)
-    cracked = plugin.get_cracked(limit=limit)
-    return jsonify({"cracked": cracked, "total": len(cracked)})
-
-
-@cracking_bp.route("/wordlists", methods=["GET"])
-def list_wordlists():
-    """List available wordlists."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-
-    wordlists = plugin.get_wordlists()
-    return jsonify({"wordlists": wordlists, "total": len(wordlists)})
-
-
-@cracking_bp.route("/stats", methods=["GET"])
-def get_stats():
-    """Get cracking statistics."""
-    plugin = _get_plugin()
-    if plugin is None:
-        return jsonify({"error": "Cracker not available"}), 503
-
-    return jsonify(plugin.get_metrics())
-
 
 # ========== John the Ripper Endpoints ==========
 
@@ -130,11 +22,34 @@ _john_manager = None
 
 
 def _get_john():
+    """Get John the Ripper manager (lazy init)."""
     global _john_manager
     if _john_manager is None:
         from momo.infrastructure.cracking import MockJohnManager
         _john_manager = MockJohnManager()
     return _john_manager
+
+
+@cracking_bp.route("/status", methods=["GET"])
+def get_status():
+    """
+    Get cracking status.
+    
+    Returns:
+        {
+            "running": bool,
+            "note": "GPU cracking moved to Cloud - use Nexus API",
+            "john": {...}
+        }
+    """
+    john = _get_john()
+    return jsonify({
+        "running": john._running,
+        "note": "GPU cracking (Hashcat) moved to Cloud VPS - use Nexus API for heavy jobs",
+        "local_cracker": "john",
+        "john": john.stats.to_dict(),
+        "metrics": john.get_metrics(),
+    })
 
 
 @cracking_bp.route("/john/status", methods=["GET"])
@@ -241,3 +156,33 @@ async def john_show():
     passwords = await john.show_cracked(Path(hash_file))
     return jsonify({"passwords": passwords, "count": len(passwords)})
 
+
+# ========== Cloud Cracking Proxy (TODO: Nexus Integration) ==========
+
+@cracking_bp.route("/cloud/status", methods=["GET"])
+def cloud_status():
+    """
+    Check Cloud GPU VPS status.
+    
+    This endpoint will proxy to Nexus which manages Cloud cracking infrastructure.
+    """
+    return jsonify({
+        "status": "not_configured",
+        "message": "Cloud cracking requires Nexus integration",
+        "setup_guide": "See docs/CRACKING.md for Cloud GPU setup",
+    })
+
+
+@cracking_bp.route("/cloud/submit", methods=["POST"])
+def cloud_submit():
+    """
+    Submit a cracking job to Cloud GPU VPS.
+    
+    This endpoint will proxy to Nexus for Cloud cracking.
+    Currently not implemented - requires Nexus integration.
+    """
+    return jsonify({
+        "error": "Cloud cracking not yet configured",
+        "message": "Use Nexus API to submit jobs to Cloud GPU VPS",
+        "setup_guide": "See docs/CRACKING.md",
+    }), 503

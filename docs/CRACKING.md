@@ -1,327 +1,180 @@
 # Password Cracking Integration
 
-> **Version:** 0.7.0 | **Last Updated:** 2025-12-12
-
-MoMo includes full hashcat integration for WPA/WPA2 password cracking.
-
-⚠️ **WARNING:** Only crack handshakes you obtained legally and ethically.
-
-## Table of Contents
-
-- [Overview](#overview)
-- [Configuration](#configuration)
-- [Web UI](#web-ui)
-- [API Endpoints](#api-endpoints)
-- [Wordlist Management](#wordlist-management)
-- [Attack Modes](#attack-modes)
-- [CLI Usage](#cli-usage)
+> **Version:** 1.0.0 | **Last Updated:** 2025-12-19
 
 ---
 
-## Overview
+## ⚠️ IMPORTANT: GPU Cracking Moved to Cloud
 
-The cracking system supports:
+**As of v1.0.0, GPU-based Hashcat cracking has been moved to Cloud infrastructure.**
 
-| Feature | Description |
-|---------|-------------|
-| **Hash Mode 22000** | WPA-PBKDF2-PMKID+EAPOL (modern format) |
-| **Dictionary Attack** | Wordlist-based cracking |
-| **Brute-force Attack** | Mask-based cracking |
-| **Rule-based Attack** | Wordlist + rules |
-| **Auto-crack** | Automatically crack new handshakes |
-| **Progress Tracking** | Real-time speed and ETA |
-| **Potfile** | Remember cracked passwords |
+### Why?
+- **Pi 5 thermal limits**: GPU-level cracking generates too much heat
+- **Battery drain**: Heavy cracking drains mobile power banks quickly
+- **Efficiency**: Cloud GPU VPS cracks 100-1000x faster than Pi 5
 
-### Architecture
+### New Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│                 HashcatManager                   │
-├─────────────────────────────────────────────────┤
-│  ┌─────────────┐  ┌─────────────┐              │
-│  │ CrackJob    │  │ WordlistMgr │              │
-│  │ - status    │  │ - scan()    │              │
-│  │ - progress  │  │ - get_best()│              │
-│  │ - results   │  │ - add()     │              │
-│  └─────────────┘  └─────────────┘              │
-└─────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    CRACKING ARCHITECTURE v2.0                       │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  MoMo (Pi 5)                 Nexus (Pi 4)              Cloud VPS    │
+│  ───────────                 ───────────               ─────────    │
+│  • Capture handshake  ───►  • Route to cloud  ───►  • GPU Hashcat  │
+│  • Local John (mini)         • Job management         • rockyou+    │
+│  • Convert to .22000         • Result aggregation     • Fast crack  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
----
+### What's Available Locally?
 
-## Configuration
+| Tool | Use Case | Speed |
+|------|----------|-------|
+| **John the Ripper** | Quick checks, mini wordlist | ~100 H/s |
+| **hcxpcapngtool** | Convert captures to .22000 | Instant |
 
-### momo.yml
+### Cloud Cracking via Nexus
 
-```yaml
-cracking:
-  enabled: true               # Enable cracking
-  auto_crack: false           # Auto-crack new handshakes
-  workload_profile: 3         # 1=low, 2=default, 3=high, 4=nightmare
-  max_runtime_seconds: 0      # 0 = unlimited
-  check_interval: 60          # Seconds between auto-crack checks
-  handshakes_dir: logs/handshakes
-  potfile: logs/hashcat.potfile
-```
+```bash
+# Submit to cloud (via Nexus API)
+curl -X POST http://nexus:8080/api/cracking/submit \
+  -d '{"hash_file": "handshake.22000", "wordlist": "rockyou"}'
 
-### Workload Profiles
+# Check status
+curl http://nexus:8080/api/cracking/jobs/<job_id>
 
-| Profile | Name | Description |
-|---------|------|-------------|
-| 1 | Low | Desktop use, minimal GPU impact |
-| 2 | Default | Balanced |
-| 3 | High | Dedicated cracking, some lag |
-| 4 | Nightmare | Full GPU, system may be unusable |
-
----
-
-## Web UI
-
-Access the cracking interface at `http://<ip>:8080/cracking`
-
-### Features
-
-- **Job Submission:** Select hash file, wordlist, attack mode
-- **Progress Display:** Real-time progress, speed, ETA
-- **Cracked Passwords:** View all recovered passwords
-- **Wordlist Selection:** Choose from available wordlists
-
-### Screenshot
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│  🔓 Password Cracking                                        │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐           │
-│  │    5    │ │    3    │ │    1    │ │    2    │           │
-│  │  Total  │ │ Cracked │ │ Active  │ │Wordlists│           │
-│  └─────────┘ └─────────┘ └─────────┘ └─────────┘           │
-│                                                              │
-│  ┌────────────────────┐  ┌────────────────────┐            │
-│  │ 🚀 Start Job       │  │ 🔑 Cracked         │            │
-│  │ Hash file: [____]  │  │ password123 (5.2s) │            │
-│  │ Wordlist:  [▼___]  │  │ secret!@#  (12.1s) │            │
-│  │ [Start Cracking]   │  │ qwerty2024 (3.8s)  │            │
-│  └────────────────────┘  └────────────────────┘            │
-└─────────────────────────────────────────────────────────────┘
+# Get result
+curl http://nexus:8080/api/cracking/results/<job_id>
 ```
 
 ---
 
-## API Endpoints
+## Local Cracking (John the Ripper)
+
+For quick local checks, use John with mini wordlists only:
+
+### API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/cracking/status` | GET | Plugin status |
-| `/api/cracking/jobs` | GET | List all jobs |
-| `/api/cracking/jobs` | POST | Start new job |
-| `/api/cracking/jobs/<id>` | DELETE | Stop job |
-| `/api/cracking/cracked` | GET | List cracked passwords |
-| `/api/cracking/wordlists` | GET | List available wordlists |
-| `/api/cracking/stats` | GET | Cracking statistics |
+| `/api/cracking/status` | GET | Overall status + cloud note |
+| `/api/cracking/john/status` | GET | John status |
+| `/api/cracking/john/jobs` | GET/POST | List/start John jobs |
+| `/api/cracking/john/jobs/<id>` | GET/DELETE | Get/stop job |
+| `/api/cracking/cloud/status` | GET | Cloud cracking status |
 
-### Start a Job
+### Start Local John Job
 
 ```bash
-curl -X POST http://localhost:8080/api/cracking/jobs \
+curl -X POST http://localhost:8080/api/cracking/john/jobs \
   -H "Content-Type: application/json" \
   -d '{
     "hash_file": "logs/handshakes/capture.22000",
-    "wordlist": "/usr/share/wordlists/rockyou.txt",
-    "attack_mode": 0
+    "mode": "wordlist",
+    "wordlist": "configs/wordlists/rockyou-mini.txt"
   }'
 ```
 
-### Response
+### Configuration
 
-```json
-{
-  "ok": true,
-  "job_id": "abc123",
-  "hash_file": "logs/handshakes/capture.22000",
-  "wordlist": "/usr/share/wordlists/rockyou.txt",
-  "attack_mode": 0
-}
+```yaml
+# momo.yml
+cracking:
+  enabled: true               # Enable local cracking
+  use_john: true              # Use John the Ripper
+  john_path: john             # Path to john binary
+  max_runtime_seconds: 300    # 5 min max (prevent battery drain)
+  handshakes_dir: logs/handshakes
+  potfile: logs/john.pot
+  
+  # Cloud settings (via Nexus)
+  cloud_enabled: false        # Enable when Nexus is configured
+  nexus_api_url: ""           # Nexus API URL
 ```
 
 ---
 
 ## Wordlist Management
 
-### Automatic Discovery
+Local wordlists should be SMALL for Pi 5:
 
-WordlistManager scans common paths:
+| Wordlist | Size | Words | Purpose |
+|----------|------|-------|---------|
+| rockyou-mini.txt | 500KB | 10K | Quick check |
+| wifi-common.txt | 100KB | 5K | WiFi-specific |
+| numeric-8.txt | 50KB | 1K | 8-digit patterns |
 
-```
-/usr/share/wordlists/
-/usr/share/dict/
-/opt/wordlists/
-~/.wordlists/
-./wordlists/
-```
-
-### Common Wordlists
-
-| Name | Words | Description |
-|------|-------|-------------|
-| rockyou.txt | 14M | Classic password list |
-| rockyou2024.txt | 10B+ | Massive updated list |
-| common-passwords.txt | 10K | Most common passwords |
-| wifi-passwords.txt | 1M | WiFi-specific passwords |
-
-### Install rockyou.txt
-
-```bash
-# Debian/Ubuntu
-sudo apt install wordlists
-sudo gunzip /usr/share/wordlists/rockyou.txt.gz
-
-# Kali Linux
-# Already available at /usr/share/wordlists/rockyou.txt
-```
+For full wordlists (rockyou.txt 14M+), use Cloud!
 
 ---
 
-## Attack Modes
+## Cloud GPU VPS Setup
 
-### Dictionary Attack (mode 0)
+### Requirements
 
-Uses a wordlist to try passwords:
+- Ubuntu VPS with NVIDIA GPU ($0.50-2/hour)
+- Hashcat installed
+- API endpoint for job submission
 
-```bash
-# Via API
-{
-  "attack_mode": 0,
-  "wordlist": "/usr/share/wordlists/rockyou.txt"
-}
-```
+### Recommended Providers
 
-### Brute-force Attack (mode 3)
+- **Vast.ai** - Cheapest, community GPUs
+- **RunPod** - Reliable, instant
+- **Lambda Labs** - Professional, A100s
 
-Uses masks for pattern-based attacks:
+### Performance Comparison
 
-```bash
-# Via API
-{
-  "attack_mode": 3,
-  "mask": "?d?d?d?d?d?d?d?d"  # 8 digits
-}
-```
-
-### Mask Characters
-
-| Char | Meaning |
-|------|---------|
-| `?d` | Digit (0-9) |
-| `?l` | Lowercase (a-z) |
-| `?u` | Uppercase (A-Z) |
-| `?s` | Special (!@#$...) |
-| `?a` | All printable |
-
-### Examples
-
-| Mask | Pattern | Example |
-|------|---------|---------|
-| `?d?d?d?d?d?d?d?d` | 8 digits | 12345678 |
-| `?u?l?l?l?l?l?d?d` | Word + 2 digits | Password12 |
-| `?d?d?d?d?d?d?d?d?d?d` | Phone number | 5551234567 |
+| Platform | Hash Rate | Cost/Hour | WPA2 Crack Time |
+|----------|-----------|-----------|-----------------|
+| Pi 5 (CPU) | ~50 H/s | Free | Weeks |
+| Pi 5 (John) | ~100 H/s | Free | Weeks |
+| Cloud A10 | ~500K H/s | $0.50 | Minutes |
+| Cloud A100 | ~2M H/s | $2.00 | Seconds |
 
 ---
 
-## CLI Usage
+## Migration Notes
 
-### Convert Capture to Hash
+### Removed from MoMo
 
-```bash
-# Convert pcapng to 22000 format
-hcxpcapngtool -o output.22000 input.pcapng
+- `momo/infrastructure/cracking/hashcat_manager.py`
+- `momo/apps/momo_plugins/hashcat_cracker.py`
+- Hashcat-specific config options
 
-# View hash info
-cat output.22000
-```
+### Still Available
 
-### Manual hashcat
+- `momo/infrastructure/cracking/john_manager.py`
+- `momo/infrastructure/cracking/wordlist_manager.py`
+- `/api/cracking/john/*` endpoints
 
-```bash
-# Dictionary attack
-hashcat -m 22000 -a 0 capture.22000 rockyou.txt
+### Future (via Nexus)
 
-# Brute-force (8 digits)
-hashcat -m 22000 -a 3 capture.22000 ?d?d?d?d?d?d?d?d
-
-# Show cracked
-hashcat -m 22000 capture.22000 --show
-```
-
----
-
-## Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `momo_crack_jobs_total` | Total jobs started |
-| `momo_crack_jobs_cracked` | Successful cracks |
-| `momo_crack_jobs_exhausted` | Wordlist exhausted |
-| `momo_crack_passwords_found` | Passwords recovered |
-| `momo_crack_active_jobs` | Currently running |
-| `momo_crack_errors_total` | Errors encountered |
-
----
-
-## Requirements
-
-### Install hashcat
-
-```bash
-# Debian/Ubuntu
-sudo apt install hashcat
-
-# Verify
-hashcat --version
-```
-
-### GPU Support
-
-For GPU acceleration:
-
-```bash
-# NVIDIA
-sudo apt install nvidia-driver nvidia-cuda-toolkit
-
-# AMD
-sudo apt install rocm-opencl-runtime
-```
+- `/api/cracking/cloud/*` endpoints
+- Automatic handshake sync to cloud
+- Result notification via WebSocket/LoRa
 
 ---
 
 ## Troubleshooting
 
-### hashcat not found
+### "Hashcat not found"
 
-```bash
-# Check if installed
-which hashcat
+Hashcat is no longer used locally. Use John or Cloud.
 
-# Install
-sudo apt install hashcat
-```
+### "John too slow"
 
-### No GPU detected
+Expected on Pi 5. Use mini wordlists or submit to Cloud.
 
-```bash
-# Check OpenCL devices
-hashcat -I
+### "Cloud not configured"
 
-# Force CPU
-hashcat -m 22000 -a 0 -D 1 ...
-```
+1. Deploy Nexus
+2. Configure cloud GPU VPS
+3. Set `nexus_api_url` in config
+4. Enable `cloud_enabled: true`
 
-### Potfile issues
+---
 
-```bash
-# Clear potfile
-rm logs/hashcat.potfile
-
-# Or disable potfile check
-hashcat --potfile-disable ...
-```
+*MoMo v1.6.0 - GPU cracking moved to Cloud*

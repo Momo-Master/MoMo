@@ -258,9 +258,10 @@ plugins:
 |--------|------|-------------|
 | `wardriver` | SCANNER | GPS-correlated AP scanning |
 | `active_wifi` | ATTACK | Deauth/beacon attacks |
-| `hashcat_cracker` | ANALYSIS | Password cracking |
 | `evil_twin` | ATTACK | Rogue AP with captive portal |
 | `capture` | CAPTURE | Handshake capture |
+| ~~`hashcat_cracker`~~ | ~~ANALYSIS~~ | *(Removed v1.6.0 - use Cloud via Nexus)* |
+| ~~`evilginx_aitm`~~ | ~~ATTACK~~ | *(Removed v1.6.0 - use VPS)* |
 
 ---
 

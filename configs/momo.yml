@@ -196,16 +196,19 @@ eviltwin:
   log_dir: logs/eviltwin      # Credential log directory
 
 # ==============================================================================
-# Cracking - Hashcat/John Integration
+# Cracking - Local John + Cloud Integration
 # ==============================================================================
+# NOTE: Hashcat moved to Cloud (v1.6.0). Use Nexus for GPU cracking.
 cracking:
-  enabled: false              # Enable password cracking
-  auto_crack: false           # Auto-crack new handshakes
-  workload_profile: 3         # 1=low, 2=default, 3=high, 4=nightmare
-  max_runtime_seconds: 0      # 0 = unlimited
-  check_interval: 60          # Seconds between auto-crack checks
+  enabled: false              # Enable local cracking (John only)
+  use_john: true              # Use John the Ripper for local
+  john_path: john             # Path to john binary
+  max_runtime_seconds: 300    # 5 min max local (prevent battery drain)
   handshakes_dir: logs/handshakes
-  potfile: logs/hashcat.potfile
+  potfile: logs/john.pot
+  # Cloud cracking via Nexus (for heavy GPU work)
+  cloud_enabled: false        # Enable when Nexus configured
+  nexus_api_url: ""           # Nexus API URL (e.g., http://nexus:8080)
 
 # ==============================================================================
 # WPA3/SAE Attack Configuration
@@ -292,20 +295,19 @@ management:
   dhcp_netmask: 255.255.255.0   # Subnet mask
 
 # ==============================================================================
-# Evilginx AiTM (Adversary-in-the-Middle)
+# Evilginx AiTM - MOVED TO VPS (v1.6.0)
 # ==============================================================================
-evilginx:
-  enabled: false              # Enable Evilginx integration
-  binary_path: /usr/local/bin/evilginx
-  external_ip: 0.0.0.0        # Public IP or interface IP
-  https_port: 443
-  dns_port: 53
-  phishlets_dir: /opt/momo/phishlets
-  data_dir: /opt/momo/evilginx_data
-  log_dir: logs/evilginx
-  autocert: true              # Use Let's Encrypt
-  api_enabled: true
-  api_port: 8443
+# NOTE: Evilginx now runs on dedicated VPS, not on MoMo.
+# Use Evil Twin to redirect victims to VPS-hosted evilginx3.
+# See docs/EVILGINX.md for VPS setup instructions.
+#
+# evilginx:
+#   enabled: false              # REMOVED - deploy on VPS
+#   vps_url: ""                 # Your evilginx VPS URL
+#
+# To use Evil Twin + Evilginx:
+# 1. Deploy evilginx3 on VPS with public domain
+# 2. Set eviltwin.redirect_url to your evilginx lure URL
 
 server:
   # Aggressive mode: No restrictions

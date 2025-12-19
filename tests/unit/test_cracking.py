@@ -1,4 +1,9 @@
-"""Unit tests for Cracking module."""
+"""Unit tests for Cracking module.
+
+NOTE: Hashcat tests have been removed as Hashcat moved to Cloud GPU VPS.
+This module now only tests John the Ripper (lightweight local cracking)
+and WordlistManager.
+"""
 
 from __future__ import annotations
 
@@ -9,216 +14,170 @@ import pytest
 
 
 @pytest.mark.asyncio
-class TestHashcatManager:
-    """Test Hashcat Manager functionality."""
+class TestJohnManager:
+    """Test John the Ripper Manager functionality."""
 
     async def test_mock_manager_start(self):
-        """Mock manager should start successfully."""
-        from momo.infrastructure.cracking.hashcat_manager import (
-            HashcatConfig,
-            MockHashcatManager,
-        )
+        """Mock John manager should start successfully."""
+        from momo.infrastructure.cracking.john_manager import MockJohnManager
 
-        config = HashcatConfig()
-        manager = MockHashcatManager(config=config)
-
-        result = await manager.start()
-        assert result is True
+        manager = MockJohnManager()
+        await manager.start()
+        
         assert manager._running is True
 
         await manager.stop()
 
     async def test_mock_crack_success(self):
-        """Mock cracking should return password."""
-        from momo.infrastructure.cracking.hashcat_manager import (
-            CrackStatus,
-            MockHashcatManager,
+        """Mock John cracking should return password."""
+        from momo.infrastructure.cracking.john_manager import (
+            JohnMode,
+            JohnStatus,
+            MockJohnManager,
         )
 
-        with tempfile.NamedTemporaryFile(suffix=".22000", delete=False) as f:
-            f.write(b"WPA*02*test*hash*data")
+        with tempfile.NamedTemporaryFile(suffix=".john", delete=False) as f:
+            f.write(b"user:$wpapsk$test")
             hash_file = Path(f.name)
 
-        manager = MockHashcatManager()
-        manager.set_mock_result("secretpass", duration=0.05)
+        manager = MockJohnManager()
+        manager.set_mock_result(True, "secretpass")
         await manager.start()
 
-        job = await manager.crack_file(hash_file=hash_file)
+        job = await manager.crack_file(hash_file=hash_file, mode=JohnMode.WORDLIST)
 
-        # Wait for completion (background task needs time)
+        # Wait for completion
         import asyncio
 
-        # Yield to let the task start, then poll for completion
-        await asyncio.sleep(0)  # Yield to event loop
-        for _ in range(100):  # Max 1 second
-            if job.status in (CrackStatus.CRACKED, CrackStatus.EXHAUSTED, CrackStatus.ERROR):
+        await asyncio.sleep(0)
+        for _ in range(100):
+            if job.status in (JohnStatus.CRACKED, JohnStatus.EXHAUSTED, JohnStatus.ERROR):
                 break
             await asyncio.sleep(0.01)
 
-        assert job.status == CrackStatus.CRACKED
-        assert len(job.results) == 1
-        assert job.results[0].password == "secretpass"
-        assert job.results[0].cracked is True
+        assert job.status == JohnStatus.CRACKED
+        assert len(job.cracked_passwords) >= 1
+        assert "secretpass" in job.cracked_passwords
 
         await manager.stop()
         hash_file.unlink()
 
     async def test_mock_crack_exhausted(self):
-        """Mock cracking should exhaust when no password."""
-        from momo.infrastructure.cracking.hashcat_manager import (
-            CrackStatus,
-            MockHashcatManager,
+        """Mock John cracking should exhaust when no password."""
+        from momo.infrastructure.cracking.john_manager import (
+            JohnMode,
+            JohnStatus,
+            MockJohnManager,
         )
 
-        with tempfile.NamedTemporaryFile(suffix=".22000", delete=False) as f:
-            f.write(b"WPA*02*test*hash*data")
+        with tempfile.NamedTemporaryFile(suffix=".john", delete=False) as f:
+            f.write(b"user:$wpapsk$test")
             hash_file = Path(f.name)
 
-        manager = MockHashcatManager()
-        manager.set_mock_result(None, duration=0.05)  # No password found
+        manager = MockJohnManager()
+        manager.set_mock_result(False)  # No crack
         await manager.start()
 
-        job = await manager.crack_file(hash_file=hash_file)
+        job = await manager.crack_file(hash_file=hash_file, mode=JohnMode.WORDLIST)
 
         import asyncio
-
-        # Wait for mock to complete (10 iterations * 0.05/10 = 0.05s + buffer)
         await asyncio.sleep(0.15)
 
-        assert job.status == CrackStatus.EXHAUSTED
-        assert len(job.results) == 0
+        assert job.status == JohnStatus.EXHAUSTED
+        assert len(job.cracked_passwords) == 0
 
         await manager.stop()
         hash_file.unlink()
 
     async def test_manager_stats(self):
         """Stats should be updated correctly."""
-        from momo.infrastructure.cracking.hashcat_manager import MockHashcatManager
+        from momo.infrastructure.cracking.john_manager import JohnMode, MockJohnManager
 
-        with tempfile.NamedTemporaryFile(suffix=".22000", delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".john", delete=False) as f:
             f.write(b"test")
             hash_file = Path(f.name)
 
-        manager = MockHashcatManager()
-        manager.set_mock_result("pass123", duration=0.01)
+        manager = MockJohnManager()
+        manager.set_mock_result(True, "pass123")
         await manager.start()
 
-        job = await manager.crack_file(hash_file=hash_file)
+        job = await manager.crack_file(hash_file=hash_file, mode=JohnMode.WORDLIST)
 
         import asyncio
-
-        # Yield to let the task start, then poll for completion
         await asyncio.sleep(0)
         for _ in range(100):
             if job.status.value in ("cracked", "exhausted", "error"):
                 break
             await asyncio.sleep(0.01)
 
-        assert manager.stats["jobs_total"] == 1
-        assert manager.stats["jobs_cracked"] == 1
-        assert manager.stats["passwords_found"] == 1
+        stats = manager.stats
+        assert stats.jobs_total >= 1
 
         await manager.stop()
         hash_file.unlink()
 
     async def test_manager_metrics(self):
         """Metrics should be Prometheus-compatible."""
-        from momo.infrastructure.cracking.hashcat_manager import MockHashcatManager
+        from momo.infrastructure.cracking.john_manager import MockJohnManager
 
-        manager = MockHashcatManager()
+        manager = MockJohnManager()
         await manager.start()
 
         metrics = manager.get_metrics()
 
-        assert "momo_crack_jobs_total" in metrics
-        assert "momo_crack_jobs_cracked" in metrics
-        assert "momo_crack_passwords_found" in metrics
-        assert "momo_crack_active_jobs" in metrics
+        assert "momo_john_jobs_total" in metrics
+        assert "momo_john_passwords_found" in metrics
 
         await manager.stop()
 
 
-class TestCrackJob:
-    """Test CrackJob model."""
+class TestJohnJob:
+    """Test JohnJob model."""
 
     def test_job_creation(self):
         """Job should be created with defaults."""
-        from momo.infrastructure.cracking.hashcat_manager import (
-            AttackMode,
-            CrackJob,
-            CrackStatus,
+        from momo.infrastructure.cracking.john_manager import (
+            JohnJob,
+            JohnMode,
+            JohnStatus,
         )
 
-        job = CrackJob(
+        job = JohnJob(
             id="test123",
-            hash_file=Path("/tmp/test.22000"),
+            hash_file=Path("/tmp/test.john"),
+            mode=JohnMode.WORDLIST,
         )
 
         assert job.id == "test123"
-        assert job.status == CrackStatus.PENDING
-        assert job.attack_mode == AttackMode.DICTIONARY
-        assert job.progress_percent == 0.0
+        assert job.status == JohnStatus.PENDING
+        assert job.mode == JohnMode.WORDLIST
 
     def test_job_to_dict(self):
         """Job should serialize correctly."""
-        from momo.infrastructure.cracking.hashcat_manager import CrackJob
+        from momo.infrastructure.cracking.john_manager import JohnJob, JohnMode
 
-        job = CrackJob(
+        job = JohnJob(
             id="abc123",
-            hash_file=Path("/tmp/test.22000"),
+            hash_file=Path("/tmp/test.john"),
+            mode=JohnMode.INCREMENTAL,
         )
-        job.progress_percent = 50.0
-        job.speed_hps = 100000
 
         data = job.to_dict()
 
         assert data["id"] == "abc123"
-        assert data["progress_percent"] == 50.0
-        assert data["speed_hps"] == 100000
+        assert data["mode"] == "incremental"
 
 
-class TestCrackResult:
-    """Test CrackResult model."""
+class TestJohnMode:
+    """Test JohnMode enum."""
 
-    def test_result_creation(self):
-        """Result should be created correctly."""
-        from momo.infrastructure.cracking.hashcat_manager import CrackResult
+    def test_john_modes(self):
+        """All John modes should be defined."""
+        from momo.infrastructure.cracking.john_manager import JohnMode
 
-        result = CrackResult(
-            hash_value="WPA*02*test",
-            password="secret123",
-            cracked=True,
-            duration_seconds=10.5,
-        )
-
-        assert result.password == "secret123"
-        assert result.cracked is True
-        assert result.duration_seconds == 10.5
-
-
-class TestAttackMode:
-    """Test AttackMode enum."""
-
-    def test_attack_modes(self):
-        """All attack modes should be defined."""
-        from momo.infrastructure.cracking.hashcat_manager import AttackMode
-
-        assert AttackMode.DICTIONARY.value == 0
-        assert AttackMode.BRUTE_FORCE.value == 3
-        assert AttackMode.COMBINATION.value == 1
-
-
-class TestCrackStatus:
-    """Test CrackStatus enum."""
-
-    def test_status_values(self):
-        """All status values should be defined."""
-        from momo.infrastructure.cracking.hashcat_manager import CrackStatus
-
-        assert CrackStatus.PENDING.value == "pending"
-        assert CrackStatus.RUNNING.value == "running"
-        assert CrackStatus.CRACKED.value == "cracked"
-        assert CrackStatus.EXHAUSTED.value == "exhausted"
+        assert JohnMode.WORDLIST.value == "wordlist"
+        assert JohnMode.INCREMENTAL.value == "incremental"
+        assert JohnMode.SINGLE.value == "single"
 
 
 class TestWordlistManager:
@@ -292,4 +251,3 @@ class TestWordlist:
 
         assert data["name"] == "test"
         assert data["word_count"] == 1000
-

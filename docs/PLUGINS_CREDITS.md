@@ -38,7 +38,7 @@ The following plugins were developed specifically for MoMo:
 | Plugin | Author | Description | Version |
 |--------|--------|-------------|---------|
 | `wardriver.py` | MoMo Team | GPS-correlated wardriving | 0.2.0 |
-| `cracker.py` | MoMo Team | Hashcat/John integration | 0.1.0 |
+| `cracker.py` | MoMo Team | John local + Cloud proxy | 1.6.0 |
 | `active_wifi.py` | MoMo Team | mdk4/aireplay attacks | 0.1.0 |
 | `bettercap.py` | MoMo Team | Bettercap REST integration | 0.1.0 |
 | `webcfg.py` | MoMo Team | Web configuration panel | 0.1.0 |

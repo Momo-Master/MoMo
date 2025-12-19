@@ -174,14 +174,21 @@ class EvilTwinConfig(BaseModel):
 
 
 class CrackingConfig(BaseModel):
-    """Hashcat cracking configuration."""
-    enabled: bool = Field(False)  # Disabled by default
-    auto_crack: bool = Field(False)  # Auto-crack new handshakes
-    workload_profile: int = Field(3, ge=1, le=4)  # 1=low, 4=nightmare
-    max_runtime_seconds: int = Field(0, ge=0)  # 0 = unlimited
-    check_interval: int = Field(60, ge=10)  # Seconds between auto-crack checks
+    """
+    Local cracking configuration (John the Ripper only).
+    
+    NOTE: GPU-based Hashcat cracking has moved to Cloud infrastructure.
+    For heavy cracking, use Nexus → Cloud GPU VPS integration.
+    """
+    enabled: bool = Field(False)  # Local cracking disabled by default
+    use_john: bool = Field(True)  # Use John the Ripper for local cracking
+    john_path: str = Field("john")  # Path to john binary
+    max_runtime_seconds: int = Field(300, ge=0)  # 5 min max for local (0 = unlimited)
     handshakes_dir: str = Field("logs/handshakes")
-    potfile: str = Field("logs/hashcat.potfile")
+    potfile: str = Field("logs/john.pot")
+    # Cloud settings (via Nexus)
+    cloud_enabled: bool = Field(False)  # Enable Cloud cracking via Nexus
+    nexus_api_url: str = Field("")  # Nexus API URL for cloud cracking
 
 
 class ManagementNetworkMode(str, Enum):
