@@ -34,16 +34,12 @@
 
 MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for penetration testers and security researchers. It combines the best features of Pwnagotchi, ESP32 Marauder, and WiFi Pineapple into one powerful, modular platform.
 
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                            MoMo Platform                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│  📡 Multi-Radio      │  🗺️ GPS Wardriving    │  🔐 WPA2/WPA3 Attacks    │
-│  👿 Evil Twin        │  🎭 Karma/MANA        │  🔗 Nexus Integration    │
-│  📻 SDR Integration  │  🦷 BLE Attacks       │  💥 John + Cloud Crack   │
-│  🔌 Plugin System    │  📊 Real-time UI      │  🔧 Hardware Auto-Detect │
-└──────────────────────────────────────────────────────────────────────────┘
-```
+| | | |
+|:---:|:---:|:---:|
+| 📡 **Multi-Radio** | 🔐 **WPA2/WPA3 Attacks** | 🤝 **Handshake Capture** |
+| 👿 **Evil Twin** | 🎭 **Karma/MANA** | 🎣 **Evilginx MFA Bypass** |
+| 🦷 **BLE Attacks** | 🗺️ **GPS Wardriving** | 💥 **Cloud Cracking** |
+| 🖥️ **OLED Display** | 🧩 **Plugin Friendly** | 🔗 **Nexus Integration** |
 
 ---
 
