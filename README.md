@@ -2,7 +2,8 @@
   <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%205-c51a4a?style=for-the-badge&logo=raspberry-pi" alt="Platform">
   <img src="https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Tests-424%20Passing-success?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Tests-445%20Passing-success?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/Version-1.5.2-blue?style=for-the-badge" alt="Version">
 </p>
 
 <h1 align="center">🔥 MoMo</h1>
@@ -16,9 +17,15 @@
 <p align="center">
   <a href="#-features">Features</a> •
   <a href="#-quick-start">Quick Start</a> •
-  <a href="#-architecture">Architecture</a> •
+  <a href="#-ecosystem">Ecosystem</a> •
   <a href="#-documentation">Docs</a> •
   <a href="#-contributing">Contributing</a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Momo-Master/MoMo-Nexus">Nexus</a> •
+  <a href="https://github.com/Momo-Master/Momo-GhostBridge">GhostBridge</a> •
+  <a href="https://github.com/Momo-Master/MoMo-Mimic">Mimic</a>
 </p>
 
 ---
@@ -98,6 +105,7 @@ MoMo is a **Raspberry Pi 5** based wireless security audit platform designed for
 - **Hardware Auto-Detection** - Automatic USB device identification & configuration
 - **Headless Ready** - Management network separation for screenless operation
 - **445 Unit Tests** - Comprehensive test coverage with pytest-asyncio
+- **Nexus Integration** - Seamless sync with [MoMo-Nexus](https://github.com/Momo-Master/MoMo-Nexus) hub
 
 ---
 
@@ -483,6 +491,36 @@ pytest tests/ -v --cov=momo
 
 ---
 
+## 🌐 MoMo Ecosystem
+
+MoMo is part of a larger offensive security ecosystem. Each project is designed to work together seamlessly.
+
+```
+                         ☁️ Cloud (Hashcat GPU + Evilginx)
+                                    │
+                         ┌──────────▼──────────┐
+                         │    MoMo-Nexus       │
+                         │    Central Hub      │
+                         └──────────┬──────────┘
+                                    │
+          ┌─────────────────────────┼─────────────────────────┐
+          │                         │                         │
+   ┌──────▼──────┐          ┌───────▼───────┐         ┌──────▼──────┐
+   │  🔵 MoMo    │          │ 👻 GhostBridge│         │ 🎭 Mimic    │
+   │   WiFi/BLE  │          │   Network     │         │  USB Attack │
+   │    Pi 5     │          │   Implant     │         │  Pi Zero    │
+   └─────────────┘          └───────────────┘         └─────────────┘
+```
+
+| Project | Description | Platform | Status |
+|---------|-------------|----------|--------|
+| **[MoMo](https://github.com/Momo-Master/MoMo)** | WiFi/BLE/SDR Audit Platform | Pi 5 | ✅ v1.5.2 |
+| **[MoMo-Nexus](https://github.com/Momo-Master/MoMo-Nexus)** | Central Communication Hub | Pi 4 | ✅ v1.0.0 |
+| **[MoMo-GhostBridge](https://github.com/Momo-Master/Momo-GhostBridge)** | Network Implant | NanoPi R2S | ✅ v0.5.0 |
+| **[MoMo-Mimic](https://github.com/Momo-Master/MoMo-Mimic)** | USB Attack Platform | Pi Zero 2W | ✅ v1.0.0 |
+
+---
+
 ## ⚠️ Legal Disclaimer
 
 **MoMo is designed for authorized security testing and educational purposes only.**
@@ -500,6 +538,13 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ---
 
 <p align="center">
-  <strong>Built with 🔥 by the MoMo Team</strong><br>
+  <strong>Part of the 🔥 MoMo Ecosystem</strong><br>
   <sub>Inspired by Pwnagotchi, ESP32 Marauder, and WiFi Pineapple</sub>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Momo-Master/MoMo">MoMo</a> •
+  <a href="https://github.com/Momo-Master/MoMo-Nexus">Nexus</a> •
+  <a href="https://github.com/Momo-Master/Momo-GhostBridge">GhostBridge</a> •
+  <a href="https://github.com/Momo-Master/MoMo-Mimic">Mimic</a>
 </p>
