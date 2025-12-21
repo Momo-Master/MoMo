@@ -68,6 +68,40 @@ oled:
   i2c_address: "0x3C"
   width: 128
   height: 64
+  rotation: 0                 # 0, 90, 180, 270 degrees
+  contrast: 255               # 0-255 brightness
+  auto_rotate_interval: 5.0   # Seconds between screen changes
+  
+  # Interactive Menu System
+  menu:
+    enabled: true
+    idle_timeout: 30.0        # Return to status after idle (seconds)
+    start_in_menu: false      # Start in menu or status view
+    long_press_action: menu   # "menu" or "home"
+    style:
+      item_height: 10
+      max_visible_items: 5
+      show_scrollbar: true
+      show_icons: true
+  
+  # GPIO Button Configuration
+  buttons:
+    enabled: true
+    layout: FOUR_BUTTON       # THREE_BUTTON, FOUR_BUTTON, FIVE_BUTTON, PIMORONI_DISPLAY_HAT
+    # GPIO pins (BCM numbering)
+    pin_up: 5
+    pin_down: 6
+    pin_select: 13
+    pin_back: 19
+    # Timing (milliseconds)
+    debounce_ms: 50
+    long_press_ms: 800
+    repeat_delay_ms: 400
+    repeat_rate_ms: 100
+    # Behavior
+    pull_up: true
+    active_low: true
+    enable_repeat: true
 
 security:
   # YOUR OWN NETWORKS - Add here to protect from self-attack
@@ -143,6 +177,45 @@ supervisor:
   jitter_frac: 0.2
   health_check_interval_secs: 5
   fault_injection: false
+
+# ==============================================================================
+# Auto-Pwn Mode - Autonomous Attack Engine
+# ==============================================================================
+autopwn:
+  enabled: false              # Enable autonomous mode
+  mode: aggressive            # passive, balanced, aggressive
+  
+  # Scanning
+  scan_interval: 30           # Seconds between scans
+  scan_channels: [1, 6, 11]   # 2.4GHz channels
+  scan_5ghz: true             # Include 5GHz channels
+  
+  # Targeting
+  max_concurrent_attacks: 1   # Parallel attack limit
+  min_signal_dbm: -80         # Ignore weak signals
+  prefer_wpa2: true           # WPA2 > WPA3
+  prefer_with_clients: true   # APs with active clients
+  max_attack_attempts: 3      # Per target
+  cooldown_seconds: 300       # 5 min between retries
+  
+  # Attack Types
+  enable_pmkid: true          # PMKID grab (clientless)
+  enable_deauth: true         # Deauth + handshake
+  enable_eviltwin: false      # Rogue AP (needs 2nd interface)
+  attack_timeout: 120         # Seconds per attack
+  
+  # Cracking
+  enable_local_crack: true    # John the Ripper
+  enable_cloud_crack: false   # Send to Nexus
+  crack_timeout: 300          # 5 min local crack timeout
+  
+  # Safety
+  stop_on_low_battery: 20     # Stop at 20% battery
+  max_session_duration: 0     # 0 = unlimited
+  
+  # Session Management
+  session_dir: logs/autopwn   # Session data directory
+  auto_save_interval: 30      # Auto-save every 30s
 
 aggressive:
   enabled: true

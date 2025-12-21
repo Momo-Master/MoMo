@@ -6,7 +6,10 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.asyncio
+pytestmark = [
+    pytest.mark.asyncio,
+    pytest.mark.skip(reason="Hashcat moved to Nexus Cloud (v1.6.0) - use John locally"),
+]
 
 
 class TestCaptureTocrackFlow:
