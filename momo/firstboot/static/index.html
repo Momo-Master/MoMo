@@ -433,6 +433,7 @@
                 
                 <!-- AP Mode Config -->
                 <div id="ap-config" style="margin-top: 20px;">
+                    <div id="ap-error" class="error-message" style="display: none;"></div>
                     <div class="form-group">
                         <label for="ap-ssid">AP Network Name</label>
                         <input type="text" id="ap-ssid" value="MoMo-Management" placeholder="Network name">
@@ -440,6 +441,10 @@
                     <div class="form-group">
                         <label for="ap-password">AP Password</label>
                         <input type="password" id="ap-password" placeholder="Password (min 8 chars)">
+                    </div>
+                    <div class="form-group">
+                        <label for="ap-password-confirm">Confirm AP Password</label>
+                        <input type="password" id="ap-password-confirm" placeholder="Confirm password">
                     </div>
                 </div>
                 
@@ -651,12 +656,31 @@
             if (step === 3) {
                 const mode = document.querySelector('input[name="network-mode"]:checked').value;
                 wizardData.network.mode = mode;
+                const apErrorDiv = document.getElementById('ap-error');
+                
                 if (mode === 'ap') {
+                    const apPassword = document.getElementById('ap-password').value;
+                    const apPasswordConfirm = document.getElementById('ap-password-confirm').value;
+                    
+                    // Validate AP password
+                    if (apPassword.length > 0 && apPassword.length < 8) {
+                        apErrorDiv.textContent = 'AP password must be at least 8 characters';
+                        apErrorDiv.style.display = 'block';
+                        return false;
+                    }
+                    if (apPassword !== apPasswordConfirm) {
+                        apErrorDiv.textContent = 'AP passwords do not match';
+                        apErrorDiv.style.display = 'block';
+                        return false;
+                    }
+                    apErrorDiv.style.display = 'none';
+                    
                     wizardData.network.ap = {
                         ssid: document.getElementById('ap-ssid').value || 'MoMo-Management',
-                        password: document.getElementById('ap-password').value
+                        password: apPassword
                     };
                 } else {
+                    apErrorDiv.style.display = 'none';
                     const selected = document.querySelector('.wifi-item.selected');
                     wizardData.network.client = {
                         ssid: selected ? selected.dataset.ssid : '',
