@@ -1,22 +1,33 @@
 [Unit]
-Description=MoMo core service
-After=network-online.target
+Description=MoMo Wireless Security Platform
+Documentation=https://github.com/M0M0Sec/MoMo
+After=network-online.target momo-ap.service
 Wants=network-online.target
+
+# Don't start until first boot wizard completes
+ConditionPathExists=|/etc/momo/.setup_complete
+ConditionPathExists=|/etc/momo/momo.yml
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/momo
-ExecStartPre=/opt/momo/deploy/helpers/net_quiet.sh stop || true
-ExecStart=/opt/momo/.venv/bin/momo run -c /opt/momo/configs/momo.yml --health-port 8081 --prom-port 9091
+
+# Use /etc/momo/momo.yml as primary config location
+ExecStart=/opt/momo/.venv/bin/momo run -c /etc/momo/momo.yml
+
+# Environment files
 EnvironmentFile=-/etc/default/momo
 EnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf
+
+# Restart policy
 Restart=always
-RestartSec=2
+RestartSec=5
 LimitNOFILE=65535
-NoNewPrivileges=yes
-ProtectSystem=full
-ProtectHome=true
-PrivateTmp=yes
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=momo
 
 [Install]
 WantedBy=multi-user.target

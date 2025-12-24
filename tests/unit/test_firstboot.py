@@ -329,9 +329,12 @@ class TestWizardServer:
             "/api/step/network",
             json={
                 "mode": "ap",
-                "ap_ssid": "TestNetwork",
-                "ap_password": "TestPass123",
-                "ap_channel": 6
+                "ap": {
+                    "ssid": "TestNetwork",
+                    "password": "TestPass123",
+                    "channel": 6
+                },
+                "client": {}
             }
         )
         assert response.status_code == 200
@@ -343,9 +346,12 @@ class TestWizardServer:
             "/api/step/network",
             json={
                 "mode": "ap",
-                "ap_ssid": "TestNetwork",
-                "ap_password": "short",
-                "ap_channel": 6
+                "ap": {
+                    "ssid": "TestNetwork",
+                    "password": "short",
+                    "channel": 6
+                },
+                "client": {}
             }
         )
         assert response.status_code == 400
@@ -356,8 +362,11 @@ class TestWizardServer:
             "/api/step/network",
             json={
                 "mode": "client",
-                "client_ssid": "",
-                "client_password": "TestPass123"
+                "ap": {},
+                "client": {
+                    "ssid": "",
+                    "password": "TestPass123"
+                }
             }
         )
         assert response.status_code == 400
@@ -656,9 +665,12 @@ class TestWizardFlow:
         # Step 3: Network
         resp = client.post("/api/step/network", json={
             "mode": "ap",
-            "ap_ssid": "MoMo-Test",
-            "ap_password": "TestAP123!",
-            "ap_channel": 6
+            "ap": {
+                "ssid": "MoMo-Test",
+                "password": "TestAP123!",
+                "channel": 6
+            },
+            "client": {}
         })
         assert resp.status_code == 200
         

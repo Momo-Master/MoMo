@@ -1,14 +1,24 @@
 [Unit]
-Description=MoMo Web UI
+Description=MoMo Web UI (Standalone)
+Documentation=https://github.com/M0M0Sec/MoMo
 After=network-online.target
-Wants=network-online.target momo.service
+Wants=network-online.target
+
+# Note: Web UI is included in main momo.service
+# This service is for standalone web server if needed
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/momo
-Environment=MOMO_CONFIG=/opt/momo/configs/momo.yml
+Environment=MOMO_CONFIG=/etc/momo/momo.yml
+EnvironmentFile=-/etc/systemd/system/momo.service.d/env.conf
 ExecStart=/opt/momo/.venv/bin/python -m momo.apps.momo_web.server
 Restart=on-failure
+RestartSec=5
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=momo-web
 
 [Install]
 WantedBy=multi-user.target

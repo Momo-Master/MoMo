@@ -107,11 +107,17 @@ main() {
     # Install MoMo
     log "Installing MoMo..."
     pip install --upgrade pip setuptools wheel >/dev/null
-    pip install -e "$DEST[recommended,wardriving,ble,eviltwin]" 2>/dev/null || \
+    
+    # Install with extras (firstboot requires fastapi, uvicorn, etc.)
+    pip install -e "$DEST[recommended,wardriving,ble,eviltwin,firstboot]" 2>/dev/null || \
+    pip install -e "$DEST[firstboot]" 2>/dev/null || \
     pip install -e "$DEST" || {
         error "Failed to install MoMo"
         exit 1
     }
+    
+    # Ensure firstboot dependencies are installed
+    pip install fastapi uvicorn[standard] python-multipart jinja2 pyyaml 2>/dev/null || true
     
     # Create config directory
     log "Setting up configuration..."
@@ -212,7 +218,16 @@ EOFENTRY
         systemctl disable dnsmasq 2>/dev/null || true
         systemctl stop dnsmasq 2>/dev/null || true
         
-        # Enable firstboot service
+        # Install Management AP service and script
+        if [ -f "$DEST/deploy/systemd/momo-ap.service" ]; then
+            log "Installing Management AP service..."
+            cp "$DEST/deploy/systemd/momo-ap.service" /etc/systemd/system/
+        fi
+        if [ -f "$DEST/scripts/momo-ap.sh" ]; then
+            chmod +x "$DEST/scripts/momo-ap.sh"
+        fi
+        
+        # Enable firstboot service (but not momo-ap yet - wizard will enable it)
         systemctl enable momo-firstboot || true
     fi
     

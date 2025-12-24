@@ -1,5 +1,6 @@
 """Security tests for MoMo."""
 
+import os
 import pytest
 
 
@@ -9,11 +10,19 @@ def secure_app():
     from momo.config import MomoConfig
     from momo.apps.momo_web import create_app
     
+    # Set a token so auth is actually required
+    os.environ["MOMO_UI_TOKEN"] = "test-security-token-12345"
+    
     config = MomoConfig()
     config.web.require_token = True
+    config.web.allow_local_unauth = False  # Disable local auth bypass for testing
     app = create_app(config)
     app.config["TESTING"] = True
-    return app
+    
+    yield app
+    
+    # Cleanup
+    os.environ.pop("MOMO_UI_TOKEN", None)
 
 
 @pytest.fixture

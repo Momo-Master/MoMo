@@ -49,10 +49,12 @@ eviltwin = [
   "aiohttp>=3.9.0",      # Captive portal server
 ]
 firstboot = [
-  "fastapi>=0.115.0",    # Wizard web server
-  "uvicorn>=0.30.0",     # ASGI server
-  "aiohttp>=3.9.0",      # Nexus discovery
-  "zeroconf>=0.131.0",   # mDNS discovery
+  "fastapi>=0.115.0",        # Wizard web server
+  "uvicorn[standard]>=0.30.0",  # ASGI server with extras
+  "python-multipart>=0.0.9", # Form handling
+  "aiohttp>=3.9.0",          # Nexus discovery
+  "zeroconf>=0.131.0",       # mDNS discovery
+  "jinja2>=3.1.0",           # Template rendering
 ]
 dev = [
   "ruff>=0.5.0",

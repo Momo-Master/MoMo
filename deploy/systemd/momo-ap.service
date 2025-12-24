@@ -16,8 +16,10 @@ Documentation=https://github.com/M0M0Sec/MoMo
 After=network.target
 Before=momo.service
 
-# Only start if setup is complete
-ConditionPathExists=/etc/momo/.setup_complete
+# Only start if setup is complete (check both locations)
+ConditionPathExists=|/etc/momo/.setup_complete
+ConditionPathExists=|/opt/momo/configs/.setup_complete
+ConditionPathExists=|/etc/momo/network.yml
 
 [Service]
 Type=forking

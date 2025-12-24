@@ -237,18 +237,27 @@ class TestAuthEndpoints:
 
     def test_unauthorized_without_token(self):
         """Requests without token should be rejected when auth enabled."""
+        import os
         from momo.config import MomoConfig
         from momo.apps.momo_web import create_app
         
-        config = MomoConfig()
-        config.web.require_token = True
-        app = create_app(config)
-        app.config["TESTING"] = True
+        # Set a token so auth is actually required
+        os.environ["MOMO_UI_TOKEN"] = "test-secret-token-12345"
         
-        with app.test_client() as client:
-            response = client.get("/api/captures")
-            # Should be unauthorized or redirect
-            assert response.status_code in [401, 302]
+        try:
+            config = MomoConfig()
+            config.web.require_token = True
+            config.web.allow_local_unauth = False  # Disable local auth bypass for test
+            app = create_app(config)
+            app.config["TESTING"] = True
+            
+            with app.test_client() as client:
+                response = client.get("/api/captures")
+                # Should be unauthorized or redirect
+                assert response.status_code in [401, 302]
+        finally:
+            # Clean up
+            os.environ.pop("MOMO_UI_TOKEN", None)
 
     def test_static_files_no_auth(self, client):
         """Static files should not require auth."""
