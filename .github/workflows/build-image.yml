@@ -73,30 +73,47 @@ jobs:
             libarchive-tools libcap2-bin \
             rsync grep udev xz-utils \
             binfmt-support file \
-            kpartx
+            kpartx arch-test \
+            fdisk gdisk \
+            pigz xxd
+
+          # Add Raspberry Pi GPG key
+          curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
+            sudo gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg
       
       - name: Build image
         run: |
           cd deploy/image
           chmod +x make_image.sh
-          sudo IMG_VERSION="${{ steps.version.outputs.version }}" ./make_image.sh
+          
+          # Use native build (not Docker) on GitHub Actions
+          sudo IMG_VERSION="${{ steps.version.outputs.version }}" \
+               WORKDIR=/tmp/momo-pigen \
+               OUTPUT_DIR=${{ github.workspace }}/releases \
+               ./make_image.sh 2>&1 || {
+            echo "Build failed, checking logs..."
+            cat /tmp/momo-pigen/pi-gen/work/*/stage0/debootstrap.log 2>/dev/null || true
+            exit 1
+          }
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
+        if: success()
         with:
           name: momo-pi5-${{ steps.version.outputs.version }}
           path: |
-            deploy/image/../../releases/*.img.xz
-            deploy/image/../../releases/*.sha256
+            ${{ github.workspace }}/releases/*.img.xz
+            ${{ github.workspace }}/releases/*.sha256
           retention-days: 30
+          if-no-files-found: warn
       
       - name: Upload to release
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' && success()
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            releases/*.img.xz
-            releases/*.sha256
+            ${{ github.workspace }}/releases/*.img.xz
+            ${{ github.workspace }}/releases/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
