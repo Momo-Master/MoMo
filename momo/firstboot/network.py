@@ -177,19 +177,48 @@ class NetworkManager:
         netmask = self.config.netmask
         
         try:
-            # Bring down interface
-            await self._run_command(["ip", "link", "set", iface, "down"])
+            logger.info(f"Taking control of interface {iface} for AP mode...")
             
-            # Set IP address
+            # Step 1: Stop NetworkManager from managing this interface
+            await self._run_command(
+                ["nmcli", "dev", "set", iface, "managed", "no"],
+                check=False
+            )
+            
+            # Step 2: Disconnect from any existing WiFi network
+            await self._run_command(
+                ["nmcli", "dev", "disconnect", iface],
+                check=False
+            )
+            
+            # Step 3: Stop wpa_supplicant for this interface
+            await self._run_command(
+                ["pkill", "-f", f"wpa_supplicant.*{iface}"],
+                check=False
+            )
+            await asyncio.sleep(0.5)
+            
+            # Step 4: Kill any remaining wpa_supplicant
+            await self._run_command(["killall", "wpa_supplicant"], check=False)
+            await asyncio.sleep(0.5)
+            
+            # Step 5: Bring down interface
+            await self._run_command(["ip", "link", "set", iface, "down"])
+            await asyncio.sleep(0.3)
+            
+            # Step 6: Flush existing IP configuration
             await self._run_command(["ip", "addr", "flush", "dev", iface])
+            
+            # Step 7: Set static IP for AP mode
             await self._run_command([
                 "ip", "addr", "add",
                 f"{ip}/24",
                 "dev", iface
             ])
             
-            # Bring up interface
+            # Step 8: Bring up interface
             await self._run_command(["ip", "link", "set", iface, "up"])
+            await asyncio.sleep(0.5)
             
             logger.info(f"Interface {iface} configured with IP {ip}")
             return True
@@ -199,14 +228,32 @@ class NetworkManager:
             return False
     
     async def _reset_interface(self) -> bool:
-        """Reset interface to default state."""
+        """Reset interface to default state and return control to NetworkManager."""
         iface = self.config.interface
         
         try:
-            await self._run_command(["ip", "addr", "flush", "dev", iface])
-            await self._run_command(["ip", "link", "set", iface, "down"])
+            logger.info(f"Resetting interface {iface} to default state...")
+            
+            # Flush IP and bring down
+            await self._run_command(["ip", "addr", "flush", "dev", iface], check=False)
+            await self._run_command(["ip", "link", "set", iface, "down"], check=False)
+            
+            # Return control to NetworkManager
+            await self._run_command(
+                ["nmcli", "dev", "set", iface, "managed", "yes"],
+                check=False
+            )
+            
+            # Bring interface back up
+            await self._run_command(["ip", "link", "set", iface, "up"], check=False)
+            
+            # Trigger NetworkManager to reconnect
+            await self._run_command(["nmcli", "dev", "connect", iface], check=False)
+            
+            logger.info(f"Interface {iface} returned to NetworkManager control")
             return True
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Error resetting interface: {e}")
             return False
     
     async def _start_hostapd(self) -> bool:
@@ -214,8 +261,13 @@ class NetworkManager:
         
         # Check if hostapd is available
         if not shutil.which("hostapd"):
-            logger.error("hostapd not found - please install it")
+            logger.error("hostapd not found - please install: sudo apt install hostapd")
             return False
+        
+        # Kill any existing hostapd processes
+        await self._run_command(["killall", "hostapd"], check=False)
+        await self._run_command(["systemctl", "stop", "hostapd"], check=False)
+        await asyncio.sleep(0.5)
         
         # Generate hostapd config
         hostapd_config = f"""# MoMo First Boot Wizard - hostapd config
@@ -233,26 +285,29 @@ wpa_passphrase={self.config.password}
 wpa_key_mgmt=WPA-PSK
 wpa_pairwise=TKIP
 rsn_pairwise=CCMP
+country_code=TR
 """
         
         self.HOSTAPD_CONF.write_text(hostapd_config)
+        logger.info(f"hostapd config written to {self.HOSTAPD_CONF}")
         
         try:
-            # Start hostapd
+            # Start hostapd with debug output
             self._hostapd_process = subprocess.Popen(
-                ["hostapd", str(self.HOSTAPD_CONF)],
+                ["hostapd", "-dd", str(self.HOSTAPD_CONF)],
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
             )
             
             # Wait a bit and check if it's running
-            await asyncio.sleep(1)
+            await asyncio.sleep(2)
             if self._hostapd_process.poll() is not None:
-                stdout, stderr = self._hostapd_process.communicate()
-                logger.error(f"hostapd failed to start: {stderr.decode()}")
+                stdout, _ = self._hostapd_process.communicate()
+                output = stdout.decode() if stdout else "No output"
+                logger.error(f"hostapd failed to start:\n{output[-500:]}")
                 return False
             
-            logger.info("hostapd started successfully")
+            logger.info(f"hostapd started: SSID={self.config.ssid}, Channel={self.config.channel}")
             return True
             
         except Exception as e:
