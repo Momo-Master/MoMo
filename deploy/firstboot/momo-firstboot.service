@@ -26,14 +26,12 @@ Before=momo-web.service
 After=network.target
 After=systemd-resolved.service
 
-# Don't start if setup is complete
+# Don't start if setup is complete (check multiple locations)
 ConditionPathExists=!/etc/momo/.setup_complete
+ConditionPathExists=!/opt/momo/configs/.setup_complete
 
 [Service]
-Type=oneshot
-
-# Stay active so we can track state
-RemainAfterExit=yes
+Type=simple
 
 # Run as root (needed for network configuration)
 User=root

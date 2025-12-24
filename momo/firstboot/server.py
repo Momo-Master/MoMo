@@ -526,22 +526,47 @@ class WizardServer:
         if self.network_manager:
             await self.network_manager.stop_wizard_network()
         
-        # Start main MoMo service
         import subprocess
+        
+        # Check if AP mode was selected
+        network_config = self.config_data.get("network", {})
+        if network_config.get("mode") == "ap":
+            # Enable and start management AP service
+            try:
+                subprocess.run(
+                    ["systemctl", "enable", "momo-ap"],
+                    check=False,
+                    capture_output=True,
+                )
+                subprocess.run(
+                    ["systemctl", "start", "momo-ap"],
+                    check=False,
+                    capture_output=True,
+                )
+                logger.info("Management AP service enabled and started")
+            except Exception as e:
+                logger.warning(f"Could not start momo-ap service: {e}")
+        
+        # Enable and start main MoMo service
         try:
+            subprocess.run(
+                ["systemctl", "enable", "momo"],
+                check=False,
+                capture_output=True,
+            )
             subprocess.run(
                 ["systemctl", "start", "momo"],
                 check=False,
                 capture_output=True,
             )
-            logger.info("MoMo service started")
+            logger.info("MoMo service enabled and started")
         except Exception as e:
             logger.warning(f"Could not start momo service: {e}")
         
-        # Stop the wizard service (this process)
+        # Disable firstboot service (no longer needed)
         try:
             subprocess.run(
-                ["systemctl", "stop", "momo-firstboot"],
+                ["systemctl", "disable", "momo-firstboot"],
                 check=False,
                 capture_output=True,
             )

@@ -118,10 +118,9 @@ install -d -m 0755 -o momo -g momo /etc/momo
 install -d -m 0755 -o momo -g momo /var/log/momo
 install -d -m 0755 -o momo -g momo /var/lib/momo
 
-# Copy default config
-if [ -f /opt/momo/configs/momo.yml ]; then
-    install -m 0644 -o momo -g momo /opt/momo/configs/momo.yml /etc/momo/momo.yml
-fi
+# DO NOT copy default config - First Boot Wizard will create it!
+# This ensures the wizard runs on first boot.
+# The example config is available at /opt/momo/configs/momo.example.yml
 
 # ==============================================================================
 # Systemd Services
@@ -133,11 +132,18 @@ install -m 0644 /opt/momo/deploy/systemd/momo.service /etc/systemd/system/
 install -m 0644 /opt/momo/deploy/systemd/momo-web.service /etc/systemd/system/
 install -m 0644 /opt/momo/deploy/systemd/momo-oled.service /etc/systemd/system/
 
+# Management AP service
+install -m 0644 /opt/momo/deploy/systemd/momo-ap.service /etc/systemd/system/
+
 # First Boot Wizard service
 install -m 0644 /opt/momo/deploy/firstboot/momo-firstboot.service /etc/systemd/system/
 
+# Install AP management script
+install -m 0755 /opt/momo/scripts/momo-ap.sh /opt/momo/scripts/
+
 # Enable services
 systemctl enable momo-firstboot.service
+# momo-ap will be enabled after setup completes (only if AP mode selected)
 # Don't enable main services yet - firstboot will do that
 # systemctl enable momo.service momo-web.service momo-oled.service
 

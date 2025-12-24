@@ -1,0 +1,50 @@
+# ==============================================================================
+# MoMo Management AP Service
+# ==============================================================================
+# Creates a WiFi Access Point for management access.
+# Reads configuration from /etc/momo/network.yml
+#
+# Installation:
+#   sudo cp momo-ap.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable momo-ap.service
+# ==============================================================================
+
+[Unit]
+Description=MoMo Management WiFi Access Point
+Documentation=https://github.com/M0M0Sec/MoMo
+After=network.target
+Before=momo.service
+
+# Only start if setup is complete
+ConditionPathExists=/etc/momo/.setup_complete
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+
+# Run as root (needed for network configuration)
+User=root
+Group=root
+
+# Working directory
+WorkingDirectory=/opt/momo
+
+# Start AP
+ExecStart=/opt/momo/scripts/momo-ap.sh start
+
+# Stop AP
+ExecStop=/opt/momo/scripts/momo-ap.sh stop
+
+# Restart on failure
+Restart=on-failure
+RestartSec=5
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=momo-ap
+
+[Install]
+WantedBy=multi-user.target
+
