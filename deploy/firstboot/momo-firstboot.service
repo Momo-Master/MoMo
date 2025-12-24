@@ -42,12 +42,13 @@ Group=root
 # Working directory
 WorkingDirectory=/opt/momo
 
-# Python path
+# Python path - use virtual environment
 Environment=PYTHONPATH=/opt/momo
 Environment=LANG=en_US.UTF-8
+Environment=PATH=/opt/momo/.venv/bin:/usr/local/bin:/usr/bin:/bin
 
-# Main command
-ExecStart=/usr/bin/python3 -m momo.firstboot.entry
+# Main command - use venv python
+ExecStart=/opt/momo/.venv/bin/python -m momo.firstboot.entry
 
 # Timeout (allow plenty of time for wizard)
 TimeoutStartSec=3600

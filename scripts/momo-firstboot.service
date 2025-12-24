@@ -46,7 +46,7 @@ Environment=PYTHONPATH=/opt/momo
 Environment=LANG=en_US.UTF-8
 
 # Main command
-ExecStart=/usr/bin/python3 -m momo.firstboot.entry
+ExecStart=/opt/momo/.venv/bin/python -m momo.firstboot.entry
 
 # Timeout (allow plenty of time for wizard)
 TimeoutStartSec=3600

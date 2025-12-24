@@ -193,11 +193,31 @@ EOF
     if [ "$ENABLE_FIRSTBOOT" = "1" ] && [ -f "$DEST/deploy/firstboot/momo-firstboot.service" ]; then
         log "Installing first boot wizard..."
         cp "$DEST/deploy/firstboot/momo-firstboot.service" /etc/systemd/system/
-        # Don't enable main momo service yet - firstboot will do it
-    else
-        systemctl enable momo || true
+        
+        # Create firstboot entry script
+        cat > /usr/local/bin/momo-firstboot << 'EOFENTRY'
+#!/bin/bash
+cd /opt/momo
+exec /opt/momo/.venv/bin/python -m momo.firstboot.entry "$@"
+EOFENTRY
+        chmod +x /usr/local/bin/momo-firstboot
+        
+        # Install hostapd and dnsmasq for AP mode
+        log "Installing AP mode dependencies..."
+        pkg_install hostapd dnsmasq
+        
+        # Disable hostapd/dnsmasq system services (we manage them manually)
+        systemctl disable hostapd 2>/dev/null || true
+        systemctl stop hostapd 2>/dev/null || true
+        systemctl disable dnsmasq 2>/dev/null || true
+        systemctl stop dnsmasq 2>/dev/null || true
+        
+        # Enable firstboot service
+        systemctl enable momo-firstboot || true
     fi
     
+    # Always enable main momo service (firstboot will start it after setup)
+    systemctl enable momo || true
     systemctl daemon-reload
     
     # Firewall
