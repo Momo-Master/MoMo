@@ -518,14 +518,40 @@ class WizardServer:
     
     async def _schedule_restart(self):
         """Schedule system restart after setup."""
-        await asyncio.sleep(5)
+        await asyncio.sleep(3)
+        
+        logger.info("Setup complete - stopping wizard and starting MoMo...")
         
         # Stop wizard network
         if self.network_manager:
             await self.network_manager.stop_wizard_network()
         
-        # In production, would restart MoMo service
-        logger.info("Setup complete - would restart MoMo service here")
+        # Start main MoMo service
+        import subprocess
+        try:
+            subprocess.run(
+                ["systemctl", "start", "momo"],
+                check=False,
+                capture_output=True,
+            )
+            logger.info("MoMo service started")
+        except Exception as e:
+            logger.warning(f"Could not start momo service: {e}")
+        
+        # Stop the wizard service (this process)
+        try:
+            subprocess.run(
+                ["systemctl", "stop", "momo-firstboot"],
+                check=False,
+                capture_output=True,
+            )
+        except Exception:
+            pass
+        
+        # If not running as service, just exit
+        import sys
+        logger.info("Wizard exiting...")
+        sys.exit(0)
     
     def _get_fallback_html(self) -> str:
         """Generate fallback HTML for development."""

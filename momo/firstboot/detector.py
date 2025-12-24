@@ -85,6 +85,10 @@ class FirstBootDetector:
     SETUP_COMPLETE_FLAG = Path("/etc/momo/.setup_complete")
     MOMO_CONFIG_DIR = Path("/etc/momo")
     
+    # Fallback paths (if /etc/momo not writable)
+    FALLBACK_CONFIG_DIR = Path("/opt/momo/configs")
+    FALLBACK_COMPLETE_FLAG = Path("/opt/momo/configs/.setup_complete")
+    
     def __init__(
         self,
         boot_config_path: Optional[Path] = None,
@@ -110,9 +114,20 @@ class FirstBootDetector:
         Returns:
             BootMode: The detected boot mode
         """
-        # Already configured?
+        # Already configured? Check both primary and fallback locations
         if self.setup_complete_flag.exists():
-            logger.info("Setup complete flag found, booting in normal mode")
+            logger.info(f"Setup complete flag found at {self.setup_complete_flag}")
+            return BootMode.NORMAL
+        
+        if self.FALLBACK_COMPLETE_FLAG.exists():
+            logger.info(f"Setup complete flag found at {self.FALLBACK_COMPLETE_FLAG}")
+            return BootMode.NORMAL
+        
+        # Also check if momo.yml exists (alternative indicator)
+        momo_config = self.config_dir / "momo.yml"
+        fallback_config = self.FALLBACK_CONFIG_DIR / "momo.yml"
+        if momo_config.exists() or fallback_config.exists():
+            logger.info("MoMo config found, booting in normal mode")
             return BootMode.NORMAL
         
         # Headless config exists?
