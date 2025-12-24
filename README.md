@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="docs/assets/momo-logo.png" alt="MoMo Logo" width="200">
-</p>
-
 <h1 align="center">🔥 MoMo</h1>
 <h3 align="center">Modular Offensive Mobile Operations</h3>
 
@@ -18,7 +14,7 @@
 </p>
 
 <p align="center">
-  <a href="#"><img src="https://img.shields.io/badge/Tests-484%20Passing-success?style=flat-square" alt="Tests"></a>
+  <a href="#"><img src="https://img.shields.io/badge/Tests-527%20Passing-success?style=flat-square" alt="Tests"></a>
   <a href="#"><img src="https://img.shields.io/badge/Coverage-87%25-brightgreen?style=flat-square" alt="Coverage"></a>
   <a href="#"><img src="https://img.shields.io/badge/Build-Passing-success?style=flat-square" alt="Build"></a>
   <a href="#"><img src="https://img.shields.io/badge/Code%20Style-Black-000000?style=flat-square" alt="Code Style"></a>
