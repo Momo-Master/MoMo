@@ -70,6 +70,7 @@ def create_app(cfg: MomoConfig) -> Flask:
             "/api/metrics",
             "/api/metrics-lite",
             "/api/health",
+            "/healthz",
             "/sse/events",
             "/sse/status",
             "/api/wardriver/stats",
@@ -87,13 +88,41 @@ def create_app(cfg: MomoConfig) -> Flask:
         # If token not required, allow all requests
         if not require:
             return None
+        
+        # Allow local connections without auth (safer for development/home use)
+        allow_local = getattr(cfg.web, "allow_local_unauth", True)
+        if allow_local:
+            remote_ip = request.remote_addr or ""
+            # Check for localhost, private networks (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+            if remote_ip in ("127.0.0.1", "::1", "localhost"):
+                session["authenticated"] = True
+                return None
+            if remote_ip.startswith("192.168.") or remote_ip.startswith("10."):
+                session["authenticated"] = True
+                return None
+            if remote_ip.startswith("172."):
+                try:
+                    second_octet = int(remote_ip.split(".")[1])
+                    if 16 <= second_octet <= 31:
+                        session["authenticated"] = True
+                        return None
+                except (ValueError, IndexError):
+                    pass
 
         token_env = cfg.web.auth.token_env
         token_file = Path("/opt/momo/.momo_ui_token")
         expected = _read_token(token_env, token_file)
 
+        # If no token configured, allow access (first-time setup)
         if not expected:
-            return Response('{"error":"unauthorized"}', status=401, mimetype="application/json")
+            # Try to read from environment
+            expected = os.environ.get(token_env, "").strip()
+        
+        if not expected:
+            # No token set - allow access but warn
+            app.logger.warning("No auth token configured - allowing unauthenticated access")
+            session["authenticated"] = True
+            return None
 
         supplied = None
         auth = request.headers.get("Authorization", "")

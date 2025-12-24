@@ -339,8 +339,9 @@ class WebConfig(BaseModel):
     auth: WebAuthConfig = Field(default_factory=WebAuthConfig)
     rate_limit: str = Field("60/minute")
     allow_delete: bool = Field(False)
-    allow_query_token: bool = Field(False)
+    allow_query_token: bool = Field(True)  # Allow ?token=xxx in URL
     require_token: bool = Field(True)
+    allow_local_unauth: bool = Field(True)  # No auth for 127.0.0.1/LAN
     token_env_var: str = Field("MOMO_UI_TOKEN")
     title: str = Field("MoMo")
     footer: str = Field("MoMo • Pi 5")

@@ -116,18 +116,55 @@ main() {
     # Create config directory
     log "Setting up configuration..."
     install -d -m 0755 "$ETC"
-    if [ ! -f "$ETC/momo.yml" ] && [ -f "$DEST/configs/momo.yml" ]; then
-        cp "$DEST/configs/momo.yml" "$ETC/momo.yml"
+    
+    # Copy default config if not exists
+    if [ ! -f "$ETC/momo.yml" ]; then
+        if [ -f "$DEST/configs/momo.yml" ]; then
+            cp "$DEST/configs/momo.yml" "$ETC/momo.yml"
+            log "Copied default config to $ETC/momo.yml"
+        elif [ -f "$DEST/configs/momo-config.example.yml" ]; then
+            cp "$DEST/configs/momo-config.example.yml" "$ETC/momo.yml"
+            log "Copied example config to $ETC/momo.yml"
+        else
+            # Create minimal config
+            cat > "$ETC/momo.yml" <<'EOFCFG'
+# MoMo Configuration
+mode: aggressive
+interface:
+  name: wlan0
+  channel_hop: true
+  channels: [1, 6, 11]
+web:
+  enabled: true
+  bind_host: 0.0.0.0
+  bind_port: 8082
+  allow_query_token: true
+  allow_local_unauth: true
+logging:
+  base_dir: /opt/momo/logs
+plugins:
+  enabled: ["autobackup", "wardriver", "webcfg"]
+EOFCFG
+            log "Created minimal config at $ETC/momo.yml"
+        fi
     fi
     
-    # Generate Web UI token
+    # Generate Web UI token (both in env and file)
     if [ "$ENABLE_WEB" = "1" ]; then
         install -d "$DROPIN_DIR"
-        if ! grep -q '^Environment=MOMO_UI_TOKEN=' "$DROPIN_DIR/env.conf" 2>/dev/null; then
+        
+        # Generate token if not exists
+        if [ ! -f "$DEST/.momo_ui_token" ]; then
             TOKEN=$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 32)
-            printf "[Service]\nEnvironment=MOMO_UI_TOKEN=%s\n" "$TOKEN" > "$DROPIN_DIR/env.conf"
+            echo "$TOKEN" > "$DEST/.momo_ui_token"
+            chmod 600 "$DEST/.momo_ui_token"
             log "Generated Web UI token"
+        else
+            TOKEN=$(cat "$DEST/.momo_ui_token")
         fi
+        
+        # Also set in systemd environment
+        printf "[Service]\nEnvironment=MOMO_UI_TOKEN=%s\n" "$TOKEN" > "$DROPIN_DIR/env.conf"
     fi
     
     # Install systemd service
@@ -179,6 +216,15 @@ EOF
         grep -q "^dtparam=i2c_arm=on" "$CONFIG_FILE" || echo "dtparam=i2c_arm=on" >> "$CONFIG_FILE"
     fi
     
+    # Start service
+    log "Starting MoMo service..."
+    systemctl enable momo >/dev/null 2>&1 || true
+    systemctl start momo >/dev/null 2>&1 || true
+    
+    # Get IP address
+    IP_ADDR=$(hostname -I 2>/dev/null | awk '{print $1}')
+    [ -z "$IP_ADDR" ] && IP_ADDR="<your-pi-ip>"
+    
     # Done!
     echo ""
     echo "╔══════════════════════════════════════════════════════════════╗"
@@ -189,21 +235,35 @@ EOF
     log "Configuration: $ETC/momo.yml"
     echo ""
     
+    echo "🌐 Web UI Access:"
+    echo "   URL:     http://${IP_ADDR}:8082"
+    if [ -f "$DEST/.momo_ui_token" ]; then
+        echo "   Token:   $(cat "$DEST/.momo_ui_token")"
+        echo ""
+        echo "   Note: Token auth is DISABLED for local network (192.168.x.x)"
+        echo "   For remote access, use: http://${IP_ADDR}:8082?token=<token>"
+    fi
+    echo ""
+    
+    echo "🔧 Service Commands:"
+    echo "   sudo systemctl status momo    # Check status"
+    echo "   sudo systemctl restart momo   # Restart"
+    echo "   sudo journalctl -u momo -f    # View logs"
+    echo ""
+    
     if [ "$ENABLE_FIRSTBOOT" = "1" ]; then
-        echo "📱 First Boot Wizard:"
-        echo "   1. Reboot the device"
-        echo "   2. Connect to WiFi: MoMo-Setup (password: momosetup)"
-        echo "   3. Open browser: http://192.168.4.1"
+        echo "📱 First Boot Wizard (optional):"
+        echo "   sudo systemctl start momo-firstboot"
+        echo "   Connect to WiFi: MoMo-Setup (password: momosetup)"
+        echo "   Open browser: http://192.168.4.1"
         echo ""
-        echo "Or start manually:"
-        echo "   sudo systemctl start momo"
+    fi
+    
+    # Check service status
+    if systemctl is-active --quiet momo 2>/dev/null; then
+        log "✅ MoMo is running!"
     else
-        echo "🚀 Start MoMo:"
-        echo "   sudo systemctl start momo"
-        echo ""
-        echo "📊 Access:"
-        echo "   Web UI:  http://$(hostname -I | awk '{print $1}'):8082"
-        echo "   Health:  http://127.0.0.1:8082/healthz"
+        warn "MoMo service not started. Run: sudo systemctl start momo"
     fi
     echo ""
 }
