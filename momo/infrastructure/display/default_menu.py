@@ -48,6 +48,7 @@ class MoMoMenuActions:
             "auto_crack": False,
             "autopwn_enabled": False,
             "autopwn_mode": "aggressive",
+            "creds_enabled": False,
         }
     
     # ═══════════════════════════════════════════════════════════════════════════
@@ -310,6 +311,65 @@ class MoMoMenuActions:
         return "0"
     
     # ═══════════════════════════════════════════════════════════════════════════
+    # Credential Harvesting Actions
+    # ═══════════════════════════════════════════════════════════════════════════
+    
+    def get_creds_enabled(self) -> bool:
+        """Get credential harvesting enabled state."""
+        return self._state["creds_enabled"]
+    
+    async def set_creds_enabled(self, enabled: bool) -> None:
+        """Set credential harvesting enabled state."""
+        self._state["creds_enabled"] = enabled
+        logger.info(f"Credential harvesting {'enabled' if enabled else 'disabled'}")
+    
+    async def start_creds(self) -> None:
+        """Start credential harvesting."""
+        logger.info("Starting credential harvesting...")
+        if self._app and hasattr(self._app, "creds_manager"):
+            await self._app.creds_manager.start()
+    
+    async def stop_creds(self) -> None:
+        """Stop credential harvesting."""
+        logger.info("Stopping credential harvesting...")
+        if self._app and hasattr(self._app, "creds_manager"):
+            await self._app.creds_manager.stop()
+    
+    def get_creds_ntlm_count(self) -> str:
+        """Get captured NTLM hash count."""
+        if self._app and hasattr(self._app, "creds_manager"):
+            stats = self._app.creds_manager.stats
+            return str(stats.get("ntlm_hashes", 0))
+        return "0"
+    
+    def get_creds_http_count(self) -> str:
+        """Get captured HTTP credential count."""
+        if self._app and hasattr(self._app, "creds_manager"):
+            stats = self._app.creds_manager.stats
+            return str(stats.get("http_credentials", 0))
+        return "0"
+    
+    def get_creds_poisoned_count(self) -> str:
+        """Get poisoned query count."""
+        if self._app and hasattr(self._app, "creds_manager"):
+            stats = self._app.creds_manager.stats
+            return str(stats.get("poisoned_queries", 0))
+        return "0"
+    
+    def get_creds_total(self) -> str:
+        """Get total captured credentials."""
+        if self._app and hasattr(self._app, "creds_manager"):
+            stats = self._app.creds_manager.stats
+            return str(stats.get("total_credentials", 0))
+        return "0"
+    
+    async def export_creds(self) -> None:
+        """Export captured credentials."""
+        logger.info("Exporting credentials...")
+        if self._app and hasattr(self._app, "creds_manager"):
+            self._app.creds_manager.export_all("/var/lib/momo/creds/export")
+    
+    # ═══════════════════════════════════════════════════════════════════════════
     # Display Actions
     # ═══════════════════════════════════════════════════════════════════════════
     
@@ -471,6 +531,26 @@ def create_default_menu(actions: MoMoMenuActions | None = None) -> Menu:
     )
     
     # ═══════════════════════════════════════════════════════════════════════════
+    # Credential Harvesting Submenu
+    # ═══════════════════════════════════════════════════════════════════════════
+    creds_menu = (
+        MenuBuilder("🔑 Creds")
+        .toggle("Enabled", actions.get_creds_enabled, actions.set_creds_enabled)
+        .separator()
+        .action("▶ Start", actions.start_creds, icon="▶")
+        .action("■ Stop", actions.stop_creds, icon="■")
+        .action("Export", actions.export_creds, icon="💾")
+        .separator()
+        .display("NTLM", actions.get_creds_ntlm_count)
+        .display("HTTP", actions.get_creds_http_count)
+        .display("Poisoned", actions.get_creds_poisoned_count)
+        .display("Total", actions.get_creds_total)
+        .separator()
+        .back()
+        .build()
+    )
+    
+    # ═══════════════════════════════════════════════════════════════════════════
     # BLE Submenu
     # ═══════════════════════════════════════════════════════════════════════════
     ble_menu = (
@@ -559,6 +639,7 @@ def create_default_menu(actions: MoMoMenuActions | None = None) -> Menu:
             SeparatorItem(),
             SubmenuItem("WiFi", wifi_menu, icon="📡"),
             SubmenuItem("Attack", attack_menu, icon="⚔"),
+            SubmenuItem("Creds", creds_menu, icon="🔑"),
             SubmenuItem("BLE", ble_menu, icon="📶"),
             SubmenuItem("Cracking", crack_menu, icon="🔓"),
             SeparatorItem(),

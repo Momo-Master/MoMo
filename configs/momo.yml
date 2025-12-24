@@ -244,6 +244,48 @@ aggressive:
   panic_file: null            # No panic file
 
 # ==============================================================================
+# Credential Harvesting (MoMo-Creds)
+# ==============================================================================
+creds:
+  enabled: false              # Enable credential harvesting
+  interface: eth0             # Network interface
+  output_dir: logs/creds      # Credential output directory
+  auto_export: true           # Auto-export captured creds
+  export_format: hashcat      # hashcat, john, csv
+  
+  # Responder (LLMNR/NBT-NS Poisoning)
+  responder:
+    enabled: true
+    llmnr: true               # Link-Local Multicast Name Resolution
+    nbns: true                # NetBIOS Name Service
+    mdns: false               # mDNS (noisy, disabled by default)
+  
+  # NTLM Hash Capture
+  ntlm:
+    enabled: true
+    smb_port: 445             # SMB server port
+    http_port: 80             # HTTP NTLM server port
+  
+  # HTTP Auth Sniffing
+  http:
+    enabled: true
+    ports: [80, 8080, 8000]   # HTTP ports to monitor
+    capture_basic: true       # Basic authentication
+    capture_digest: true      # Digest authentication
+    capture_forms: true       # Form POST data
+    capture_bearer: true      # Bearer tokens
+    capture_cookies: false    # Session cookies (noisy)
+  
+  # Kerberos (Requires AD credentials)
+  kerberos:
+    enabled: false            # Enable Kerberoast/AS-REP
+    dc_ip: ""                 # Domain Controller IP
+    domain: ""                # AD Domain (e.g., corp.local)
+    username: ""              # AD username
+    password: ""              # AD password (or use ntlm_hash)
+    ntlm_hash: ""             # Alternative: NTLM hash for PTH
+
+# ==============================================================================
 # BLE (Bluetooth Low Energy) Scanner
 # ==============================================================================
 ble:
