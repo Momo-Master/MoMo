@@ -432,28 +432,46 @@ class WizardServer:
             try:
                 # Generate and save configuration
                 if self.config_generator:
+                    logger.info(f"Generating config with data: {list(self.config_data.keys())}")
                     success = await self.config_generator.generate(self.config_data)
                     if not success:
+                        logger.error("Config generator returned False")
                         raise HTTPException(
                             status_code=500,
-                            detail="Failed to save configuration"
+                            detail="Failed to save configuration - check permissions for /etc/momo"
                         )
+                else:
+                    # No config generator - just mark as complete (for testing)
+                    logger.warning("No config generator - skipping config generation")
                 
                 # Mark setup as complete
                 self.state.completed = True
                 self.state.current_step = WizardStep.COMPLETE
                 
+                logger.info("Setup completed successfully")
+                
                 # Schedule restart (give time for response)
                 asyncio.create_task(self._schedule_restart())
                 
-                return {
-                    "success": True,
-                    "message": "Setup complete! MoMo will restart in 5 seconds.",
-                    "redirect_to": self._get_redirect_url(),
-                }
+                return JSONResponse(
+                    content={
+                        "success": True,
+                        "message": "Setup complete! MoMo will restart in 5 seconds.",
+                        "redirect_to": self._get_redirect_url(),
+                    },
+                    status_code=200,
+                )
                 
+            except HTTPException:
+                raise
+            except PermissionError as e:
+                logger.error(f"Permission denied: {e}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Permission denied - run with sudo: {e}"
+                )
             except Exception as e:
-                logger.error(f"Failed to complete setup: {e}")
+                logger.error(f"Failed to complete setup: {e}", exc_info=True)
                 raise HTTPException(
                     status_code=500,
                     detail=str(e)

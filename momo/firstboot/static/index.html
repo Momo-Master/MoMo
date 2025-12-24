@@ -739,46 +739,58 @@
             
             try {
                 // Step by step API calls
-                await fetch('/api/step/language', {
+                let resp;
+                
+                resp = await fetch('/api/step/language', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ language: wizardData.language })
                 });
+                if (!resp.ok) throw new Error('Language step failed');
                 
-                await fetch('/api/step/password', {
+                resp = await fetch('/api/step/password', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ password: wizardData.password })
                 });
+                if (!resp.ok) throw new Error('Password step failed');
                 
-                await fetch('/api/step/network', {
+                resp = await fetch('/api/step/network', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(wizardData.network)
                 });
+                if (!resp.ok) throw new Error('Network step failed');
                 
-                await fetch('/api/step/profile', {
+                resp = await fetch('/api/step/profile', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ profile: wizardData.profile })
                 });
+                if (!resp.ok) throw new Error('Profile step failed');
                 
                 if (wizardData.nexus.enabled) {
-                    await fetch('/api/step/nexus', {
+                    resp = await fetch('/api/step/nexus', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(wizardData.nexus)
                     });
+                    if (!resp.ok) throw new Error('Nexus step failed');
                 }
                 
                 // Complete
-                const result = await fetch('/api/complete', { method: 'POST' });
+                resp = await fetch('/api/complete', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ confirm: true })
+                });
                 
-                if (result.ok) {
+                if (resp.ok) {
                     document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
                     document.getElementById('step-success').classList.add('active');
                 } else {
-                    throw new Error('Setup failed');
+                    const data = await resp.json().catch(() => ({}));
+                    throw new Error(data.detail || 'Setup failed');
                 }
             } catch (e) {
                 alert('Setup failed: ' + e.message);

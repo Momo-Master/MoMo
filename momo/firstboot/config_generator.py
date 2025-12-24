@@ -62,34 +62,49 @@ class ConfigGenerator:
             True if successful, False otherwise
         """
         try:
-            # Ensure config directory exists
-            self.config_dir.mkdir(parents=True, exist_ok=True)
+            # Try primary config dir, fallback to alternative
+            try:
+                self.config_dir.mkdir(parents=True, exist_ok=True)
+            except PermissionError:
+                # Fallback to /opt/momo/configs
+                alt_dir = Path("/opt/momo/configs")
+                logger.warning(f"Cannot write to {self.config_dir}, falling back to {alt_dir}")
+                self.config_dir = alt_dir
+                self.momo_config = alt_dir / "momo.yml"
+                self.network_config = alt_dir / "network.yml"
+                self.nexus_config = alt_dir / "nexus.yml"
+                self.setup_complete_flag = alt_dir / ".setup_complete"
+                self.config_dir.mkdir(parents=True, exist_ok=True)
             
             # Generate main config
             momo_config = self._generate_momo_config(wizard_data)
             self._write_yaml(self.momo_config, momo_config)
+            logger.info(f"Wrote main config to {self.momo_config}")
             
             # Generate network config
             if "network" in wizard_data:
                 network_config = self._generate_network_config(wizard_data)
                 self._write_yaml(self.network_config, network_config)
+                logger.info(f"Wrote network config to {self.network_config}")
             
             # Generate Nexus config
             if wizard_data.get("nexus", {}).get("enabled"):
                 nexus_config = self._generate_nexus_config(wizard_data)
                 self._write_yaml(self.nexus_config, nexus_config)
+                logger.info(f"Wrote nexus config to {self.nexus_config}")
             
             # Mark setup as complete
             self.setup_complete_flag.touch()
+            logger.info(f"Created setup complete flag: {self.setup_complete_flag}")
             
             logger.info("Configuration generated successfully")
             return True
             
         except PermissionError as e:
             logger.error(f"Permission denied writing config: {e}")
-            return False
+            raise  # Re-raise to let caller handle
         except Exception as e:
-            logger.error(f"Failed to generate config: {e}")
+            logger.error(f"Failed to generate config: {e}", exc_info=True)
             return False
     
     def _generate_momo_config(self, wizard_data: dict) -> dict:
