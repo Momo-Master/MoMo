@@ -48,6 +48,12 @@ ble = [
 eviltwin = [
   "aiohttp>=3.9.0",      # Captive portal server
 ]
+firstboot = [
+  "fastapi>=0.115.0",    # Wizard web server
+  "uvicorn>=0.30.0",     # ASGI server
+  "aiohttp>=3.9.0",      # Nexus discovery
+  "zeroconf>=0.131.0",   # mDNS discovery
+]
 dev = [
   "ruff>=0.5.0",
   "mypy>=1.10.0",
@@ -62,6 +68,7 @@ dev = [
 
 [project.scripts]
 momo = "momo.cli:launch"
+momo-firstboot = "momo.firstboot.entry:cli_main"
 [tool.hatch.version]
 source = "vcs"
 

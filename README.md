@@ -11,7 +11,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Momo-Master/MoMo/releases"><img src="https://img.shields.io/badge/Version-1.6.0-blue?style=for-the-badge" alt="Version"></a>
+  <a href="https://github.com/Momo-Master/MoMo/releases"><img src="https://img.shields.io/badge/Version-1.7.0-blue?style=for-the-badge" alt="Version"></a>
   <a href="#"><img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%205-c51a4a?style=for-the-badge&logo=raspberry-pi" alt="Platform"></a>
   <a href="#"><img src="https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"></a>
@@ -207,9 +207,29 @@
 | **Web Dashboard** | Real-time dark-theme UI with SSE updates |
 | **Auto-Whitelist** | Management network protected from attacks |
 
+### 🚀 First Boot Wizard
+
+| Feature | Description |
+|---------|-------------|
+| **Web-based Setup** | Modern React UI, mobile-friendly |
+| **Auto WiFi AP** | Connect to `MoMo-Setup` network |
+| **QR Code Display** | Scan OLED QR to connect |
+| **Nexus Discovery** | Auto-find Nexus via mDNS |
+| **Headless Mode** | `/boot/momo-config.yml` for fleet deploy |
+
 ---
 
 ## 🚀 Quick Start
+
+### First Boot (New Device)
+
+1. Flash MoMo image to SD card
+2. Power on Raspberry Pi
+3. Connect to `MoMo-Setup` WiFi (password: `momosetup`)
+4. Browser opens wizard automatically
+5. Complete 6-step setup in ~2 minutes
+
+> **Headless?** Copy `configs/momo-config.example.yml` to `/boot/momo-config.yml`
 
 ### One-Line Install (Raspberry Pi 5)
 
@@ -866,6 +886,7 @@ nexus:
 | [📡 WIFI_ATTACKS.md](docs/WIFI_ATTACKS.md) | WiFi attack techniques |
 | [🔑 CREDENTIALS.md](docs/CREDENTIALS.md) | Credential harvesting guide |
 | [🤖 AUTOPWN.md](docs/AUTOPWN.md) | Auto-Pwn mode documentation |
+| [🚀 FIRST_BOOT.md](docs/FIRST_BOOT.md) | First Boot Wizard guide |
 | [🔌 PLUGINS.md](docs/PLUGINS.md) | Plugin development guide |
 | [🗺️ ROADMAP.md](docs/ROADMAP.md) | Development roadmap |
 | [📝 CHANGELOG.md](docs/CHANGELOG.md) | Version history |
@@ -883,10 +904,11 @@ nexus:
 | v1.2.0 | Bluetooth Expansion | ✅ |
 | v1.5.0 | SDR Integration | ✅ |
 | v1.5.2 | Management Network | ✅ |
-| **v1.6.0** | **Credential Harvesting** | ✅ **NEW** |
+| v1.6.0 | Credential Harvesting | ✅ |
+| **v1.7.0** | **First Boot Wizard** | ✅ **NEW** |
 
 **Statistics:**
-- 📝 **484 Tests** passing
+- 📝 **527 Tests** passing
 - 📊 **87% Coverage**
 - 🔌 **52 Plugins** available
 - 📡 **6 Attack Modules**

@@ -1,0 +1,61 @@
+# ==============================================================================
+# MoMo First Boot Service
+# ==============================================================================
+# This systemd service handles the first boot setup experience.
+#
+# Installation:
+#   sudo cp momo-firstboot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable momo-firstboot.service
+#
+# The service runs once on boot and:
+#   - If /etc/momo/.setup_complete exists: Exits immediately (normal boot)
+#   - If /boot/momo-config.yml exists: Applies headless config
+#   - Otherwise: Starts WiFi AP and web wizard
+# ==============================================================================
+
+[Unit]
+Description=MoMo First Boot Setup Wizard
+Documentation=https://github.com/Momo-Master/MoMo
+
+# Run before main MoMo service
+Before=momo.service
+
+# Wait for networking and basic services
+After=network.target
+After=systemd-resolved.service
+
+# Don't start if setup is complete
+ConditionPathExists=!/etc/momo/.setup_complete
+
+[Service]
+Type=oneshot
+
+# Stay active so we can track state
+RemainAfterExit=yes
+
+# Run as root (needed for network configuration)
+User=root
+Group=root
+
+# Working directory
+WorkingDirectory=/opt/momo
+
+# Python path
+Environment=PYTHONPATH=/opt/momo
+Environment=LANG=en_US.UTF-8
+
+# Main command
+ExecStart=/usr/bin/python3 -m momo.firstboot.entry
+
+# Timeout (allow plenty of time for wizard)
+TimeoutStartSec=3600
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=momo-firstboot
+
+[Install]
+WantedBy=multi-user.target
+

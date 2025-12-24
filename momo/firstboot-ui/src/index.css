@@ -1,0 +1,351 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOMO FIRST BOOT WIZARD - MOBILE-FIRST DESIGN
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@layer base {
+  * {
+    @apply border-border-default;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-momo-bg text-text-primary font-sans antialiased;
+    @apply min-h-screen;
+    background-image: 
+      radial-gradient(ellipse at top, rgba(16, 185, 129, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at bottom, rgba(34, 211, 238, 0.03) 0%, transparent 50%);
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-momo-bg;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border-active rounded-full;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-accent-green/30 text-accent-green;
+  }
+
+  /* Remove input zoom on iOS */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+@layer components {
+  /* ═══════════════════════════════════════════════════════════════════════
+     WIZARD CONTAINER
+     ═══════════════════════════════════════════════════════════════════════ */
+  .wizard-container {
+    @apply min-h-screen flex flex-col;
+    @apply px-4 py-6 sm:px-6 lg:px-8;
+    @apply max-w-lg mx-auto;
+  }
+
+  .wizard-header {
+    @apply text-center mb-8 animate-fade-in;
+  }
+
+  .wizard-logo {
+    @apply text-5xl mb-4;
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  .wizard-title {
+    @apply text-2xl sm:text-3xl font-bold;
+    @apply bg-gradient-to-r from-accent-cyan to-accent-green;
+    @apply bg-clip-text text-transparent;
+  }
+
+  .wizard-subtitle {
+    @apply text-text-secondary text-sm mt-1;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     PROGRESS INDICATOR
+     ═══════════════════════════════════════════════════════════════════════ */
+  .progress-bar {
+    @apply flex items-center justify-center gap-2 mb-8;
+  }
+
+  .progress-dot {
+    @apply w-2.5 h-2.5 rounded-full transition-all duration-300;
+    @apply bg-border-default;
+  }
+
+  .progress-dot.active {
+    @apply bg-accent-green w-8;
+  }
+
+  .progress-dot.completed {
+    @apply bg-accent-green;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     CARDS
+     ═══════════════════════════════════════════════════════════════════════ */
+  .card {
+    @apply bg-momo-surface/80 backdrop-blur-sm;
+    @apply border border-border-default rounded-2xl;
+    @apply p-5 sm:p-6;
+    @apply transition-all duration-300;
+  }
+
+  .card-selectable {
+    @apply card cursor-pointer;
+    @apply hover:border-accent-cyan/50 hover:bg-momo-elevated;
+  }
+
+  .card-selectable.selected {
+    @apply border-accent-green bg-accent-green/10;
+    @apply ring-2 ring-accent-green/20;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     FORM ELEMENTS
+     ═══════════════════════════════════════════════════════════════════════ */
+  .input-group {
+    @apply mb-4;
+  }
+
+  .input-label {
+    @apply block text-sm font-medium text-text-secondary mb-2;
+  }
+
+  .input {
+    @apply w-full px-4 py-3;
+    @apply bg-momo-bg border border-border-default rounded-xl;
+    @apply text-text-primary placeholder:text-text-muted;
+    @apply focus:outline-none focus:border-accent-cyan focus:ring-2 focus:ring-accent-cyan/20;
+    @apply transition-all duration-200;
+  }
+
+  .input-with-icon {
+    @apply relative;
+  }
+
+  .input-with-icon .input {
+    @apply pl-11;
+  }
+
+  .input-with-icon .input-icon {
+    @apply absolute left-4 top-1/2 -translate-y-1/2;
+    @apply text-text-muted;
+  }
+
+  .input-hint {
+    @apply text-xs text-text-muted mt-1;
+  }
+
+  .input-error {
+    @apply text-xs text-accent-red mt-1;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     BUTTONS
+     ═══════════════════════════════════════════════════════════════════════ */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2;
+    @apply px-6 py-3.5 rounded-xl font-medium;
+    @apply transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-momo-bg;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-primary {
+    @apply btn;
+    @apply bg-gradient-to-r from-accent-cyan to-accent-green;
+    @apply text-momo-bg font-semibold;
+    @apply hover:shadow-lg hover:shadow-accent-green/20;
+    @apply active:scale-[0.98];
+    @apply focus:ring-accent-green;
+  }
+
+  .btn-secondary {
+    @apply btn;
+    @apply bg-momo-surface text-text-primary;
+    @apply border border-border-default;
+    @apply hover:bg-momo-elevated hover:border-border-active;
+    @apply focus:ring-border-active;
+  }
+
+  .btn-ghost {
+    @apply btn;
+    @apply text-text-secondary;
+    @apply hover:text-text-primary hover:bg-momo-surface;
+  }
+
+  .btn-icon {
+    @apply p-3 rounded-xl;
+    @apply text-text-secondary;
+    @apply hover:text-text-primary hover:bg-momo-surface;
+    @apply transition-all duration-200;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     OPTION CARDS
+     ═══════════════════════════════════════════════════════════════════════ */
+  .option-card {
+    @apply flex items-center gap-4 p-4;
+    @apply bg-momo-surface border border-border-default rounded-xl;
+    @apply cursor-pointer transition-all duration-200;
+    @apply hover:border-accent-cyan/50 hover:bg-momo-elevated;
+  }
+
+  .option-card.selected {
+    @apply border-accent-green bg-accent-green/10;
+  }
+
+  .option-icon {
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+    @apply bg-momo-bg text-2xl;
+  }
+
+  .option-content {
+    @apply flex-1;
+  }
+
+  .option-title {
+    @apply font-medium text-text-primary;
+  }
+
+  .option-desc {
+    @apply text-sm text-text-muted;
+  }
+
+  .option-check {
+    @apply w-6 h-6 rounded-full border-2 border-border-default;
+    @apply flex items-center justify-center;
+    @apply transition-all duration-200;
+  }
+
+  .option-card.selected .option-check {
+    @apply bg-accent-green border-accent-green;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     PASSWORD STRENGTH
+     ═══════════════════════════════════════════════════════════════════════ */
+  .password-strength {
+    @apply h-1 rounded-full bg-momo-bg mt-2 overflow-hidden;
+  }
+
+  .password-strength-bar {
+    @apply h-full transition-all duration-300;
+  }
+
+  .strength-weak { @apply w-1/4 bg-accent-red; }
+  .strength-fair { @apply w-2/4 bg-accent-orange; }
+  .strength-good { @apply w-3/4 bg-accent-cyan; }
+  .strength-strong { @apply w-full bg-accent-green; }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     WIFI LIST
+     ═══════════════════════════════════════════════════════════════════════ */
+  .wifi-list {
+    @apply space-y-2 max-h-60 overflow-y-auto;
+  }
+
+  .wifi-item {
+    @apply flex items-center gap-3 p-3;
+    @apply bg-momo-bg rounded-xl cursor-pointer;
+    @apply transition-all duration-200;
+    @apply hover:bg-momo-elevated;
+  }
+
+  .wifi-item.selected {
+    @apply bg-accent-green/10 ring-1 ring-accent-green/50;
+  }
+
+  .wifi-signal {
+    @apply text-lg;
+  }
+
+  .wifi-name {
+    @apply flex-1 font-medium;
+  }
+
+  .wifi-security {
+    @apply text-xs px-2 py-0.5 rounded-full;
+    @apply bg-momo-surface text-text-muted;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     SUMMARY
+     ═══════════════════════════════════════════════════════════════════════ */
+  .summary-item {
+    @apply flex justify-between py-3 border-b border-border-default last:border-0;
+  }
+
+  .summary-label {
+    @apply text-text-muted;
+  }
+
+  .summary-value {
+    @apply font-medium text-text-primary;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     LOADING
+     ═══════════════════════════════════════════════════════════════════════ */
+  .loading-spinner {
+    @apply w-6 h-6 border-2 border-text-muted rounded-full;
+    @apply border-t-accent-green;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     FOOTER ACTIONS
+     ═══════════════════════════════════════════════════════════════════════ */
+  .wizard-footer {
+    @apply mt-auto pt-6 flex gap-3;
+  }
+
+  .wizard-footer .btn {
+    @apply flex-1;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.animate-slide-up {
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

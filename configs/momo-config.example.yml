@@ -1,0 +1,134 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# MoMo Headless Configuration Example
+# ══════════════════════════════════════════════════════════════════════════════
+#
+# Copy this file to /boot/momo-config.yml on your SD card to skip the
+# First Boot Wizard and automatically configure MoMo on first startup.
+#
+# This is useful for:
+# - Fleet deployments (configure many devices at once)
+# - Headless setups (no screen attached)
+# - Automated provisioning
+#
+# ══════════════════════════════════════════════════════════════════════════════
+
+# ==============================================================================
+# Wizard Control
+# ==============================================================================
+setup:
+  skip_wizard: true       # Set to true to skip web wizard
+  language: en            # en, tr
+
+# ==============================================================================
+# Security
+# ==============================================================================
+security:
+  admin_password: "YourSecurePassword123!"
+  
+  # Alternative: use password hash (more secure, password not in plaintext)
+  # Generate with: python -c "import bcrypt; print(bcrypt.hashpw(b'password', bcrypt.gensalt()).decode())"
+  # admin_password_hash: "$2b$12$..."
+
+# ==============================================================================
+# Network Configuration
+# ==============================================================================
+network:
+  # Mode: "ap" to create own network, "client" to join existing network
+  mode: ap
+  
+  # Access Point Mode (create own network)
+  ap:
+    ssid: MoMo-Management
+    password: MoMoAdmin2024!
+    channel: 6
+    hidden: false
+  
+  # Client Mode (join existing network)
+  client:
+    ssid: ""
+    password: ""
+
+# ==============================================================================
+# Operation Profile
+# ==============================================================================
+# Available profiles:
+# - passive:    Scan only, no active attacks (safest)
+# - balanced:   Moderate scanning + opportunistic attacks (recommended)
+# - aggressive: Maximum attack rate (use with caution)
+profile: balanced
+
+# ==============================================================================
+# Attack Interface
+# ==============================================================================
+interface:
+  # "auto" = Use first available USB WiFi adapter
+  # Or specify: wlan1, wlan2, etc.
+  name: auto
+
+# ==============================================================================
+# Whitelist (Your Own Networks - Never Attack!)
+# ==============================================================================
+whitelist:
+  ssids:
+    - "Home_WiFi"
+    - "Office_Network"
+  bssids: []
+
+# ==============================================================================
+# Nexus Connection (Optional)
+# ==============================================================================
+# If you have a MoMo-Nexus instance, configure it here for:
+# - Centralized monitoring
+# - Cloud cracking
+# - Remote control
+# - Data sync
+nexus:
+  enabled: false
+  url: "http://192.168.1.100:8080"
+  
+  # Registration token (get from Nexus dashboard)
+  registration_token: ""
+  
+  # Device identification
+  device_name: "MoMo-Field-01"
+  
+  # Sync settings
+  sync:
+    enabled: true
+    interval: 30              # seconds
+    handshakes: true          # Sync captured handshakes
+    credentials: true         # Sync harvested credentials
+    wardriving: true          # Sync GPS/wardriving data
+    stats: true               # Sync statistics
+  
+  # Cloud cracking
+  cloud_crack:
+    enabled: true             # Use Nexus GPU for cracking
+    auto_submit: true         # Auto-submit captured hashes
+    notify_on_crack: true     # Get notified when cracked
+
+# ==============================================================================
+# SSH Access
+# ==============================================================================
+ssh:
+  enabled: true
+  port: 22
+  allow_password: true
+  # authorized_keys:
+  #   - "ssh-ed25519 AAAA... user@host"
+
+# ==============================================================================
+# Advanced Options
+# ==============================================================================
+advanced:
+  # Hardware
+  oled_enabled: true
+  gpio_buttons: true
+  
+  # Logging
+  log_level: INFO            # DEBUG, INFO, WARNING, ERROR
+  
+  # Storage
+  storage_limit_mb: 1024     # Max storage for captures
+  auto_cleanup: true         # Delete old files when full
+

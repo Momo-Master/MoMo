@@ -1,0 +1,133 @@
+#!/usr/bin/env python3
+"""
+MoMo First Boot Entry Script.
+
+This script is installed to /usr/bin/momo-firstboot and provides
+a CLI interface for the first boot wizard.
+
+Usage:
+    momo-firstboot              # Normal operation (detect and run)
+    momo-firstboot --wizard     # Force wizard mode
+    momo-firstboot --cli        # CLI wizard only
+    momo-firstboot --reset      # Reset setup (for testing)
+    momo-firstboot --status     # Check setup status
+"""
+
+import sys
+import os
+
+# Add MoMo to path if not installed
+MOMO_PATH = "/opt/momo"
+if MOMO_PATH not in sys.path and os.path.isdir(MOMO_PATH):
+    sys.path.insert(0, MOMO_PATH)
+
+# Also check local development path
+DEV_PATH = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if DEV_PATH not in sys.path:
+    sys.path.insert(0, DEV_PATH)
+
+
+def main():
+    import argparse
+    import asyncio
+    
+    parser = argparse.ArgumentParser(
+        description="MoMo First Boot Wizard",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+    momo-firstboot              # Auto-detect mode and run
+    momo-firstboot --wizard     # Force web wizard
+    momo-firstboot --cli        # CLI-only wizard
+    momo-firstboot --reset      # Reset setup for testing
+    momo-firstboot --status     # Show current status
+        """,
+    )
+    
+    parser.add_argument(
+        "--wizard", "-w",
+        action="store_true",
+        help="Force wizard mode (start WiFi AP and web server)",
+    )
+    
+    parser.add_argument(
+        "--cli", "-c",
+        action="store_true",
+        help="Run CLI wizard only (no web server)",
+    )
+    
+    parser.add_argument(
+        "--reset", "-r",
+        action="store_true",
+        help="Reset setup (remove completion flag)",
+    )
+    
+    parser.add_argument(
+        "--status", "-s",
+        action="store_true",
+        help="Show current setup status",
+    )
+    
+    parser.add_argument(
+        "--config-dir",
+        default="/etc/momo",
+        help="Configuration directory (default: /etc/momo)",
+    )
+    
+    args = parser.parse_args()
+    
+    from pathlib import Path
+    from momo.firstboot.detector import FirstBootDetector, BootMode
+    
+    config_dir = Path(args.config_dir)
+    detector = FirstBootDetector(
+        config_dir=config_dir,
+        setup_complete_flag=config_dir / ".setup_complete",
+    )
+    
+    # Handle status
+    if args.status:
+        mode = detector.detect_boot_mode()
+        headless_config = detector.load_headless_config()
+        
+        print("\n🔥 MoMo First Boot Status\n")
+        print(f"Config directory: {config_dir}")
+        print(f"Setup complete:   {detector.setup_complete_flag.exists()}")
+        print(f"Boot mode:        {mode.value}")
+        print(f"Headless config:  {'Found' if headless_config else 'Not found'}")
+        
+        if headless_config:
+            print(f"  Language:       {headless_config.language}")
+            print(f"  Profile:        {headless_config.profile}")
+            print(f"  Network mode:   {headless_config.network_mode}")
+            print(f"  Nexus enabled:  {headless_config.nexus_enabled}")
+        
+        return 0
+    
+    # Handle reset
+    if args.reset:
+        detector.reset_setup()
+        print("✅ Setup reset - wizard will run on next boot")
+        return 0
+    
+    # Handle CLI mode
+    if args.cli:
+        from momo.firstboot.entry import run_cli_wizard
+        asyncio.run(run_cli_wizard())
+        return 0
+    
+    # Handle forced wizard mode
+    if args.wizard:
+        from momo.firstboot.entry import run_wizard_mode
+        asyncio.run(run_wizard_mode())
+        return 0
+    
+    # Auto-detect mode
+    from momo.firstboot.entry import main as firstboot_main
+    asyncio.run(firstboot_main())
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
+

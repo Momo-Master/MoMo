@@ -5,6 +5,80 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2025-12-24 (First Boot Wizard) ✅
+
+### Added
+- **First Boot Wizard** - Web-based setup experience for new devices
+  - Language selection (English, Turkish)
+  - Admin password configuration with strength validation
+  - Network setup (AP mode or client mode)
+  - Operation profile selection (passive, balanced, aggressive)
+  - Nexus integration with mDNS auto-discovery
+  - Configuration summary and confirmation
+- **Headless Configuration** - `/boot/momo-config.yml` for automated setup
+- **OLED QR Code Display** - WiFi credentials QR code on OLED screen
+- **Captive Portal** - Automatic redirect to wizard on first connection
+- **mDNS Nexus Discovery** - Find Nexus devices on local network
+- **Nexus Device Registration** - Auto-register with Nexus hub
+- **New CLI Command** - `momo-firstboot` for wizard control
+- **43 unit tests** for first boot system
+- **React Frontend** - Modern wizard UI with Tailwind CSS
+
+### Backend Modules
+| Module | Description |
+|--------|-------------|
+| `detector.py` | Boot mode detection (normal/headless/wizard) |
+| `network.py` | WiFi AP, DHCP, captive portal management |
+| `server.py` | FastAPI wizard server with 15+ endpoints |
+| `nexus.py` | mDNS discovery and Nexus registration |
+| `config_generator.py` | Config file generation |
+| `oled.py` | OLED display with QR code support |
+
+### Frontend Pages
+| Page | Description |
+|------|-------------|
+| `Welcome.tsx` | Language selection |
+| `Password.tsx` | Admin password with strength meter |
+| `Network.tsx` | WiFi AP/client configuration |
+| `Profile.tsx` | Operation profile selection |
+| `Nexus.tsx` | Nexus connection with discovery |
+| `Summary.tsx` | Configuration review |
+| `Complete.tsx` | Success screen with redirect |
+
+### Configuration
+```yaml
+# /boot/momo-config.yml (headless setup)
+setup:
+  skip_wizard: true
+  language: en
+
+security:
+  admin_password: "YourSecurePassword123!"
+
+network:
+  mode: ap
+  ap:
+    ssid: MoMo-Management
+    password: MoMoAdmin2024!
+
+profile: balanced
+
+nexus:
+  enabled: true
+  url: "http://192.168.1.100:8080"
+```
+
+### Installation
+```bash
+# Install with firstboot dependencies
+pip install -e ".[firstboot]"
+
+# Enable systemd service
+sudo systemctl enable momo-firstboot
+```
+
+---
+
 ## [1.6.0] - 2025-12-19 (Cloud Migration) ✅
 
 ### Changed - BREAKING
