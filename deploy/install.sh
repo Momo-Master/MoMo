@@ -41,7 +41,7 @@ ensure_repo() {
   mkdir -p "$REPO_DIR"
   if [ ! -d "$REPO_DIR/.git" ]; then
     log "Cloning MoMo to $REPO_DIR"
-    git clone --depth 1 "${REPO_URL:-https://github.com/Project-MoMo/MoMo}.git" "$REPO_DIR" || true
+    git clone --depth 1 "${REPO_URL:-https://github.com/M0M0Sec/MoMo.git}" "$REPO_DIR" || true
   else
     log "Updating repo"
     git -C "$REPO_DIR" fetch --depth 1 origin || true

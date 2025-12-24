@@ -20,7 +20,7 @@
 
 ```bash
 # Clone and setup
-git clone https://github.com/Momo-Master/MoMo.git
+git clone https://github.com/M0M0Sec/MoMo.git
 cd MoMo
 python3 -m venv venv
 source venv/bin/activate

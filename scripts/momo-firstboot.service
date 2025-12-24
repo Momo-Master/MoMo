@@ -16,7 +16,7 @@
 
 [Unit]
 Description=MoMo First Boot Setup Wizard
-Documentation=https://github.com/Momo-Master/MoMo
+Documentation=https://github.com/M0M0Sec/MoMo
 
 # Run before main MoMo service
 Before=momo.service

@@ -76,7 +76,7 @@ if [ -d /opt/momo/.git ]; then
     cd /opt/momo && git pull
 else
     rm -rf /opt/momo
-    git clone --depth 1 https://github.com/Momo-Master/MoMo.git /opt/momo
+    git clone --depth 1 https://github.com/M0M0Sec/MoMo.git /opt/momo
 fi
 
 # ==============================================================================
@@ -184,7 +184,7 @@ cat > /etc/motd <<'EOF'
     Dashboard: http://<IP>:8082
     CLI: momo --help
 
-  Documentation: https://github.com/Momo-Master/MoMo
+  Documentation: https://github.com/M0M0Sec/MoMo
 
 EOF
 

@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Momo-Master/MoMo/releases"><img src="https://img.shields.io/badge/Version-1.7.0-blue?style=for-the-badge" alt="Version"></a>
+  <a href="https://github.com/M0M0Sec/MoMo/releases"><img src="https://img.shields.io/badge/Version-1.7.0-blue?style=for-the-badge" alt="Version"></a>
   <a href="#"><img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%205-c51a4a?style=for-the-badge&logo=raspberry-pi" alt="Platform"></a>
   <a href="#"><img src="https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License"></a>
@@ -230,7 +230,7 @@
 ### One-Line Install (Raspberry Pi 5)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Momo-Master/MoMo/main/deploy/momo-quickstart.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/M0M0Sec/MoMo/main/deploy/momo-quickstart.sh | sudo bash
 ```
 
 ### Verify Installation
@@ -266,7 +266,7 @@ momo web-url --show-token
 
 ```bash
 # Download and run installer
-curl -fsSL https://raw.githubusercontent.com/Momo-Master/MoMo/main/deploy/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/M0M0Sec/MoMo/main/deploy/install.sh | sudo bash
 
 # Configure
 sudo nano /etc/momo/momo.yml
@@ -279,7 +279,7 @@ sudo systemctl enable --now momo
 
 ```bash
 # Clone repository
-git clone https://github.com/Momo-Master/MoMo.git
+git clone https://github.com/M0M0Sec/MoMo.git
 cd MoMo
 
 # Create virtual environment
@@ -849,10 +849,10 @@ MoMo is part of an integrated offensive security ecosystem. Each project is desi
 
 | Project | Description | Platform | Links |
 |---------|-------------|----------|-------|
-| **🔵 MoMo** | WiFi/BLE/SDR Audit Platform | Pi 5 | [GitHub](https://github.com/Momo-Master/MoMo) |
-| **🟢 Nexus** | Central C2 Hub | Pi 4 | [GitHub](https://github.com/Momo-Master/MoMo-Nexus) |
-| **👻 GhostBridge** | Transparent Network Implant | NanoPi R2S | [GitHub](https://github.com/Momo-Master/Momo-GhostBridge) |
-| **🎭 Mimic** | USB Attack Platform | Pi Zero 2W | [GitHub](https://github.com/Momo-Master/MoMo-Mimic) |
+| **🔵 MoMo** | WiFi/BLE/SDR Audit Platform | Pi 5 | [GitHub](https://github.com/M0M0Sec/MoMo) |
+| **🟢 Nexus** | Central C2 Hub | Pi 4 | [GitHub](https://github.com/M0M0Sec/MoMo-Nexus) |
+| **👻 GhostBridge** | Transparent Network Implant | NanoPi R2S | [GitHub](https://github.com/M0M0Sec/Momo-GhostBridge) |
+| **🎭 Mimic** | USB Attack Platform | Pi Zero 2W | [GitHub](https://github.com/M0M0Sec/MoMo-Mimic) |
 
 ### Nexus Integration
 
@@ -935,7 +935,7 @@ Types: feat, fix, docs, style, refactor, test, chore
 
 ```bash
 # Setup
-git clone https://github.com/Momo-Master/MoMo.git
+git clone https://github.com/M0M0Sec/MoMo.git
 cd MoMo
 pip install -e ".[dev]"
 pre-commit install
@@ -981,10 +981,10 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 </p>
 
 <p align="center">
-  <a href="https://github.com/Momo-Master/MoMo">🔵 MoMo</a> •
-  <a href="https://github.com/Momo-Master/MoMo-Nexus">🟢 Nexus</a> •
-  <a href="https://github.com/Momo-Master/Momo-GhostBridge">👻 GhostBridge</a> •
-  <a href="https://github.com/Momo-Master/MoMo-Mimic">🎭 Mimic</a>
+  <a href="https://github.com/M0M0Sec/MoMo">🔵 MoMo</a> •
+  <a href="https://github.com/M0M0Sec/MoMo-Nexus">🟢 Nexus</a> •
+  <a href="https://github.com/M0M0Sec/Momo-GhostBridge">👻 GhostBridge</a> •
+  <a href="https://github.com/M0M0Sec/MoMo-Mimic">🎭 Mimic</a>
 </p>
 
 <p align="center">
