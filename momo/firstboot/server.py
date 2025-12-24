@@ -58,17 +58,27 @@ class LanguageRequest(BaseModel):
 class PasswordRequest(BaseModel):
     """Password setup request."""
     password: str = Field(..., min_length=8)
-    confirm_password: str = Field(..., min_length=8)
+    confirm_password: str = Field(default="")  # Optional from frontend
+
+
+class NetworkAPConfig(BaseModel):
+    """AP network config."""
+    ssid: str = Field(default="MoMo-Management")
+    password: str = Field(default="")
+    channel: int = Field(default=6, ge=1, le=14)
+
+
+class NetworkClientConfig(BaseModel):
+    """Client network config."""
+    ssid: str = Field(default="")
+    password: str = Field(default="")
 
 
 class NetworkRequest(BaseModel):
     """Network configuration request."""
     mode: str = Field(..., pattern="^(ap|client)$")
-    ap_ssid: str = Field(default="MoMo-Management")
-    ap_password: str = Field(default="")
-    ap_channel: int = Field(default=6, ge=1, le=14)
-    client_ssid: str = Field(default="")
-    client_password: str = Field(default="")
+    ap: NetworkAPConfig = Field(default_factory=NetworkAPConfig)
+    client: NetworkClientConfig = Field(default_factory=NetworkClientConfig)
 
 
 class ProfileRequest(BaseModel):
@@ -86,7 +96,7 @@ class NexusRequest(BaseModel):
 
 class CompleteRequest(BaseModel):
     """Final setup request."""
-    confirm: bool = True
+    confirm: bool = True  # Default to True for simple POST
 
 
 class WifiNetwork(BaseModel):
@@ -245,7 +255,8 @@ class WizardServer:
         @app.post("/api/step/password")
         async def set_password(request: PasswordRequest):
             """Set admin password."""
-            if request.password != request.confirm_password:
+            # Only check confirm if provided (frontend may validate separately)
+            if request.confirm_password and request.password != request.confirm_password:
                 raise HTTPException(
                     status_code=400,
                     detail="Passwords do not match"
@@ -299,13 +310,13 @@ class WizardServer:
             """Configure network settings."""
             # Validate based on mode
             if request.mode == "ap":
-                if len(request.ap_password) < 8:
+                if request.ap.password and len(request.ap.password) < 8:
                     raise HTTPException(
                         status_code=400,
                         detail="AP password must be at least 8 characters"
                     )
             else:  # client mode
-                if not request.client_ssid:
+                if not request.client.ssid:
                     raise HTTPException(
                         status_code=400,
                         detail="Client SSID is required"
@@ -314,13 +325,13 @@ class WizardServer:
             self.config_data["network"] = {
                 "mode": request.mode,
                 "ap": {
-                    "ssid": request.ap_ssid,
-                    "password": request.ap_password,
-                    "channel": request.ap_channel,
+                    "ssid": request.ap.ssid,
+                    "password": request.ap.password,
+                    "channel": request.ap.channel,
                 },
                 "client": {
-                    "ssid": request.client_ssid,
-                    "password": request.client_password,
+                    "ssid": request.client.ssid,
+                    "password": request.client.password,
                 },
             }
             self.state.current_step = WizardStep.PROFILE
@@ -410,7 +421,7 @@ class WizardServer:
             }
         
         @app.post("/api/complete")
-        async def complete_setup(request: CompleteRequest):
+        async def complete_setup(request: CompleteRequest = CompleteRequest()):
             """Complete the setup wizard."""
             if not request.confirm:
                 raise HTTPException(

@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoMo Setup Wizard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════════
+           MOMO FIRST BOOT WIZARD - NEXUS THEME
+           ═══════════════════════════════════════════════════════════════════════ */
+        :root {
+            --nexus-bg: #0a0a0f;
+            --nexus-surface: #12121a;
+            --nexus-elevated: #1a1a24;
+            --nexus-hover: #22222e;
+            --neon-green: #00ff88;
+            --neon-cyan: #00d4ff;
+            --neon-magenta: #ff00ff;
+            --neon-orange: #ff8800;
+            --neon-red: #ff4444;
+            --text-primary: #e0e0e0;
+            --text-secondary: #8888aa;
+            --text-muted: #555566;
+            --border-default: #2a2a3a;
+            --border-active: #3a3a4a;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--nexus-bg);
+            background-image: 
+                linear-gradient(rgba(0, 255, 136, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 136, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .wizard-container {
+            width: 100%;
+            max-width: 480px;
+            background: var(--nexus-surface);
+            border: 1px solid var(--border-default);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        .wizard-header {
+            text-align: center;
+            padding: 32px 24px 24px;
+            border-bottom: 1px solid var(--border-default);
+        }
+        
+        .wizard-logo {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        
+        .wizard-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--neon-green);
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+            margin-bottom: 8px;
+        }
+        
+        .wizard-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        /* Progress Steps */
+        .wizard-progress {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px;
+            background: var(--nexus-bg);
+        }
+        
+        .progress-step {
+            width: 40px;
+            height: 4px;
+            background: var(--border-default);
+            border-radius: 2px;
+            transition: all 0.3s;
+        }
+        
+        .progress-step.active {
+            background: var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+        
+        .progress-step.completed {
+            background: var(--neon-cyan);
+        }
+        
+        /* Wizard Content */
+        .wizard-content {
+            padding: 24px;
+            min-height: 300px;
+        }
+        
+        .step { display: none; }
+        .step.active { display: block; animation: fadeIn 0.3s ease; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .step-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .step-description {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--nexus-bg);
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            transition: all 0.2s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--neon-green);
+            box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.1);
+        }
+        
+        input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        /* Option Cards */
+        .option-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .option-card {
+            padding: 16px;
+            background: var(--nexus-bg);
+            border: 2px solid var(--border-default);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .option-card:hover {
+            border-color: var(--border-active);
+            background: var(--nexus-hover);
+        }
+        
+        .option-card.selected {
+            border-color: var(--neon-green);
+            background: rgba(0, 255, 136, 0.05);
+        }
+        
+        .option-card input[type="radio"] {
+            display: none;
+        }
+        
+        .option-title {
+            font-weight: 600;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .option-title .icon {
+            font-size: 18px;
+        }
+        
+        .option-description {
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        
+        /* WiFi Network List */
+        .wifi-list {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 16px;
+        }
+        
+        .wifi-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            border: 1px solid var(--border-default);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .wifi-item:hover {
+            background: var(--nexus-hover);
+        }
+        
+        .wifi-item.selected {
+            border-color: var(--neon-green);
+            background: rgba(0, 255, 136, 0.05);
+        }
+        
+        .wifi-name {
+            font-weight: 500;
+        }
+        
+        .wifi-signal {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        /* Buttons */
+        .wizard-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 24px;
+            background: var(--nexus-bg);
+            border-top: 1px solid var(--border-default);
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+        
+        .btn-primary {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--neon-green);
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background: rgba(0, 255, 136, 0.2);
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-secondary);
+            border-color: var(--border-default);
+        }
+        
+        .btn-secondary:hover {
+            color: var(--text-primary);
+            border-color: var(--border-active);
+        }
+        
+        /* Loading State */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-default);
+            border-top-color: var(--neon-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            margin-top: 16px;
+            color: var(--text-secondary);
+        }
+        
+        /* Success State */
+        .success {
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 16px;
+        }
+        
+        .success-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--neon-green);
+            margin-bottom: 8px;
+        }
+        
+        .success-message {
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+        
+        /* Error State */
+        .error-message {
+            background: rgba(255, 68, 68, 0.1);
+            border: 1px solid rgba(255, 68, 68, 0.3);
+            color: var(--neon-red);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wizard-container">
+        <div class="wizard-header">
+            <div class="wizard-logo">🔥</div>
+            <h1 class="wizard-title">Welcome to MoMo</h1>
+            <p class="wizard-subtitle">Modular Offensive Mobile Operations</p>
+        </div>
+        
+        <div class="wizard-progress">
+            <div class="progress-step active" data-step="1"></div>
+            <div class="progress-step" data-step="2"></div>
+            <div class="progress-step" data-step="3"></div>
+            <div class="progress-step" data-step="4"></div>
+            <div class="progress-step" data-step="5"></div>
+        </div>
+        
+        <div class="wizard-content">
+            <!-- Step 1: Language -->
+            <div class="step active" id="step-1">
+                <h2 class="step-title">🌍 Language</h2>
+                <p class="step-description">Select your preferred language</p>
+                
+                <div class="option-cards">
+                    <label class="option-card selected">
+                        <input type="radio" name="language" value="en" checked>
+                        <div class="option-title"><span class="icon">🇬🇧</span> English</div>
+                        <div class="option-description">Use English for the interface</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="language" value="tr">
+                        <div class="option-title"><span class="icon">🇹🇷</span> Türkçe</div>
+                        <div class="option-description">Arayüz için Türkçe kullan</div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Step 2: Admin Password -->
+            <div class="step" id="step-2">
+                <h2 class="step-title">🔐 Admin Password</h2>
+                <p class="step-description">Set a secure password for the admin interface</p>
+                
+                <div id="password-error" class="error-message" style="display: none;"></div>
+                
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter password (min 8 characters)">
+                </div>
+                
+                <div class="form-group">
+                    <label for="password-confirm">Confirm Password</label>
+                    <input type="password" id="password-confirm" placeholder="Confirm password">
+                </div>
+            </div>
+            
+            <!-- Step 3: Network Mode -->
+            <div class="step" id="step-3">
+                <h2 class="step-title">📡 Network Mode</h2>
+                <p class="step-description">How should MoMo connect to the network?</p>
+                
+                <div class="option-cards">
+                    <label class="option-card selected">
+                        <input type="radio" name="network-mode" value="ap" checked>
+                        <div class="option-title"><span class="icon">📶</span> Access Point Mode</div>
+                        <div class="option-description">MoMo creates its own WiFi network for management</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="network-mode" value="client">
+                        <div class="option-title"><span class="icon">🔗</span> Client Mode</div>
+                        <div class="option-description">Connect to an existing WiFi network</div>
+                    </label>
+                </div>
+                
+                <!-- AP Mode Config -->
+                <div id="ap-config" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label for="ap-ssid">AP Network Name</label>
+                        <input type="text" id="ap-ssid" value="MoMo-Management" placeholder="Network name">
+                    </div>
+                    <div class="form-group">
+                        <label for="ap-password">AP Password</label>
+                        <input type="password" id="ap-password" placeholder="Password (min 8 chars)">
+                    </div>
+                </div>
+                
+                <!-- Client Mode Config (hidden by default) -->
+                <div id="client-config" style="margin-top: 20px; display: none;">
+                    <div class="form-group">
+                        <label>Available Networks</label>
+                        <div class="wifi-list" id="wifi-list">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <div class="loading-text">Scanning...</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="wifi-password">WiFi Password</label>
+                        <input type="password" id="wifi-password" placeholder="Enter password">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Step 4: Operation Profile -->
+            <div class="step" id="step-4">
+                <h2 class="step-title">🎯 Operation Profile</h2>
+                <p class="step-description">Select your default operation mode</p>
+                
+                <div class="option-cards">
+                    <label class="option-card">
+                        <input type="radio" name="profile" value="passive">
+                        <div class="option-title"><span class="icon">👁️</span> Passive</div>
+                        <div class="option-description">Observation only, no active attacks</div>
+                    </label>
+                    <label class="option-card selected">
+                        <input type="radio" name="profile" value="balanced" checked>
+                        <div class="option-title"><span class="icon">⚖️</span> Balanced</div>
+                        <div class="option-description">Recommended for most operations</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="profile" value="aggressive">
+                        <div class="option-title"><span class="icon">🔥</span> Aggressive</div>
+                        <div class="option-description">All attack features enabled</div>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Step 5: Nexus Connection (Optional) -->
+            <div class="step" id="step-5">
+                <h2 class="step-title">🔗 Nexus Connection</h2>
+                <p class="step-description">Connect to a MoMo Nexus server (optional)</p>
+                
+                <div class="option-cards" style="margin-bottom: 20px;">
+                    <label class="option-card">
+                        <input type="radio" name="nexus-enable" value="no" checked>
+                        <div class="option-title"><span class="icon">⏭️</span> Skip for now</div>
+                        <div class="option-description">You can configure Nexus later</div>
+                    </label>
+                    <label class="option-card">
+                        <input type="radio" name="nexus-enable" value="yes">
+                        <div class="option-title"><span class="icon">🌐</span> Connect to Nexus</div>
+                        <div class="option-description">Central management and cloud cracking</div>
+                    </label>
+                </div>
+                
+                <div id="nexus-config" style="display: none;">
+                    <div id="nexus-discovered" style="margin-bottom: 16px;"></div>
+                    <div class="form-group">
+                        <label for="nexus-url">Nexus URL</label>
+                        <input type="text" id="nexus-url" placeholder="http://192.168.1.100:8080">
+                    </div>
+                    <div class="form-group">
+                        <label for="device-name">Device Name</label>
+                        <input type="text" id="device-name" value="MoMo-Field-01" placeholder="Device identifier">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Completing Step -->
+            <div class="step" id="step-completing">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <div class="loading-text">Applying configuration...</div>
+                </div>
+            </div>
+            
+            <!-- Success Step -->
+            <div class="step" id="step-success">
+                <div class="success">
+                    <div class="success-icon">✅</div>
+                    <h2 class="success-title">Setup Complete!</h2>
+                    <p class="success-message">MoMo is configured and ready. The device will restart.</p>
+                    <button class="btn btn-primary" onclick="window.location.reload()">Close Wizard</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="wizard-footer" id="wizard-footer">
+            <button class="btn btn-secondary" id="btn-back" onclick="prevStep()" style="visibility: hidden;">← Back</button>
+            <button class="btn btn-primary" id="btn-next" onclick="nextStep()">Next →</button>
+        </div>
+    </div>
+    
+    <script>
+        let currentStep = 1;
+        const totalSteps = 5;
+        let wizardData = {
+            language: 'en',
+            password: '',
+            network: { mode: 'ap', ap: {}, client: {} },
+            profile: 'balanced',
+            nexus: { enabled: false }
+        };
+        
+        // Option card selection
+        document.querySelectorAll('.option-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const name = this.querySelector('input').name;
+                document.querySelectorAll(`input[name="${name}"]`).forEach(input => {
+                    input.closest('.option-card').classList.remove('selected');
+                });
+                this.classList.add('selected');
+                this.querySelector('input').checked = true;
+                
+                // Handle network mode change
+                if (name === 'network-mode') {
+                    const mode = this.querySelector('input').value;
+                    document.getElementById('ap-config').style.display = mode === 'ap' ? 'block' : 'none';
+                    document.getElementById('client-config').style.display = mode === 'client' ? 'block' : 'none';
+                    if (mode === 'client') {
+                        scanWifi();
+                    }
+                }
+                
+                // Handle nexus enable change
+                if (name === 'nexus-enable') {
+                    const enabled = this.querySelector('input').value === 'yes';
+                    document.getElementById('nexus-config').style.display = enabled ? 'block' : 'none';
+                    if (enabled) {
+                        discoverNexus();
+                    }
+                }
+            });
+        });
+        
+        function updateProgress() {
+            document.querySelectorAll('.progress-step').forEach((step, index) => {
+                const stepNum = index + 1;
+                step.classList.remove('active', 'completed');
+                if (stepNum === currentStep) {
+                    step.classList.add('active');
+                } else if (stepNum < currentStep) {
+                    step.classList.add('completed');
+                }
+            });
+        }
+        
+        function showStep(step) {
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+            
+            // Update buttons
+            document.getElementById('btn-back').style.visibility = step > 1 ? 'visible' : 'hidden';
+            document.getElementById('btn-next').textContent = step === totalSteps ? 'Complete Setup' : 'Next →';
+            
+            updateProgress();
+        }
+        
+        function validateStep(step) {
+            if (step === 2) {
+                const password = document.getElementById('password').value;
+                const confirm = document.getElementById('password-confirm').value;
+                const errorDiv = document.getElementById('password-error');
+                
+                if (password.length < 8) {
+                    errorDiv.textContent = 'Password must be at least 8 characters';
+                    errorDiv.style.display = 'block';
+                    return false;
+                }
+                if (password !== confirm) {
+                    errorDiv.textContent = 'Passwords do not match';
+                    errorDiv.style.display = 'block';
+                    return false;
+                }
+                errorDiv.style.display = 'none';
+                wizardData.password = password;
+            }
+            
+            if (step === 1) {
+                wizardData.language = document.querySelector('input[name="language"]:checked').value;
+            }
+            
+            if (step === 3) {
+                const mode = document.querySelector('input[name="network-mode"]:checked').value;
+                wizardData.network.mode = mode;
+                if (mode === 'ap') {
+                    wizardData.network.ap = {
+                        ssid: document.getElementById('ap-ssid').value || 'MoMo-Management',
+                        password: document.getElementById('ap-password').value
+                    };
+                } else {
+                    const selected = document.querySelector('.wifi-item.selected');
+                    wizardData.network.client = {
+                        ssid: selected ? selected.dataset.ssid : '',
+                        password: document.getElementById('wifi-password').value
+                    };
+                }
+            }
+            
+            if (step === 4) {
+                wizardData.profile = document.querySelector('input[name="profile"]:checked').value;
+            }
+            
+            if (step === 5) {
+                const enabled = document.querySelector('input[name="nexus-enable"]:checked').value === 'yes';
+                wizardData.nexus = {
+                    enabled: enabled,
+                    url: enabled ? document.getElementById('nexus-url').value : '',
+                    device_name: enabled ? document.getElementById('device-name').value : ''
+                };
+            }
+            
+            return true;
+        }
+        
+        function nextStep() {
+            if (!validateStep(currentStep)) return;
+            
+            if (currentStep < totalSteps) {
+                currentStep++;
+                showStep(currentStep);
+            } else {
+                completeSetup();
+            }
+        }
+        
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                showStep(currentStep);
+            }
+        }
+        
+        async function scanWifi() {
+            const list = document.getElementById('wifi-list');
+            list.innerHTML = '<div class="loading"><div class="spinner"></div><div class="loading-text">Scanning...</div></div>';
+            
+            try {
+                const response = await fetch('/api/wifi/scan');
+                const data = await response.json();
+                
+                if (data.networks && data.networks.length > 0) {
+                    list.innerHTML = data.networks.map(net => `
+                        <div class="wifi-item" data-ssid="${net.ssid}" onclick="selectWifi(this)">
+                            <div class="wifi-name">${net.ssid}</div>
+                            <div class="wifi-signal">${net.signal} dBm • ${net.encryption}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No networks found</div>';
+                }
+            } catch (e) {
+                list.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--neon-red);">Scan failed</div>';
+            }
+        }
+        
+        function selectWifi(element) {
+            document.querySelectorAll('.wifi-item').forEach(i => i.classList.remove('selected'));
+            element.classList.add('selected');
+        }
+        
+        async function discoverNexus() {
+            const container = document.getElementById('nexus-discovered');
+            container.innerHTML = '<div class="loading"><div class="spinner" style="width:24px;height:24px;"></div><div class="loading-text" style="font-size:12px;">Discovering Nexus...</div></div>';
+            
+            try {
+                const response = await fetch('/api/nexus/discover');
+                const data = await response.json();
+                
+                if (data.devices && data.devices.length > 0) {
+                    container.innerHTML = '<label>Discovered Nexus Servers</label>' + data.devices.map(d => `
+                        <div class="wifi-item" onclick="document.getElementById('nexus-url').value='${d.url}'; this.classList.add('selected');">
+                            <div class="wifi-name">${d.name}</div>
+                            <div class="wifi-signal">${d.url}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div style="padding: 12px; text-align: center; color: var(--text-muted); font-size: 13px;">No Nexus servers found on network</div>';
+                }
+            } catch (e) {
+                container.innerHTML = '';
+            }
+        }
+        
+        async function completeSetup() {
+            document.getElementById('wizard-footer').style.display = 'none';
+            document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+            document.getElementById('step-completing').classList.add('active');
+            
+            try {
+                // Step by step API calls
+                await fetch('/api/step/language', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ language: wizardData.language })
+                });
+                
+                await fetch('/api/step/password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: wizardData.password })
+                });
+                
+                await fetch('/api/step/network', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(wizardData.network)
+                });
+                
+                await fetch('/api/step/profile', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ profile: wizardData.profile })
+                });
+                
+                if (wizardData.nexus.enabled) {
+                    await fetch('/api/step/nexus', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(wizardData.nexus)
+                    });
+                }
+                
+                // Complete
+                const result = await fetch('/api/complete', { method: 'POST' });
+                
+                if (result.ok) {
+                    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+                    document.getElementById('step-success').classList.add('active');
+                } else {
+                    throw new Error('Setup failed');
+                }
+            } catch (e) {
+                alert('Setup failed: ' + e.message);
+                document.getElementById('wizard-footer').style.display = 'flex';
+                showStep(currentStep);
+            }
+        }
+        
+        // Initial setup
+        showStep(1);
+    </script>
+</body>
+</html>
+
