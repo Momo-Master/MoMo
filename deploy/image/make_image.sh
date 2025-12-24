@@ -131,7 +131,7 @@ setup_pigen() {
 
 IMG_NAME=$IMG_NAME
 RELEASE=bookworm
-DEPLOY_DIR=\${PWD}/deploy
+DEPLOY_DIR=$WORKDIR/pi-gen/deploy
 TARGET_HOSTNAME=$TARGET_HOSTNAME
 FIRST_USER_NAME=$FIRST_USER_NAME
 FIRST_USER_PASS=$FIRST_USER_PASS
@@ -216,15 +216,58 @@ copy_output() {
     
     mkdir -p "$OUTPUT_DIR"
     
-    local src_img
-    src_img=$(find "$WORKDIR/pi-gen/deploy" -name "*.img.xz" -type f | head -1)
+    # Search for output image in multiple locations
+    log "Searching for output image..."
+    local src_img=""
+    
+    # Possible locations where pi-gen puts the image
+    local search_paths=(
+        "$WORKDIR/pi-gen/deploy"
+        "$WORKDIR/pi-gen/work/${IMG_NAME}/export-image"
+        "$WORKDIR/pi-gen/work/${IMG_NAME}"
+        "$WORKDIR/deploy"
+        "/tmp/momo-pigen/pi-gen/deploy"
+    )
+    
+    for path in "${search_paths[@]}"; do
+        log "Checking: $path"
+        if [[ -d "$path" ]]; then
+            src_img=$(find "$path" -name "*.img.xz" -type f 2>/dev/null | head -1)
+            if [[ -n "$src_img" ]]; then
+                log "Found image: $src_img"
+                break
+            fi
+            # Also check for uncompressed image
+            local uncompressed=$(find "$path" -name "*.img" -type f 2>/dev/null | head -1)
+            if [[ -n "$uncompressed" ]]; then
+                log "Found uncompressed image: $uncompressed"
+                log "Compressing with xz..."
+                xz -6 -k "$uncompressed"
+                src_img="${uncompressed}.xz"
+                break
+            fi
+        fi
+    done
+    
+    # Last resort: find anywhere in WORKDIR
+    if [[ -z "$src_img" ]]; then
+        log "Searching entire WORKDIR..."
+        src_img=$(find "$WORKDIR" -name "*${IMG_NAME}*.img.xz" -type f 2>/dev/null | head -1)
+        if [[ -z "$src_img" ]]; then
+            src_img=$(find "$WORKDIR" -name "*.img.xz" -type f 2>/dev/null | head -1)
+        fi
+    fi
     
     if [[ -z "$src_img" ]]; then
-        error "No image found in deploy directory!"
+        error "No image found! Listing WORKDIR contents:"
+        find "$WORKDIR" -name "*.img*" -type f 2>/dev/null || true
+        ls -laR "$WORKDIR/pi-gen/deploy" 2>/dev/null || true
+        ls -laR "$WORKDIR/pi-gen/work" 2>/dev/null | head -50 || true
         exit 1
     fi
     
     local dest_img="$OUTPUT_DIR/${IMG_NAME}-${IMG_VERSION}.img.xz"
+    log "Copying $src_img to $dest_img"
     cp "$src_img" "$dest_img"
     
     # Generate checksums
