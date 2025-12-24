@@ -62,6 +62,22 @@ jobs:
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf "$AGENT_TOOLSDIRECTORY"
           df -h
+
+      # Setup QEMU for ARM emulation - this properly registers binfmt handlers
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm,arm64
+
+      - name: Verify QEMU setup
+        run: |
+          echo "Checking binfmt_misc..."
+          ls -la /proc/sys/fs/binfmt_misc/ || true
+          cat /proc/sys/fs/binfmt_misc/qemu-arm 2>/dev/null || echo "qemu-arm not registered"
+          
+          echo "Checking qemu-arm-static..."
+          which qemu-arm-static || echo "qemu-arm-static not in PATH"
+          ls -la /usr/bin/qemu-arm-static 2>/dev/null || true
       
       - name: Install dependencies
         run: |
@@ -75,26 +91,51 @@ jobs:
             binfmt-support file \
             kpartx arch-test \
             fdisk gdisk \
-            pigz xxd
+            pigz xxd bc
+
+          # Ensure binfmt is started
+          sudo systemctl restart binfmt-support || true
+          
+          # Manually register ARM if needed
+          if [ ! -f /proc/sys/fs/binfmt_misc/qemu-arm ]; then
+            echo "Registering qemu-arm manually..."
+            echo ':qemu-arm:M::\x7fELF\x01\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x02\x00\x28\x00:\xff\xff\xff\xff\xff\xff\xff\x00\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xff\xff\xff:/usr/bin/qemu-arm-static:F' | sudo tee /proc/sys/fs/binfmt_misc/register || true
+          fi
 
           # Add Raspberry Pi GPG key
           curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
             sudo gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg
+          
+          # Verify setup
+          echo "Final binfmt check:"
+          ls /proc/sys/fs/binfmt_misc/
       
       - name: Build image
         run: |
           cd deploy/image
           chmod +x make_image.sh
           
+          # Create releases directory
+          mkdir -p ${{ github.workspace }}/releases
+          
           # Use native build (not Docker) on GitHub Actions
           sudo IMG_VERSION="${{ steps.version.outputs.version }}" \
                WORKDIR=/tmp/momo-pigen \
                OUTPUT_DIR=${{ github.workspace }}/releases \
                ./make_image.sh 2>&1 || {
+            echo "========================================"
             echo "Build failed, checking logs..."
-            cat /tmp/momo-pigen/pi-gen/work/*/stage0/debootstrap.log 2>/dev/null || true
+            echo "========================================"
+            echo "--- debootstrap.log ---"
+            cat /tmp/momo-pigen/pi-gen/work/*/stage0/debootstrap.log 2>/dev/null || echo "No debootstrap log"
+            echo "--- build.log ---"
+            cat /tmp/momo-pigen/pi-gen/build.log 2>/dev/null || echo "No build log"
             exit 1
           }
+          
+          # List output
+          echo "Build artifacts:"
+          ls -la ${{ github.workspace }}/releases/
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
@@ -132,4 +173,3 @@ jobs:
             echo "❌ Image build failed!"
             exit 1
           fi
-
