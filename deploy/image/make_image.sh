@@ -130,7 +130,8 @@ setup_pigen() {
 # Generated: $(date -u +%F_%T)
 
 IMG_NAME=$IMG_NAME
-RELEASE=$RELEASE
+RELEASE=bookworm
+DEPLOY_DIR=\${PWD}/deploy
 TARGET_HOSTNAME=$TARGET_HOSTNAME
 FIRST_USER_NAME=$FIRST_USER_NAME
 FIRST_USER_PASS=$FIRST_USER_PASS
@@ -147,8 +148,15 @@ SKIP_IMAGES=0
 
 # Compression
 DEPLOY_COMPRESSION=xz
-COMPRESSION_LEVEL=9
+COMPRESSION_LEVEL=6
+
+# Use Raspberry Pi archive
+APT_PROXY=""
 EOF
+
+    # Skip touch files from failed runs
+    rm -f pi-gen/stage*/SKIP 2>/dev/null || true
+    rm -rf pi-gen/work 2>/dev/null || true
     
     log "pi-gen setup complete."
 }
