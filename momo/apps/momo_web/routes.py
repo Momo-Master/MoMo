@@ -1224,70 +1224,75 @@ def bluetooth_page():
     """BLE Scanner page."""
     cfg = _cfg()
     content = """
-    <h1 class="page-title">📶 Bluetooth Scanner</h1>
-    
-    <div class="stat-grid">
-        <div class="stat-card">
-            <span class="stat-value" id="total-devices">0</span>
-            <span class="stat-label">Total Devices</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="total-beacons">0</span>
-            <span class="stat-label">Beacons</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="ibeacons">0</span>
-            <span class="stat-label">iBeacons</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="scans">0</span>
-            <span class="stat-label">Scans</span>
+    <div class="header">
+        <h1>📶 Bluetooth Scanner</h1>
+        <div class="header-status">
+            <span class="badge badge-info" id="ble-status">Loading...</span>
         </div>
     </div>
     
-    <div class="card-grid">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon cyan">📱</div>
+            <div class="stat-label">Total Devices</div>
+            <div class="stat-value" id="total-devices">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">📍</div>
+            <div class="stat-label">Beacons</div>
+            <div class="stat-value" id="total-beacons">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">🍎</div>
+            <div class="stat-label">iBeacons</div>
+            <div class="stat-value" id="ibeacons">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">🔄</div>
+            <div class="stat-label">Scans</div>
+            <div class="stat-value" id="scans">0</div>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 24px; margin-bottom: 24px;">
         <div class="card">
             <div class="card-header">
                 <span class="card-title">📱 Recent Devices</span>
                 <button class="btn btn-primary" id="refresh-btn">Refresh</button>
             </div>
-            <div class="card-body">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Name</th>
-                            <th>MAC</th>
-                            <th>RSSI</th>
-                            <th>Type</th>
-                            <th>Last Seen</th>
-                        </tr>
-                    </thead>
-                    <tbody id="devices-list">
-                        <tr><td colspan="5">Loading...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>MAC</th>
+                        <th>RSSI</th>
+                        <th>Type</th>
+                        <th>Last Seen</th>
+                    </tr>
+                </thead>
+                <tbody id="devices-list">
+                    <tr><td colspan="5" style="color: var(--text-muted);">Loading...</td></tr>
+                </tbody>
+            </table>
         </div>
         
         <div class="card">
             <div class="card-header">
                 <span class="card-title">📍 Beacons</span>
             </div>
-            <div class="card-body">
-                <div id="beacons-list">
-                    <p>No beacons detected yet.</p>
-                </div>
+            <div id="beacons-list" style="max-height: 300px; overflow-y: auto;">
+                <p style="color: var(--text-muted);">No beacons detected yet.</p>
             </div>
         </div>
     </div>
     
-    <div class="card" style="margin-top: 20px;">
+    <div class="card">
         <div class="card-header">
             <span class="card-title">🔧 Controls</span>
         </div>
-        <div class="card-body">
-            <button class="btn btn-danger" id="clear-btn">Clear Cache</button>
-            <span id="status-msg" style="margin-left: 20px;"></span>
+        <div style="display: flex; gap: 12px; align-items: center;">
+            <button class="btn btn-secondary" id="clear-btn">🗑️ Clear Cache</button>
+            <span id="status-msg" style="color: var(--text-muted);"></span>
         </div>
     </div>
     
@@ -1395,93 +1400,96 @@ def eviltwin_page():
     """Evil Twin attack page."""
     cfg = _cfg()
     content = """
-    <h1 class="page-title">👿 Evil Twin</h1>
-    
-    <div class="stat-grid">
-        <div class="stat-card">
-            <span class="stat-value" id="status">Stopped</span>
-            <span class="stat-label">Status</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="clients">0</span>
-            <span class="stat-label">Connected</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="creds">0</span>
-            <span class="stat-label">Credentials</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="ssid">-</span>
-            <span class="stat-label">SSID</span>
+    <div class="header">
+        <h1>👿 Evil Twin</h1>
+        <div class="header-status">
+            <span class="badge badge-warning" id="et-status-badge">Stopped</span>
         </div>
     </div>
     
-    <div class="card-grid">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon orange">⚡</div>
+            <div class="stat-label">Status</div>
+            <div class="stat-value" id="status" style="font-size: 24px;">Stopped</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon cyan">👥</div>
+            <div class="stat-label">Connected</div>
+            <div class="stat-value" id="clients">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">🔑</div>
+            <div class="stat-label">Credentials</div>
+            <div class="stat-value" id="creds">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">📡</div>
+            <div class="stat-label">SSID</div>
+            <div class="stat-value" id="ssid" style="font-size: 18px;">-</div>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
         <div class="card">
             <div class="card-header">
                 <span class="card-title">🚀 Start Attack</span>
             </div>
-            <div class="card-body">
-                <form id="attack-form">
-                    <div class="form-group">
-                        <label>Target SSID</label>
-                        <input type="text" id="target-ssid" placeholder="FreeWiFi" value="FreeWiFi" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                    </div>
-                    <div class="form-group" style="margin-top:15px;">
-                        <label>Channel</label>
-                        <input type="number" id="channel" value="6" min="1" max="14" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                    </div>
-                    <div class="form-group" style="margin-top:15px;">
-                        <label>Portal Template</label>
-                        <select id="template" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                            <option value="generic">Generic WiFi</option>
-                            <option value="hotel">Hotel Guest</option>
-                            <option value="corporate">Corporate</option>
-                            <option value="facebook">Facebook</option>
-                            <option value="google">Google</option>
-                            <option value="router">Router Login</option>
-                        </select>
-                    </div>
-                    <div style="margin-top:20px; display:flex; gap:10px;">
-                        <button type="submit" class="btn btn-primary" id="start-btn">Start Attack</button>
-                        <button type="button" class="btn btn-danger" id="stop-btn">Stop</button>
-                    </div>
-                </form>
-                <div id="attack-result" style="margin-top:15px;"></div>
-            </div>
+            <form id="attack-form">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Target SSID</label>
+                    <input type="text" id="target-ssid" placeholder="FreeWiFi" value="FreeWiFi" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Channel</label>
+                    <input type="number" id="channel" value="6" min="1" max="14" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Portal Template</label>
+                    <select id="template" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                        <option value="generic">Generic WiFi</option>
+                        <option value="hotel">Hotel Guest</option>
+                        <option value="corporate">Corporate</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="google">Google</option>
+                        <option value="router">Router Login</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:12px;">
+                    <button type="submit" class="btn btn-primary">🚀 Start Attack</button>
+                    <button type="button" class="btn btn-secondary" id="stop-btn">⏹️ Stop</button>
+                </div>
+            </form>
+            <div id="attack-result" style="margin-top:16px;"></div>
         </div>
         
         <div class="card">
             <div class="card-header">
                 <span class="card-title">💀 Captured Credentials</span>
             </div>
-            <div class="card-body">
-                <div id="creds-list" style="max-height:400px; overflow-y:auto;">
-                    <p style="color:var(--text-muted);">No credentials captured yet.</p>
-                </div>
+            <div id="creds-list" style="max-height:350px; overflow-y:auto;">
+                <p style="color:var(--text-muted); text-align: center; padding: 20px;">No credentials captured yet.</p>
             </div>
         </div>
     </div>
     
-    <div class="card" style="margin-top:20px;">
+    <div class="card">
         <div class="card-header">
             <span class="card-title">📱 Connected Clients</span>
         </div>
-        <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>MAC Address</th>
-                        <th>IP Address</th>
-                        <th>Connected At</th>
-                        <th>Credentials</th>
-                    </tr>
-                </thead>
-                <tbody id="clients-list">
-                    <tr><td colspan="4" style="color:var(--text-muted);">No clients connected.</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>MAC Address</th>
+                    <th>IP Address</th>
+                    <th>Connected At</th>
+                    <th>Credentials</th>
+                </tr>
+            </thead>
+            <tbody id="clients-list">
+                <tr><td colspan="4" style="color:var(--text-muted);">No clients connected.</td></tr>
+            </tbody>
+        </table>
     </div>
     
     <script>
@@ -1611,95 +1619,98 @@ def cracking_page():
     """Password cracking page."""
     cfg = _cfg()
     content = """
-    <h1 class="page-title">🔓 Password Cracking</h1>
-    
-    <div class="stat-grid">
-        <div class="stat-card">
-            <span class="stat-value" id="jobs-total">0</span>
-            <span class="stat-label">Total Jobs</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="jobs-cracked" style="color:var(--accent-green);">0</span>
-            <span class="stat-label">Cracked</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="active-jobs">0</span>
-            <span class="stat-label">Active</span>
-        </div>
-        <div class="stat-card">
-            <span class="stat-value" id="wordlists">0</span>
-            <span class="stat-label">Wordlists</span>
+    <div class="header">
+        <h1>🔓 Password Cracking</h1>
+        <div class="header-status">
+            <span class="badge badge-info">John the Ripper</span>
         </div>
     </div>
     
-    <div class="card-grid">
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon cyan">📋</div>
+            <div class="stat-label">Total Jobs</div>
+            <div class="stat-value" id="jobs-total">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div class="stat-label">Cracked</div>
+            <div class="stat-value" id="jobs-cracked" style="color:var(--accent-green);">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon orange">⚡</div>
+            <div class="stat-label">Active</div>
+            <div class="stat-value" id="active-jobs">0</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon purple">📚</div>
+            <div class="stat-label">Wordlists</div>
+            <div class="stat-value" id="wordlists">0</div>
+        </div>
+    </div>
+    
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
         <div class="card">
             <div class="card-header">
                 <span class="card-title">🚀 Start Crack Job</span>
             </div>
-            <div class="card-body">
-                <form id="crack-form">
-                    <div class="form-group">
-                        <label>Hash File (.22000)</label>
-                        <input type="text" id="hash-file" placeholder="logs/handshakes/capture.22000" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                    </div>
-                    <div class="form-group" style="margin-top:15px;">
-                        <label>Attack Mode</label>
-                        <select id="attack-mode" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                            <option value="0">Dictionary (Wordlist)</option>
-                            <option value="3">Brute-Force (Mask)</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-top:15px;">
-                        <label>Wordlist</label>
-                        <select id="wordlist" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                            <option value="">Auto-select best</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-top:15px;">
-                        <label>Mask (for brute-force)</label>
-                        <input type="text" id="mask" placeholder="?d?d?d?d?d?d?d?d" style="width:100%; padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-card); color:var(--text-primary);">
-                        <small style="color:var(--text-muted);">?d=digit, ?l=lower, ?u=upper, ?s=special</small>
-                    </div>
-                    <button type="submit" class="btn btn-primary" style="margin-top:20px;">Start Cracking</button>
-                </form>
-                <div id="crack-result" style="margin-top:15px;"></div>
-            </div>
+            <form id="crack-form">
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Hash File (.22000)</label>
+                    <input type="text" id="hash-file" placeholder="logs/handshakes/capture.22000" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Attack Mode</label>
+                    <select id="attack-mode" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                        <option value="0">Dictionary (Wordlist)</option>
+                        <option value="3">Brute-Force (Mask)</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Wordlist</label>
+                    <select id="wordlist" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                        <option value="">Auto-select best</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <label style="display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 6px;">Mask (for brute-force)</label>
+                    <input type="text" id="mask" placeholder="?d?d?d?d?d?d?d?d" style="width:100%; padding:12px; border:1px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary);">
+                    <small style="color:var(--text-muted); display: block; margin-top: 4px;">?d=digit, ?l=lower, ?u=upper, ?s=special</small>
+                </div>
+                <button type="submit" class="btn btn-primary">🔓 Start Cracking</button>
+            </form>
+            <div id="crack-result" style="margin-top:16px;"></div>
         </div>
         
         <div class="card">
             <div class="card-header">
                 <span class="card-title">🔑 Cracked Passwords</span>
             </div>
-            <div class="card-body">
-                <div id="cracked-list" style="max-height:400px; overflow-y:auto;">
-                    <p style="color:var(--text-muted);">No passwords cracked yet.</p>
-                </div>
+            <div id="cracked-list" style="max-height:350px; overflow-y:auto;">
+                <p style="color:var(--text-muted); text-align: center; padding: 20px;">No passwords cracked yet.</p>
             </div>
         </div>
     </div>
     
-    <div class="card" style="margin-top:20px;">
+    <div class="card">
         <div class="card-header">
             <span class="card-title">📋 Recent Jobs</span>
         </div>
-        <div class="card-body">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>File</th>
-                        <th>Status</th>
-                        <th>Progress</th>
-                        <th>Speed</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="jobs-list">
-                    <tr><td colspan="6" style="color:var(--text-muted);">No jobs yet.</td></tr>
-                </tbody>
-            </table>
-        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>File</th>
+                    <th>Status</th>
+                    <th>Progress</th>
+                    <th>Speed</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="jobs-list">
+                <tr><td colspan="6" style="color:var(--text-muted);">No jobs yet.</td></tr>
+            </tbody>
+        </table>
     </div>
     
     <script>
