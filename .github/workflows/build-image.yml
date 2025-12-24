@@ -1,0 +1,118 @@
+# ==============================================================================
+# MoMo Pi 5 Image Build Workflow
+# ==============================================================================
+# Automatically builds MoMo SD card image on release or manual trigger.
+#
+# Triggers:
+#   - New release published
+#   - Manual workflow dispatch
+#   - Push to main with [build-image] in commit message
+#
+# Output:
+#   - momo-pi5-vX.X.X.img.xz attached to release
+# ==============================================================================
+
+name: Build Pi 5 Image
+
+on:
+  release:
+    types: [published]
+  
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Image version (e.g., 1.7.0)'
+        required: false
+        default: 'dev'
+  
+  push:
+    branches: [main]
+    paths:
+      - 'deploy/image/**'
+      - '.github/workflows/build-image.yml'
+
+jobs:
+  build:
+    name: Build MoMo Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 180  # 3 hours max
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          elif [ "${{ github.event.inputs.version }}" != "" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="dev-$(date +%Y%m%d)"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
+      
+      - name: Free disk space
+        run: |
+          echo "Freeing disk space..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+      
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            coreutils quilt parted \
+            qemu-user-static debootstrap \
+            zerofree zip dosfstools \
+            libarchive-tools libcap2-bin \
+            rsync grep udev xz-utils \
+            binfmt-support file \
+            kpartx
+      
+      - name: Build image
+        run: |
+          cd deploy/image
+          chmod +x make_image.sh
+          sudo IMG_VERSION="${{ steps.version.outputs.version }}" ./make_image.sh
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: momo-pi5-${{ steps.version.outputs.version }}
+          path: |
+            deploy/image/../../releases/*.img.xz
+            deploy/image/../../releases/*.sha256
+          retention-days: 30
+      
+      - name: Upload to release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            releases/*.img.xz
+            releases/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  notify:
+    name: Notify
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Build status
+        run: |
+          if [ "${{ needs.build.result }}" = "success" ]; then
+            echo "✅ Image build successful!"
+          else
+            echo "❌ Image build failed!"
+            exit 1
+          fi
+
