@@ -529,8 +529,26 @@
                 <div class="success">
                     <div class="success-icon">✅</div>
                     <h2 class="success-title">Setup Complete!</h2>
-                    <p class="success-message">MoMo is configured and ready. The device will restart.</p>
-                    <button class="btn btn-primary" onclick="window.location.reload()">Close Wizard</button>
+                    <p class="success-message">MoMo is configured and ready.</p>
+                    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                        Connect to your configured network and access MoMo at:<br>
+                        <code style="color: var(--neon-cyan);">http://momo.local:8082</code>
+                    </p>
+                    <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="goToMoMo()">Open MoMo Dashboard</button>
+                        <button class="btn btn-secondary" onclick="showFinalInfo()">Connection Info</button>
+                    </div>
+                    <div id="final-info" style="display: none; margin-top: 20px; text-align: left; background: var(--nexus-bg); padding: 16px; border-radius: 8px;">
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                            <strong style="color: var(--neon-green);">AP Mode:</strong> Connect to your MoMo-Management WiFi
+                        </p>
+                        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 8px;">
+                            <strong style="color: var(--neon-green);">Client Mode:</strong> MoMo will connect to your WiFi
+                        </p>
+                        <p style="font-size: 13px; color: var(--text-secondary);">
+                            <strong style="color: var(--neon-green);">Access:</strong> http://192.168.4.1:8082 (AP) or http://momo.local:8082
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -797,6 +815,21 @@
                 document.getElementById('wizard-footer').style.display = 'flex';
                 showStep(currentStep);
             }
+        }
+        
+        function goToMoMo() {
+            // Try different URLs based on network mode
+            const mode = wizardData.network?.mode || 'ap';
+            if (mode === 'ap') {
+                window.location.href = 'http://192.168.4.1:8082';
+            } else {
+                window.location.href = 'http://momo.local:8082';
+            }
+        }
+        
+        function showFinalInfo() {
+            const info = document.getElementById('final-info');
+            info.style.display = info.style.display === 'none' ? 'block' : 'none';
         }
         
         // Initial setup
