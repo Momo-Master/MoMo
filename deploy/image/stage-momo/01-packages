@@ -13,9 +13,9 @@ tcpdump
 nmap
 net-tools
 
-# WiFi tools
-hcxdumptool
-hcxtools
+# WiFi tools - may not be in standard repos
+# hcxdumptool
+# hcxtools
 
 # GPS
 gpsd
@@ -23,8 +23,6 @@ gpsd-clients
 
 # Hardware
 i2c-tools
-python3-smbus
-python3-rpi.gpio
 
 # Python
 python3-pip
@@ -49,4 +47,5 @@ avahi-utils
 vim
 htop
 tmux
+bc
 

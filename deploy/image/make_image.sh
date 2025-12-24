@@ -140,11 +140,9 @@ LOCALE_DEFAULT=$LOCALE
 TIMEZONE_DEFAULT=$TIMEZONE
 KEYBOARD_KEYMAP=$KEYBOARD
 
-# Build lite image (no desktop)
-STAGE_LIST="stage0 stage1 stage2 stage-momo"
-
-# Skip stages we don't need
-SKIP_IMAGES=0
+# Build lite image - only stage0, stage1, and our custom stage
+# Skip stage2 which has Raspberry Pi specific packages
+STAGE_LIST="stage0 stage1 stage-momo"
 
 # Compression
 DEPLOY_COMPRESSION=xz
@@ -153,6 +151,38 @@ COMPRESSION_LEVEL=6
 # Use Raspberry Pi archive
 APT_PROXY=""
 EOF
+
+    # Rename stage-momo scripts to run after apt config
+    log "Configuring stage-momo scripts..."
+    if [ -f pi-gen/stage-momo/00-run-chroot.sh ]; then
+        mv pi-gen/stage-momo/00-run-chroot.sh pi-gen/stage-momo/01-run-chroot.sh
+    fi
+    if [ -f pi-gen/stage-momo/00-run.sh ]; then
+        mv pi-gen/stage-momo/00-run.sh pi-gen/stage-momo/01-run.sh
+    fi
+
+    # Add Raspberry Pi repository configuration as first step
+    log "Adding Raspberry Pi repository configuration..."
+    cat > pi-gen/stage-momo/00-run-chroot.sh <<'APTEOF'
+#!/bin/bash -e
+echo "[momo] Configuring Raspberry Pi repository..."
+
+# Add Raspberry Pi GPG key
+apt-get update
+apt-get install -y curl gnupg
+
+curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
+    gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg
+
+# Add Raspberry Pi repository
+echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.com/debian/ bookworm main" \
+    > /etc/apt/sources.list.d/raspi.list
+
+apt-get update
+
+echo "[momo] Raspberry Pi repository configured"
+APTEOF
+    chmod +x pi-gen/stage-momo/00-run-chroot.sh
 
     # Skip touch files from failed runs
     rm -f pi-gen/stage*/SKIP 2>/dev/null || true

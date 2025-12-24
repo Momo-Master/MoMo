@@ -1,6 +1,6 @@
 #!/bin/bash -e
 # ==============================================================================
-# MoMo Stage - Chroot Script
+# MoMo Stage - Chroot Script (01-run-chroot.sh)
 # ==============================================================================
 # This runs inside the chroot environment during image build.
 # Installs all MoMo dependencies and configures the system.
@@ -16,6 +16,8 @@ echo "╚═══════════════════════�
 echo "[momo] Installing system dependencies..."
 
 apt-get update
+
+# Core packages (should always be available)
 apt-get install -y --no-install-recommends \
     python3-pip \
     python3-venv \
@@ -29,9 +31,6 @@ apt-get install -y --no-install-recommends \
     iw \
     wireless-tools \
     rfkill \
-    aircrack-ng \
-    hcxdumptool \
-    hcxtools \
     gpsd \
     gpsd-clients \
     i2c-tools \
@@ -41,7 +40,14 @@ apt-get install -y --no-install-recommends \
     zlib1g-dev \
     libfreetype6-dev \
     avahi-daemon \
-    avahi-utils
+    avahi-utils \
+    bc
+
+# Optional packages - install if available
+echo "[momo] Installing optional packages..."
+apt-get install -y --no-install-recommends aircrack-ng || echo "aircrack-ng not available"
+apt-get install -y --no-install-recommends hcxdumptool || echo "hcxdumptool not available"
+apt-get install -y --no-install-recommends hcxtools || echo "hcxtools not available"
 
 # ==============================================================================
 # Enable I2C and SPI
