@@ -133,9 +133,57 @@ jobs:
             exit 1
           }
           
-          # List output
-          echo "Build artifacts:"
+          # Find and copy image manually if not found
+          echo "========================================"
+          echo "Searching for image files..."
+          echo "========================================"
+          
+          # List all .img files anywhere in WORKDIR
+          echo "All .img files in /tmp/momo-pigen:"
+          find /tmp/momo-pigen -name "*.img*" -type f 2>/dev/null || echo "No .img files"
+          
+          # List deploy directory
+          echo "Deploy directory contents:"
+          ls -laR /tmp/momo-pigen/pi-gen/deploy/ 2>/dev/null || echo "No deploy dir"
+          
+          # List work directory structure
+          echo "Work directory (top level):"
+          ls -la /tmp/momo-pigen/pi-gen/work/ 2>/dev/null || echo "No work dir"
+          
+          # Check export-image
+          echo "Export-image directories:"
+          find /tmp/momo-pigen -type d -name "export-image" 2>/dev/null || echo "No export-image"
+          
+          # If releases is empty, try to find and copy image
+          if [ ! -f "${{ github.workspace }}/releases/"*.img.xz ]; then
+            echo "Releases empty, searching for image..."
+            IMG_FILE=$(find /tmp/momo-pigen -name "*.img" -type f -size +100M 2>/dev/null | head -1)
+            if [ -n "$IMG_FILE" ]; then
+              echo "Found large image: $IMG_FILE"
+              echo "Compressing..."
+              xz -6 -k "$IMG_FILE"
+              cp "${IMG_FILE}.xz" "${{ github.workspace }}/releases/momo-pi5-${{ steps.version.outputs.version }}.img.xz"
+              cd ${{ github.workspace }}/releases
+              sha256sum *.img.xz > momo-pi5-${{ steps.version.outputs.version }}.img.xz.sha256
+            fi
+          fi
+          
+          # Final check
+          echo "========================================"
+          echo "Final releases directory:"
           ls -la ${{ github.workspace }}/releases/
+          
+          # Verify image size
+          for f in ${{ github.workspace }}/releases/*.img.xz; do
+            if [ -f "$f" ]; then
+              SIZE=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+              echo "File: $f Size: $SIZE bytes"
+              if [ "$SIZE" -lt 1000000 ]; then
+                echo "ERROR: Image too small! Expected > 1MB"
+                exit 1
+              fi
+            fi
+          done
       
       - name: Upload artifact
         uses: actions/upload-artifact@v4
