@@ -160,46 +160,9 @@ PI_GEN_RELEASE=bookworm
 APT_PROXY=""
 EOF
 
-    # Rename stage-momo scripts to run after apt config
-    log "Configuring stage-momo scripts..."
-    
-    # Rename the main install script to 02 (runs after package install and repo setup)
-    if [ -f pi-gen/stage-momo/00-run-chroot.sh ]; then
-        mv pi-gen/stage-momo/00-run-chroot.sh pi-gen/stage-momo/02-run-chroot.sh
-        chmod +x pi-gen/stage-momo/02-run-chroot.sh
-    fi
-    if [ -f pi-gen/stage-momo/00-run.sh ]; then
-        mv pi-gen/stage-momo/00-run.sh pi-gen/stage-momo/02-run.sh
-        chmod +x pi-gen/stage-momo/02-run.sh
-    fi
-    
-    # Rename packages file to 01 (installs packages first)
-    if [ -f pi-gen/stage-momo/01-packages ]; then
-        mv pi-gen/stage-momo/01-packages pi-gen/stage-momo/01-packages-nr
-    fi
-
-    # Add Raspberry Pi repository configuration as first step (00)
-    log "Adding Raspberry Pi repository configuration..."
-    cat > pi-gen/stage-momo/00-run-chroot.sh <<'APTEOF'
-#!/bin/bash -e
-echo "[momo] Configuring Raspberry Pi repository..."
-
-# Add Raspberry Pi GPG key
-apt-get update
-apt-get install -y curl gnupg
-
-curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
-    gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg
-
-# Add Raspberry Pi repository
-echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.com/debian/ bookworm main" \
-    > /etc/apt/sources.list.d/raspi.list
-
-apt-get update
-
-echo "[momo] Raspberry Pi repository configured"
-APTEOF
-    chmod +x pi-gen/stage-momo/00-run-chroot.sh
+    # Ensure scripts are executable
+    log "Setting script permissions..."
+    find pi-gen/stage-momo -name "*.sh" -exec chmod +x {} \;
 
     # Skip touch files from failed runs
     rm -f pi-gen/stage*/SKIP 2>/dev/null || true

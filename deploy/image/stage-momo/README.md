@@ -1,33 +1,42 @@
 # MoMo Pi-Gen Stage
 
-This is a custom pi-gen stage that creates a ready-to-use MoMo image.
+Custom pi-gen stage for building MoMo Raspberry Pi images.
 
-## What it does
+## Structure
 
-1. **System Packages** - Installs all required dependencies (hostapd, dnsmasq, aircrack-ng, etc.)
-2. **MoMo Installation** - Clones repo, creates venv, installs with all extras
-3. **Hardware Setup** - Enables I2C, SPI for OLED and sensors
-4. **Systemd Services** - Installs and enables momo-firstboot service
-5. **Network Config** - Prepares hostapd/dnsmasq for First Boot Wizard
-6. **User Setup** - Creates `momo` system user with correct permissions
+```
+stage-momo/
+├── 00-install-momo/
+│   ├── 00-packages        # APT packages to install
+│   └── 01-run-chroot.sh   # Main installation script (runs in chroot)
+├── EXPORT_IMAGE           # Flag: export .img.xz after this stage
+├── EXPORT_NOOBS           # Flag: also create NOOBS format
+└── README.md
+```
 
-## Files
+## What Gets Installed
 
-| File | Purpose |
-|------|---------|
-| `00-run.sh` | Host-side script (file copies) |
-| `00-run-chroot.sh` | Chroot script (main installation) |
-| `01-packages` | Additional apt packages |
+### System Packages
+- Python 3 with venv and pip
+- Network tools: hostapd, dnsmasq, iptables, iw, wireless-tools
+- GPS: gpsd, gpsd-clients
+- Hardware: i2c-tools
+- Security tools: aircrack-ng, tcpdump, nmap (if available)
 
-## First Boot Flow
+### MoMo
+- Cloned to `/opt/momo`
+- Virtual environment at `/opt/momo/.venv`
+- All optional dependencies: recommended, wardriving, ble, eviltwin, firstboot
 
-1. Image flashed to SD card
-2. Pi boots for first time
-3. `momo-firstboot.service` starts
-4. WiFi AP "MoMo-Setup" created
-5. User connects and completes wizard
-6. Main MoMo services enabled and started
-7. Device ready for use
+### Services
+- `momo-firstboot.service` - First boot wizard (enabled)
+- `momo.service` - Main MoMo service (enabled after wizard)
+- `momo-ap.service` - Management AP (optional)
+
+### Configuration
+- `/etc/momo/` - Config directory (empty, wizard creates config)
+- `/var/log/momo/` - Log directory
+- `/var/lib/momo/` - Data directory
 
 ## Build
 
@@ -36,15 +45,4 @@ cd deploy/image
 ./make_image.sh --docker
 ```
 
-## Output
-
-- `releases/momo-pi5-YYYYMMDD.img.xz` - Compressed image
-- `releases/momo-pi5-YYYYMMDD.img.xz.sha256` - Checksum
-
-## Customization
-
-Edit `00-run-chroot.sh` to:
-- Change default WiFi credentials
-- Add custom packages
-- Modify default configuration
-- Pre-configure Nexus connection
+Output: `releases/momo-pi5-YYYYMMDD.img.xz`
