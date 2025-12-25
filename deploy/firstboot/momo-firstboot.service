@@ -22,9 +22,11 @@ Documentation=https://github.com/M0M0Sec/MoMo
 Before=momo.service
 Before=momo-web.service
 
-# Wait for networking and basic services
+# Wait for system to be fully ready
 After=network.target
 After=systemd-resolved.service
+After=NetworkManager.service
+After=multi-user.target
 
 # Don't start if setup is complete (check multiple locations)
 ConditionPathExists=!/etc/momo/.setup_complete
@@ -44,6 +46,12 @@ WorkingDirectory=/opt/momo
 Environment=PYTHONPATH=/opt/momo
 Environment=LANG=en_US.UTF-8
 Environment=PATH=/opt/momo/.venv/bin:/usr/local/bin:/usr/bin:/bin
+
+# Pre-start: Wait for system stability and release wlan0
+ExecStartPre=/bin/sleep 5
+ExecStartPre=-/usr/bin/nmcli dev set wlan0 managed no
+ExecStartPre=-/usr/bin/nmcli dev disconnect wlan0
+ExecStartPre=-/usr/bin/killall wpa_supplicant
 
 # Main command - use venv python
 ExecStart=/opt/momo/.venv/bin/python -m momo.firstboot.entry

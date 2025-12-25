@@ -179,17 +179,24 @@ class NetworkManager:
         try:
             logger.info(f"Taking control of interface {iface} for AP mode...")
             
+            # Step 0: Stop any services that might interfere
+            await self._run_command(["systemctl", "stop", "hostapd"], check=False)
+            await self._run_command(["systemctl", "stop", "dnsmasq"], check=False)
+            await self._run_command(["systemctl", "stop", "wpa_supplicant"], check=False)
+            
             # Step 1: Stop NetworkManager from managing this interface
             await self._run_command(
                 ["nmcli", "dev", "set", iface, "managed", "no"],
                 check=False
             )
+            await asyncio.sleep(0.5)
             
             # Step 2: Disconnect from any existing WiFi network
             await self._run_command(
                 ["nmcli", "dev", "disconnect", iface],
                 check=False
             )
+            await asyncio.sleep(0.5)
             
             # Step 3: Stop wpa_supplicant for this interface
             await self._run_command(
@@ -198,30 +205,40 @@ class NetworkManager:
             )
             await asyncio.sleep(0.5)
             
-            # Step 4: Kill any remaining wpa_supplicant
-            await self._run_command(["killall", "wpa_supplicant"], check=False)
-            await asyncio.sleep(0.5)
+            # Step 4: Kill any remaining wpa_supplicant processes
+            await self._run_command(["killall", "-9", "wpa_supplicant"], check=False)
+            await asyncio.sleep(1)
             
-            # Step 5: Bring down interface
-            await self._run_command(["ip", "link", "set", iface, "down"])
+            # Step 5: Release DHCP lease if any
+            await self._run_command(["dhclient", "-r", iface], check=False)
             await asyncio.sleep(0.3)
             
-            # Step 6: Flush existing IP configuration
+            # Step 6: Bring down interface
+            await self._run_command(["ip", "link", "set", iface, "down"])
+            await asyncio.sleep(0.5)
+            
+            # Step 7: Flush existing IP configuration
             await self._run_command(["ip", "addr", "flush", "dev", iface])
             
-            # Step 7: Set static IP for AP mode
+            # Step 8: Set static IP for AP mode
             await self._run_command([
                 "ip", "addr", "add",
                 f"{ip}/24",
                 "dev", iface
             ])
             
-            # Step 8: Bring up interface
+            # Step 9: Bring up interface
             await self._run_command(["ip", "link", "set", iface, "up"])
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(1)
             
-            logger.info(f"Interface {iface} configured with IP {ip}")
-            return True
+            # Step 10: Verify interface is up and has correct IP
+            result = await self._run_command(["ip", "addr", "show", iface], check=False)
+            if result and ip in result.stdout.decode():
+                logger.info(f"Interface {iface} configured with IP {ip}")
+                return True
+            else:
+                logger.warning(f"Interface might not be properly configured, continuing anyway...")
+                return True
             
         except Exception as e:
             logger.error(f"Failed to configure interface: {e}")
@@ -257,7 +274,7 @@ class NetworkManager:
             return False
     
     async def _start_hostapd(self) -> bool:
-        """Start hostapd for WiFi access point."""
+        """Start hostapd for WiFi access point with retry logic."""
         
         # Check if hostapd is available
         if not shutil.which("hostapd"):
@@ -265,11 +282,13 @@ class NetworkManager:
             return False
         
         # Kill any existing hostapd processes
-        await self._run_command(["killall", "hostapd"], check=False)
+        await self._run_command(["killall", "-9", "hostapd"], check=False)
         await self._run_command(["systemctl", "stop", "hostapd"], check=False)
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(1)
         
         # Generate hostapd config
+        # Note: country_code removed to avoid regulatory issues on first boot
+        # 2.4GHz channel 6 works worldwide without regulatory restrictions
         hostapd_config = f"""# MoMo First Boot Wizard - hostapd config
 interface={self.config.interface}
 driver=nl80211
@@ -285,34 +304,53 @@ wpa_passphrase={self.config.password}
 wpa_key_mgmt=WPA-PSK
 wpa_pairwise=TKIP
 rsn_pairwise=CCMP
-country_code=TR
+# Country code disabled for universal compatibility
+# ieee80211n=1
 """
         
         self.HOSTAPD_CONF.write_text(hostapd_config)
         logger.info(f"hostapd config written to {self.HOSTAPD_CONF}")
         
-        try:
-            # Start hostapd with debug output
-            self._hostapd_process = subprocess.Popen(
-                ["hostapd", "-dd", str(self.HOSTAPD_CONF)],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.STDOUT,
-            )
-            
-            # Wait a bit and check if it's running
-            await asyncio.sleep(2)
-            if self._hostapd_process.poll() is not None:
-                stdout, _ = self._hostapd_process.communicate()
-                output = stdout.decode() if stdout else "No output"
-                logger.error(f"hostapd failed to start:\n{output[-500:]}")
+        # Retry logic - try up to 3 times
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                logger.info(f"Starting hostapd (attempt {attempt + 1}/{max_retries})...")
+                
+                # Start hostapd with debug output
+                self._hostapd_process = subprocess.Popen(
+                    ["hostapd", str(self.HOSTAPD_CONF)],
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT,
+                )
+                
+                # Wait and check if it's running
+                await asyncio.sleep(3)
+                if self._hostapd_process.poll() is not None:
+                    stdout, _ = self._hostapd_process.communicate()
+                    output = stdout.decode() if stdout else "No output"
+                    logger.warning(f"hostapd attempt {attempt + 1} failed:\n{output[-300:]}")
+                    
+                    if attempt < max_retries - 1:
+                        # Before retry, ensure interface is properly reset
+                        await self._run_command(["ip", "link", "set", self.config.interface, "down"], check=False)
+                        await asyncio.sleep(1)
+                        await self._run_command(["ip", "link", "set", self.config.interface, "up"], check=False)
+                        await asyncio.sleep(1)
+                        continue
+                    return False
+                
+                logger.info(f"hostapd started: SSID={self.config.ssid}, Channel={self.config.channel}")
+                return True
+                
+            except Exception as e:
+                logger.error(f"hostapd attempt {attempt + 1} exception: {e}")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(2)
+                    continue
                 return False
-            
-            logger.info(f"hostapd started: SSID={self.config.ssid}, Channel={self.config.channel}")
-            return True
-            
-        except Exception as e:
-            logger.error(f"Failed to start hostapd: {e}")
-            return False
+        
+        return False
     
     async def _start_dnsmasq(self) -> bool:
         """Start dnsmasq for DHCP and DNS."""
