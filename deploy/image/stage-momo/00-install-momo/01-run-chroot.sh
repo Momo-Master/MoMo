@@ -7,7 +7,31 @@ echo "╔═══════════════════════�
 echo "║            🔥 Installing MoMo...                             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 
+# ==============================================================================
+# Add Raspberry Pi Repository (required for userconf-pi and other Pi packages)
+# ==============================================================================
+echo "[momo] Adding Raspberry Pi repository..."
+
+apt-get update
+apt-get install -y curl gnupg
+
+# Add Raspberry Pi GPG key
+curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
+    gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg 2>/dev/null || true
+
+# Add Raspberry Pi repository
+if [ ! -f /etc/apt/sources.list.d/raspi.list ]; then
+    echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.com/debian/ bookworm main" \
+        > /etc/apt/sources.list.d/raspi.list
+fi
+
+apt-get update
+
+echo "[momo] Raspberry Pi repository configured"
+
+# ==============================================================================
 # Optional packages - install if available (not in all repos)
+# ==============================================================================
 echo "[momo] Installing optional packages..."
 apt-get install -y --no-install-recommends aircrack-ng || echo "aircrack-ng not available"
 apt-get install -y --no-install-recommends hcxdumptool || echo "hcxdumptool not available"
