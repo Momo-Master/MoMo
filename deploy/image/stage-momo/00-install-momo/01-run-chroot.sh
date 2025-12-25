@@ -8,26 +8,37 @@ echo "║            🔥 Installing MoMo...                             ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 
 # ==============================================================================
-# Add Raspberry Pi Repository (required for userconf-pi and other Pi packages)
+# Ensure Raspberry Pi Repository is configured
 # ==============================================================================
-echo "[momo] Adding Raspberry Pi repository..."
+echo "[momo] Checking Raspberry Pi repository..."
 
-apt-get update
-apt-get install -y curl gnupg
+# Remove any duplicate raspi.list to avoid conflicts
+rm -f /etc/apt/sources.list.d/raspi.list 2>/dev/null || true
 
-# Add Raspberry Pi GPG key
-curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
-    gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg 2>/dev/null || true
-
-# Add Raspberry Pi repository
-if [ ! -f /etc/apt/sources.list.d/raspi.list ]; then
+# Check if raspberrypi repo is already in sources
+if ! grep -rq "archive.raspberrypi.com" /etc/apt/sources.list.d/ 2>/dev/null; then
+    echo "[momo] Adding Raspberry Pi repository..."
+    
+    apt-get update
+    apt-get install -y curl gnupg
+    
+    # Add Raspberry Pi GPG key (only if not exists)
+    if [ ! -f /usr/share/keyrings/raspberrypi-archive-keyring.gpg ]; then
+        curl -fsSL https://archive.raspberrypi.com/debian/raspberrypi.gpg.key | \
+            gpg --dearmor -o /usr/share/keyrings/raspberrypi-archive-keyring.gpg
+    fi
+    
+    # Add repository
     echo "deb [signed-by=/usr/share/keyrings/raspberrypi-archive-keyring.gpg] http://archive.raspberrypi.com/debian/ bookworm main" \
         > /etc/apt/sources.list.d/raspi.list
+    
+    apt-get update
+else
+    echo "[momo] Raspberry Pi repository already configured"
+    apt-get update
 fi
 
-apt-get update
-
-echo "[momo] Raspberry Pi repository configured"
+echo "[momo] Repository check complete"
 
 # ==============================================================================
 # Optional packages - install if available (not in all repos)
