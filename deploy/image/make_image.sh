@@ -125,13 +125,18 @@ setup_pigen() {
     
     # Create config
     log "Creating pi-gen config..."
+    
+    # Ensure absolute path for DEPLOY_DIR
+    local deploy_dir="$WORKDIR/pi-gen/deploy"
+    mkdir -p "$deploy_dir"
+    
     cat > pi-gen/config <<EOF
 # MoMo Pi 5 Image Configuration
 # Generated: $(date -u +%F_%T)
 
 IMG_NAME=$IMG_NAME
 RELEASE=bookworm
-DEPLOY_DIR=$WORKDIR/pi-gen/deploy
+DEPLOY_DIR=$deploy_dir
 TARGET_HOSTNAME=$TARGET_HOSTNAME
 FIRST_USER_NAME=$FIRST_USER_NAME
 FIRST_USER_PASS=$FIRST_USER_PASS
@@ -148,20 +153,32 @@ STAGE_LIST="stage0 stage1 stage-momo"
 DEPLOY_COMPRESSION=xz
 COMPRESSION_LEVEL=6
 
+# Pi 5 target
+PI_GEN_RELEASE=bookworm
+
 # Use Raspberry Pi archive
 APT_PROXY=""
 EOF
 
     # Rename stage-momo scripts to run after apt config
     log "Configuring stage-momo scripts..."
+    
+    # Rename the main install script to 02 (runs after package install and repo setup)
     if [ -f pi-gen/stage-momo/00-run-chroot.sh ]; then
-        mv pi-gen/stage-momo/00-run-chroot.sh pi-gen/stage-momo/01-run-chroot.sh
+        mv pi-gen/stage-momo/00-run-chroot.sh pi-gen/stage-momo/02-run-chroot.sh
+        chmod +x pi-gen/stage-momo/02-run-chroot.sh
     fi
     if [ -f pi-gen/stage-momo/00-run.sh ]; then
-        mv pi-gen/stage-momo/00-run.sh pi-gen/stage-momo/01-run.sh
+        mv pi-gen/stage-momo/00-run.sh pi-gen/stage-momo/02-run.sh
+        chmod +x pi-gen/stage-momo/02-run.sh
+    fi
+    
+    # Rename packages file to 01 (installs packages first)
+    if [ -f pi-gen/stage-momo/01-packages ]; then
+        mv pi-gen/stage-momo/01-packages pi-gen/stage-momo/01-packages-nr
     fi
 
-    # Add Raspberry Pi repository configuration as first step
+    # Add Raspberry Pi repository configuration as first step (00)
     log "Adding Raspberry Pi repository configuration..."
     cat > pi-gen/stage-momo/00-run-chroot.sh <<'APTEOF'
 #!/bin/bash -e

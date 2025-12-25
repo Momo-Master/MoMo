@@ -1,0 +1,3 @@
+# This file tells pi-gen to export an image after this stage
+# The image will be named based on IMG_NAME from config
+
