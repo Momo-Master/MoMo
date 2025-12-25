@@ -168,6 +168,20 @@ EOF
     rm -f pi-gen/stage*/SKIP 2>/dev/null || true
     rm -rf pi-gen/work 2>/dev/null || true
     
+    # Skip problematic export-image substages that require userconf-pi
+    # (userconf-pi is not available in standard Debian repos, only in Pi OS)
+    log "Configuring export-image stage..."
+    if [ -d pi-gen/export-image/01-user-rename ]; then
+        touch pi-gen/export-image/01-user-rename/SKIP
+        log "Skipped export-image/01-user-rename (userconf-pi not available)"
+    fi
+    
+    # Also skip any other problematic Pi-specific steps
+    if [ -d pi-gen/export-image/02-network ]; then
+        touch pi-gen/export-image/02-network/SKIP
+        log "Skipped export-image/02-network"
+    fi
+    
     log "pi-gen setup complete."
 }
 
